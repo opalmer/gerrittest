@@ -50,7 +50,7 @@ function GerritAddress {
     fi
 
     # If the docker-machine command does not exist then use localhost
-    docker-machine version > /dev/null
+    docker-machine version 2>1 /dev/null
     if [ $? -ne 0 ]; then
         echo "localhost"
         return
