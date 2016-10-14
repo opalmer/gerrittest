@@ -108,7 +108,7 @@ function RunContainer {
     local address=$(GerritAddress)
 
     if [ "$(ContainerID)" = "" ]; then
-        runorfail "docker run -d --name $CONTAINER_NAME -p $PORT_HTTP:8080 -p $PORT_SSH:29418 -e GERRIT_CANONICAL_URL=http://$address:$PORT_HTTP $DOCKER_IMAGE" \
+        RunOrFail "docker run -d --name $CONTAINER_NAME -p $PORT_HTTP:8080 -p $PORT_SSH:29418 -e GERRIT_CANONICAL_URL=http://$address:$PORT_HTTP $DOCKER_IMAGE" \
             "ERROR: Failed to run container"
     else
         echo "Gerrit already running in container $(ContainerID)"
@@ -129,17 +129,9 @@ function StopContainer {
     docker rm -f $container > /dev/null
 }
 
-# Internal function which is used to make
-function checkcode {
-    local code=$1
-    local errormessage=$2
-    if [ $code -ne 0 ]; then
-        echo $errormessage
-        exit $code
-    fi
-}
-
-function runorfail {
+# Runs a command or fails with an error message
+#  RunOrFail "ping -c 0 nosuchhost" "ERROR: Ping failed"
+function RunOrFail {
     local command=$1
     local errormessage=$2
 
@@ -165,11 +157,11 @@ function CreateAdminAccount {
 
     echo "Creating admin account and testing login"
 
-    runorfail \
+    RunOrFail \
         "curl -sLo /dev/null --fail  --cookie-jar $cookiefile http://$address:$PORT_HTTP/login/%23%2F?account_id=1000000" \
         "ERROR: Failed to create account"
 
-    runorfail \
+    RunOrFail \
         "$DIGEST_CURL http://$address:$PORT_HTTP/a/accounts/self" \
         "ERROR: Failed to login to new account"
 }
@@ -195,12 +187,12 @@ function AddAdminSSHKey {
     echo "Adding ssh key $path.pub"
 
     # Add the key
-    runorfail \
+    RunOrFail \
         "$DIGEST_CURL -u admin:secret --digest -H \"Content-Type: plain/text\" -o /dev/null --fail --data-binary @$path.pub http://$address:$PORT_HTTP/a/accounts/self/sshkeys" \
         "ERROR: Failed to add ssh key"
 
     # Test the key
-    runorfail \
+    RunOrFail \
         "ssh -o LogLevel=quiet -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $path -p $PORT_SSH admin@$address gerrit version" \
         "ERROR: key test failed"
 }
