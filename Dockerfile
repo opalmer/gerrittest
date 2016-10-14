@@ -10,6 +10,7 @@ ENV GERRIT_SITE ${GERRIT_HOME}/review_site
 ENV GERRIT_WAR ${GERRIT_HOME}/gerrit.war
 ENV GERRIT_USER gerrit
 ENV GERRIT_INIT_ARGS ""
+ENV GERRIT_CANONICAL_URL "http://localhost:8080/"
 
 # Add our user and group first to make sure their IDs get assigned consistently, regardless of whatever dependencies get added
 RUN adduser -D -h "${GERRIT_HOME}" -g "Gerrit User" "${GERRIT_USER}"
