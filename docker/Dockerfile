@@ -18,7 +18,7 @@ ARG GERRIT_USER=gerrit
 ARG GERRIT_INIT_ARGS=""
 ARG GERRIT_CANONICAL_URL="http://localhost:8080/"
 
-# Establish environment variables
+# Establish environment variables (used by entrypoint.sh)
 ENV GERRIT_HOME ${GERRIT_HOME}
 ENV GERRIT_SITE ${GERRIT_SITE}
 ENV GERRIT_CANONICAL_URL ${GERRIT_CANONICAL_URL}
