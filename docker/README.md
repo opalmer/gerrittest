@@ -1,6 +1,6 @@
 # Dockerized Gerrit, For Testing
 
-This repository is used to create a docker container setup
+This directory is used to create a docker container setup
 for Gerrit.  **This is not intended for production.** 
 
 ## Useful Links
