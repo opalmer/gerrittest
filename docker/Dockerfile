@@ -18,6 +18,11 @@ ARG GERRIT_USER=gerrit
 ARG GERRIT_INIT_ARGS=""
 ARG GERRIT_CANONICAL_URL="http://localhost:8080/"
 
+# Establish environment variables
+ENV GERRIT_HOME ${GERRIT_HOME}
+ENV GERRIT_SITE ${GERRIT_SITE}
+ENV GERRIT_CANONICAL_URL ${GERRIT_CANONICAL_URL}
+
 # Grab gosu for easy step-down from root
 RUN set -x \
     && apk add --update --no-cache git openssh openssl bash
