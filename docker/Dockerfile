@@ -41,10 +41,10 @@ ADD https://gerrit-ci.gerritforge.com/job/plugin-delete-project-${PLUGIN_VERSION
 ADD https://gerrit-ci.gerritforge.com/job/plugin-events-log-${PLUGIN_VERSION}/lastSuccessfulBuild/artifact/buck-out/gen/plugins/events-log/events-log.jar ${GERRIT_HOME}/events-log.jar
 
 # Add bouncy castle
-
 ADD https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk15on/${BOUNCY_CASTLE_VERSION}/bcprov-jdk15on-${BOUNCY_CASTLE_VERSION}.jar ${GERRIT_HOME}/bcprov-jdk15on-${BOUNCY_CASTLE_VERSION}.jar
 ADD https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-jdk15on/${BOUNCY_CASTLE_VERSION}/bcpkix-jdk15on-${BOUNCY_CASTLE_VERSION}.jar ${GERRIT_HOME}/bcpkix-jdk15on-${BOUNCY_CASTLE_VERSION}.jar
 
+# Add files
 ADD /entrypoint.sh /
 ADD config/gerrit.config ${GERRIT_SITE}/etc/gerrit.config
 
