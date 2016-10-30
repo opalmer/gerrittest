@@ -1,0 +1,4 @@
+/vendor/github.com/
+/vendor/golang.org/
+/gerrittest
+/.coverage/
