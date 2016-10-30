@@ -4,5 +4,5 @@ services:
   - docker
 
 script:
-  - cd docker && docker build . --tag opalmer/gerritstats:travis
+  - make -C docker build BUILD_TAGS="-t opalmer/gerritstats:travis"
   - ./test.sh
