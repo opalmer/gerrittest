@@ -20,9 +20,5 @@ vet:
 lint: deps
 	(for f in $(SOURCES); do golint -set_exit_status $$f; done)
 
-test: $(patsubst %,%.test,$(PACKAGES))
-
-%.test:
-	@[ -d .coverage ] || mkdir .coverage
-	go test -v -race -covermode=atomic -coverprofile=.coverage/$(subst /,-,$*).out $*
-	@[ ! -e .coverage/$(subst /,-,$*).out ] || go tool cover -html=.coverage/$(subst /,-,$*).out -o .coverage/$(subst /,-,$*).html
+test:
+	./test.sh
