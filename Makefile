@@ -21,4 +21,4 @@ lint: deps
 	@(for f in $(SOURCES); do golint -set_exit_status $$f; done)
 
 test:
-	./test.sh
+	go test -race -coverprofile=coverage.txt -covermode=atomic -check.v
