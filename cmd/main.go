@@ -17,8 +17,8 @@ var (
 		Short: "A command line tool for running Gerrit in docker " +
 			"for testing."}
 
-	// ListCOmmand shows information about running containers
-	ListCOmmand = &cobra.Command{
+	// ListCommand shows information about running containers
+	ListCommand = &cobra.Command{
 		Use:   "list",
 		Short: "Lists information about running containers",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -90,7 +90,7 @@ func init() {
 	persistent.String(
 		"log-level", "", "Override the default log level.")
 
-	Command.AddCommand(ListCOmmand)
+	Command.AddCommand(ListCommand)
 
 	Command.AddCommand(RunCommand)
 	RunCommand.Flags().Int(
