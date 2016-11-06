@@ -3,10 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "vzPNBiOJFecKT9FA6aAtmOjRlgs=",
+			"checksumSHA1": "B+GonfgNwOAJMEe0WUHQGATRtMA=",
 			"path": "github.com/Microsoft/go-winio",
-			"revision": "ce2922f643c8fd76b46cadc7f404a06282678b34",
-			"revisionTime": "2016-06-21T21:14:38Z"
+			"revision": "562bb09f6612d9a4e91597184709d1cdba95af93",
+			"revisionTime": "2016-11-03T18:56:17Z"
 		},
 		{
 			"checksumSHA1": "2avCvSn0XonfApKKuTMyiQmk7s0=",
@@ -29,8 +29,8 @@
 		{
 			"checksumSHA1": "3AoPMXlmVq2+iWMpsdJZkcUKHB8=",
 			"path": "github.com/opencontainers/runc/libcontainer/user",
-			"revision": "4c8007f34a0077a1040923ee4c7cec64b6e070d4",
-			"revisionTime": "2016-10-28T23:00:52Z"
+			"revision": "ac031b5bf1cc92239461125f4c1ffb760522bbf2",
+			"revisionTime": "2016-11-04T07:25:37Z"
 		},
 		{
 			"checksumSHA1": "fEGgcE+iSzLkxdrbRj7j/vV7a7E=",
