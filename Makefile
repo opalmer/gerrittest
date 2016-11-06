@@ -1,5 +1,5 @@
 PACKAGES ?= $(shell go list ./... | grep -v /vendor/)
-SOURCES=$(shell for f in $(PACKAGES); do ls $$GOPATH/src/$$f/*.go; done)
+SOURCES = $(shell for f in $(PACKAGES); do ls $$GOPATH/src/$$f/*.go; done)
 
 build: deps check test
 	go build -o gerrittest cmd/main.go
@@ -18,7 +18,7 @@ vet:
 	go vet $(PACKAGES)
 
 lint: deps
-	(for f in $(SOURCES); do golint -set_exit_status $$f; done)
+	@(for f in $(SOURCES); do golint -set_exit_status $$f; done)
 
 test:
 	./test.sh
