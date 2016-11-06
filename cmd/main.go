@@ -17,10 +17,10 @@ var (
 		Short: "A command line tool for running Gerrit in docker " +
 			"for testing."}
 
-	// ShowCommand shows information about running containers
-	ShowCommand = &cobra.Command{
-		Use:   "show",
-		Short: "Shows information about running containers",
+	// ListCOmmand shows information about running containers
+	ListCOmmand = &cobra.Command{
+		Use:   "list",
+		Short: "Lists information about running containers",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := newdockerclient(cmd)
 			if err != nil {
@@ -33,13 +33,7 @@ var (
 			}
 
 			for _, container := range containers {
-				entry := log.WithFields(log.Fields{
-					"id":   container.ID,
-					"http": container.HTTP,
-					"ssh":  container.SSH,
-				})
-
-				entry.Info()
+				printinfo(container)
 			}
 
 			return nil
@@ -68,11 +62,15 @@ var (
 			if err != nil {
 				return err
 			}
-			fmt.Printf(
-				"%s %d %d\n", created.ID, created.SSH, created.HTTP)
+			printinfo(created)
 			return nil
 		}}
 )
+
+func printinfo(container *gerrittest.Container) {
+	fmt.Printf(
+		"%s %d %d\n", container.ID, container.SSH, container.HTTP)
+}
 
 func newdockerclient(cmd *cobra.Command) (*gerrittest.DockerClient, error) {
 	if cmd.Flag("log-level").Changed {
@@ -92,7 +90,7 @@ func init() {
 	persistent.String(
 		"log-level", "", "Override the default log level.")
 
-	Command.AddCommand(ShowCommand)
+	Command.AddCommand(ListCOmmand)
 
 	Command.AddCommand(RunCommand)
 	RunCommand.Flags().Int(
