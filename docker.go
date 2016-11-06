@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 )
 
 var (
@@ -28,6 +30,14 @@ const (
 	// DefaultImage is the docker image that's used in tests
 	// and by DockerClient if no image is supplied.
 	DefaultImage = "opalmer/gerrittest:latest"
+
+	// InternalHTTPPort is the port Gerrit is listening for http requests
+	// on inside the container.
+	InternalHTTPPort = uint16(8080)
+
+	// InternalSSHPort is the port Gerrit is listening for ssh connection on
+	// inside the container.
+	InternalSSHPort = uint16(29418)
 )
 
 // Container wraps the standard container type.
@@ -44,29 +54,24 @@ type RunGerritInput struct {
 
 	// PortHTTP is the local tcp port to expose Gerrit's HTTP interface
 	// and API on. If not provided Docker will assign a random port.
-	PortHTTP int
+	PortHTTP string
 
 	// PortHTTP is the local tcp port to expose Gerrit's SSH server
 	// on. If not provided Docker will assign a random port.
-	PortSSH int
+	PortSSH string
 }
 
 // DockerClient provides a wrapper for the standard docker client
 type DockerClient struct {
 	Docker *client.Client
-	image  string
 	log    *log.Entry
 }
 
 // NewDockerClient returns a *DockerClient struct. If you supply "" to
 // default image gerrittest.DefaultImage will be used.
-func NewDockerClient(defaultimage string) (*DockerClient, error) {
+func NewDockerClient() (*DockerClient, error) {
 	logEntry := log.WithField("phase", "new-client")
 	logEntry.Debug("Constructing new client")
-
-	if defaultimage == "" {
-		defaultimage = DefaultImage
-	}
 
 	docker, err := client.NewEnvClient()
 	if err != nil {
@@ -74,12 +79,9 @@ func NewDockerClient(defaultimage string) (*DockerClient, error) {
 		return nil, err
 	}
 
-	cli := &DockerClient{
+	return &DockerClient{
 		Docker: docker,
-		image:  defaultimage,
-		log:    log.WithField("phase", "docker")}
-
-	return cli, nil
+		log:    log.WithField("phase", "docker")}, nil
 }
 
 // NewContainer returns a *Container struct for the given container.
@@ -153,7 +155,27 @@ func (client *DockerClient) RunGerrit(input *RunGerritInput) (*Container, error)
 	}
 
 	if input.Image == "" {
-		input.Image = client.image
+		input.Image = DefaultImage
+	}
+
+	hostconfig := &container.HostConfig{PublishAllPorts: true}
+	portSpecs := []string{}
+	if input.PortHTTP != "" {
+		portSpecs = append(
+			portSpecs, fmt.Sprintf("%s:%d", input.PortHTTP, InternalHTTPPort))
+	}
+
+	if input.PortSSH != "" {
+		portSpecs = append(
+			portSpecs, fmt.Sprintf("%s:%d", input.PortSSH, InternalSSHPort))
+	}
+
+	if len(portSpecs) > 0 {
+		_, bindings, err := nat.ParsePortSpecs(portSpecs)
+		if err != nil {
+			return nil, err
+		}
+		hostconfig.PortBindings = bindings
 	}
 
 	logger := client.log.WithField("phase", "run")
@@ -164,10 +186,7 @@ func (client *DockerClient) RunGerrit(input *RunGerritInput) (*Container, error)
 			Image:  input.Image,
 			Labels: map[string]string{"gerrittest": "1"},
 		},
-		&container.HostConfig{
-			PublishAllPorts: true,
-		},
-		&network.NetworkingConfig{}, "")
+		hostconfig, &network.NetworkingConfig{}, "")
 	if err != nil {
 		return nil, err
 	}
@@ -184,4 +203,12 @@ func (client *DockerClient) RunGerrit(input *RunGerritInput) (*Container, error)
 	}
 
 	return client.GetContainer(created.ID)
+}
+
+// RemoveContainer will remove the specified container immediately. This
+// is equivalent to `docker rm -f <container id>`.
+func (client *DockerClient) RemoveContainer(id string) error {
+	return client.Docker.ContainerRemove(
+		context.Background(), id,
+		types.ContainerRemoveOptions{Force: true})
 }

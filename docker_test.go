@@ -19,8 +19,8 @@ func TestGerritTest(t *testing.T) {
 
 var _ = Suite(&TestSuite{})
 
-func (s *TestSuite) NewClient(c *C, image string) *DockerClient {
-	client, err := NewDockerClient(image)
+func (s *TestSuite) NewClient(c *C) *DockerClient {
+	client, err := NewDockerClient()
 	c.Assert(err, IsNil)
 	return client
 }
@@ -31,20 +31,10 @@ func (s *TestSuite) TestNewContainer_ErrFailedToDeterminePorts(c *C) {
 	c.Assert(err, Equals, ErrPublicPortsMissing)
 }
 
-func (s *TestSuite) TestNewDockerClient_DefaultImage(c *C) {
-	client := s.NewClient(c, "")
-	c.Assert(client.image, Equals, DefaultImage)
-}
-
-func (s *TestSuite) TestNewDockerClient_CustomImage(c *C) {
-	client := s.NewClient(c, "foo")
-	c.Assert(client.image, Equals, "foo")
-}
-
 func (s *TestSuite) TestNewDockerClient_BadDockerHost(c *C) {
 	defer os.Setenv("DOCKER_HOST", os.Getenv("DOCKER_HOST"))
 	os.Setenv("DOCKER_HOST", "none")
-	_, err := NewDockerClient("")
+	_, err := NewDockerClient()
 	c.Assert(err, NotNil)
 }
 
@@ -59,9 +49,60 @@ func (s *TestSuite) TestNewContainer(c *C) {
 	c.Assert(container.SSH, Equals, uint16(60000))
 }
 
-func (s *TestSuite) TestRunGerrit(c *C) {
-	client := s.NewClient(c, "")
-	_ = client
-	//client.RunGerrit("")
+func (s *TestSuite) TestRunAndStopGerrit(c *C) {
+	client := s.NewClient(c)
+	container, err := client.RunGerrit(nil)
+	c.Assert(err, IsNil)
+	c.Assert(client.RemoveContainer(container.ID), IsNil)
+}
 
+func (s *TestSuite) TestRunWithCustomPort(c *C) {
+	client := s.NewClient(c)
+	container, err := client.RunGerrit(
+		&RunGerritInput{
+			PortHTTP: "55500",
+			PortSSH:  "44300"})
+	defer client.RemoveContainer(container.ID)
+	c.Assert(err, IsNil)
+	c.Assert(container.HTTP, Equals, uint16(55500))
+	c.Assert(container.SSH, Equals, uint16(44300))
+}
+
+func (s *TestSuite) TestListContainers(c *C) {
+	client := s.NewClient(c)
+	container, err := client.RunGerrit(nil)
+	defer client.RemoveContainer(container.ID)
+	c.Assert(err, IsNil)
+
+	containers, err := client.Containers()
+	c.Assert(err, IsNil)
+
+	found := false
+	for _, listed := range containers {
+		if listed.ID == container.ID {
+			found = true
+			break
+		}
+	}
+	c.Assert(found, Equals, true)
+
+}
+
+func (s *TestSuite) TestGetContainer(c *C) {
+	client := s.NewClient(c)
+	container, err := client.RunGerrit(nil)
+	defer client.RemoveContainer(container.ID)
+	c.Assert(err, IsNil)
+
+	containers, err := client.Containers()
+	c.Assert(err, IsNil)
+
+	found := false
+	for _, listed := range containers {
+		if listed.ID == container.ID {
+			found = true
+			break
+		}
+	}
+	c.Assert(found, Equals, true)
 }

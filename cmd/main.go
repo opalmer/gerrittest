@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	log "github.com/Sirupsen/logrus"
@@ -47,17 +48,28 @@ var (
 	// RunCommand is the command used to run a container
 	RunCommand = &cobra.Command{
 		Use:   "run",
-		Short: "Runs Gerrit in a docker container and returns information about it",
+		Short: "Runs Gerrit in a docker container and returns information about it (id, ssh port, http port)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := newdockerclient(cmd)
 			if err != nil {
 				return err
 			}
-			created, err := client.RunGerrit(nil)
+
+			image := gerrittest.DefaultImage
+			if cmd.Flag("image").Changed {
+				image = cmd.Flag("image").Value.String()
+			}
+
+			// Create the container
+			created, err := client.RunGerrit(&gerrittest.RunGerritInput{
+				Image:    image,
+				PortHTTP: cmd.Flag("port-http").Value.String(),
+				PortSSH:  cmd.Flag("port-ssh").Value.String()})
 			if err != nil {
 				return err
 			}
-			log.Info(created.ID)
+			fmt.Printf(
+				"%s %d %d\n", created.ID, created.SSH, created.HTTP)
 			return nil
 		}}
 )
@@ -71,26 +83,29 @@ func newdockerclient(cmd *cobra.Command) (*gerrittest.DockerClient, error) {
 		log.SetLevel(resolved)
 	}
 
-	image := "opalmer/gerrittest:latest"
-	if cmd.Flag("image").Changed {
-		image = cmd.Flag("image").Value.String()
-	}
-
-	client, err := gerrittest.NewDockerClient(image)
+	client, err := gerrittest.NewDockerClient()
 	return client, err
 }
 
 func init() {
 	persistent := Command.PersistentFlags()
 	persistent.String(
-		"image", "opalmer/gerrittest:latest",
-		"The name of the image that should be run.")
-	persistent.String(
 		"log-level", "", "Override the default log level.")
 
-	// Add commands
 	Command.AddCommand(ShowCommand)
+
 	Command.AddCommand(RunCommand)
+	RunCommand.Flags().Int(
+		"port-http", 0,
+		"If provided run Gerrit's HTTP service on this port. A random "+
+			"port will be chosen otherwise.")
+	RunCommand.Flags().Int(
+		"port-ssh", 0,
+		"If provided run Gerrit's SSH service on this port. A random "+
+			"port will be chosen otherwise.")
+	RunCommand.Flags().String(
+		"image", gerrittest.DefaultImage,
+		"The name of the image that should be run.")
 }
 
 func main() {
