@@ -41,7 +41,6 @@ func (s *TestSuite) TestNewDockerClient_CustomImage(c *C) {
 	c.Assert(client.image, Equals, "foo")
 }
 
-
 func (s *TestSuite) TestNewDockerClient_BadDockerHost(c *C) {
 	defer os.Setenv("DOCKER_HOST", os.Getenv("DOCKER_HOST"))
 	os.Setenv("DOCKER_HOST", "none")

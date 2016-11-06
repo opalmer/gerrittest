@@ -105,7 +105,7 @@ func (client *DockerClient) Containers() ([]*Container, error) {
 	args := filters.NewArgs()
 	args.Add("ancestor", "opalmer/gerrittest")
 
-	options := types.ContainerListOptions{Filter: args}
+	options := types.ContainerListOptions{Filters: args}
 	containers, err := client.Docker.ContainerList(context.Background(), options)
 
 	if err != nil {
@@ -133,7 +133,7 @@ func (client *DockerClient) Containers() ([]*Container, error) {
 func (client *DockerClient) GetContainer(id string) (*Container, error) {
 	args := filters.NewArgs()
 	args.Add("id", id)
-	options := types.ContainerListOptions{Filter: args}
+	options := types.ContainerListOptions{Filters: args}
 	containers, err := client.Docker.ContainerList(context.Background(), options)
 	if err != nil {
 		return nil, err
