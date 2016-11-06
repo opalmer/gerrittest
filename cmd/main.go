@@ -2,9 +2,7 @@ package main
 
 import (
 	"os"
-	//"context"
 
-	//"github.com/docker/docker/client"
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/gerrittest"
 	"github.com/spf13/cobra"
@@ -23,7 +21,7 @@ var (
 		Use:   "show",
 		Short: "Shows information about running containers",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client, err := setup(cmd)
+			client, err := newdockerclient(cmd)
 			if err != nil {
 				return err
 			}
@@ -34,7 +32,6 @@ var (
 			}
 
 			for _, container := range containers {
-
 				entry := log.WithFields(log.Fields{
 					"id":   container.ID,
 					"http": container.HTTP,
@@ -46,9 +43,26 @@ var (
 
 			return nil
 		}}
+
+	// RunCommand is the command used to run a container
+	RunCommand = &cobra.Command{
+		Use:   "run",
+		Short: "Runs Gerrit in a docker container and returns information about it",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client, err := newdockerclient(cmd)
+			if err != nil {
+				return err
+			}
+			created, err := client.RunGerrit(nil)
+			if err != nil {
+				return err
+			}
+			log.Info(created.ID)
+			return nil
+		}}
 )
 
-func setup(cmd *cobra.Command) (*gerrittest.DockerClient, error) {
+func newdockerclient(cmd *cobra.Command) (*gerrittest.DockerClient, error) {
 	if cmd.Flag("log-level").Changed {
 		resolved, err := log.ParseLevel(cmd.Flag("log-level").Value.String())
 		if err != nil {
@@ -57,7 +71,12 @@ func setup(cmd *cobra.Command) (*gerrittest.DockerClient, error) {
 		log.SetLevel(resolved)
 	}
 
-	client, err := gerrittest.NewDockerClient()
+	image := "opalmer/gerrittest:latest"
+	if cmd.Flag("image").Changed {
+		image = cmd.Flag("image").Value.String()
+	}
+
+	client, err := gerrittest.NewDockerClient(image)
 	return client, err
 }
 
@@ -68,7 +87,10 @@ func init() {
 		"The name of the image that should be run.")
 	persistent.String(
 		"log-level", "", "Override the default log level.")
+
+	// Add commands
 	Command.AddCommand(ShowCommand)
+	Command.AddCommand(RunCommand)
 }
 
 func main() {
