@@ -212,3 +212,8 @@ func (client *DockerClient) RemoveContainer(id string) error {
 		context.Background(), id,
 		types.ContainerRemoveOptions{Force: true})
 }
+
+// Helpers returns a GerritHelpers struct for the given container.
+func (client *DockerClient) Helpers(input *Container) (*GerritHelpers, error) {
+	return NewGerritHelpers(input)
+}
