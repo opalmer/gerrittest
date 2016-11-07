@@ -45,12 +45,11 @@ func AddressOnly(value string) string {
 
 // GetAddress attempts to returns the address where we should expect to
 // connect to. This will try $DOCKER_HOST first and failing that attempt
-// to use docker-machine before finally giving up and returning 127.0.0.1
+// to use docker-machine before finally giving up and returning 127.0.0.1.
 func GetAddress() string {
 	address := "127.0.0.1"
 
-	dockerhost := os.Getenv("DOCKER_HOST")
-	if dockerhost != "" {
+	if dockerhost, set := os.LookupEnv("DOCKER_HOST"); set {
 		address = AddressOnly(dockerhost)
 	} else {
 		command := exec.Command("docker-machine", "ip")
