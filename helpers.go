@@ -1,7 +1,9 @@
 package gerrittest
 
 import (
-	"errors"
+	"fmt"
+	"golang.org/x/crypto/ssh"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -11,18 +13,24 @@ import (
 // Helpers provides structs and functions for setting up and
 // interacting with Gerrit.
 
-var (
-	// ErrGerritDown is returned by Ping() if Gerrit appears to be down.
-	ErrGerritDown = errors.New(
-		"Gerrrit is not running or failed to start.")
-)
-
 // GerritHelpers is a struct which provides helper methods for interacting
 // with a running instance of Gerrit.
 type GerritHelpers struct {
+	// PortHTTP is the port that should be used when attempting to connect
+	// to Gerrit.
 	PortHTTP int
-	PortSSH  int
-	Address  string
+
+	// PortSSH is the port that should be used when attempting to connect
+	// to Gerrit.
+	PortSSH int
+
+	// Address is the IP address or hostname that is running the docker
+	// container.
+	Address string
+
+	// URL is the root url to make API requests to.  It will be
+	// something like http://127.0.0.1:8080
+	URL string
 }
 
 // AddressOnly returns the address part of the given value. For example:
@@ -63,15 +71,30 @@ func GetAddress() string {
 
 // NewGerritHelpers produces a new *GerritHelpers struct.
 func NewGerritHelpers(container *Container) (*GerritHelpers, error) {
-
+	address := GetAddress()
+	httpport := int(container.HTTP)
 	helpers := &GerritHelpers{
-		PortHTTP: int(container.HTTP),
+		PortHTTP: httpport,
 		PortSSH:  int(container.SSH),
-	}
+		Address:  address,
+		URL:      fmt.Sprintf("http://%s:%d", address, httpport)}
 	return helpers, helpers.Ping()
 }
 
-// Ping returns nil if Gerrit appears to be running.
+// Ping returns nil if Gerrit appears to be running. This will ensures that
+// we can make a successful HTTP request and that w can connect to ssh.
 func (helpers *GerritHelpers) Ping() error {
-	return nil
+	// Attempt to connect to http by making a request.
+	if _, err := http.Get(helpers.URL); err != nil {
+		return err
+	}
+
+	_, err := ssh.Dial(
+		"tcp",
+		fmt.Sprintf("%s:%d", helpers.Address, helpers.PortSSH),
+		&ssh.ClientConfig{})
+	if strings.Contains(err.Error(), "unable to authenticate") {
+		return nil
+	}
+	return err
 }
