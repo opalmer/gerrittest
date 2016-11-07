@@ -98,3 +98,9 @@ func (helpers *GerritHelpers) Ping() error {
 	}
 	return err
 }
+
+// CreateAdministrator will create an administrative user and return
+// information about the account.
+func (helpers *GerritHelpers) CreateAdministrator() error {
+	return nil
+}
