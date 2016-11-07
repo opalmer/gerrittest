@@ -31,10 +31,13 @@ type GerritHelpers struct {
 func AddressOnly(value string) string {
 	value = strings.TrimSpace(value)
 	if parsed, err := url.Parse(value); err == nil {
+		if parsed.Host == "" {
+			return value
+		}
 		value = parsed.Host
 	}
 	if strings.Contains(value, ":") {
-		value = strings.Split(value, "L")[0]
+		value = strings.Split(value, ":")[0]
 	}
 
 	return value
