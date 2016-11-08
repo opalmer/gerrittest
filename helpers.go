@@ -108,11 +108,14 @@ func (helpers *GerritHelpers) CreateAdministrator() error {
 	}
 
 	client := &http.Client{Jar: jar}
-	response, err := client.Get(helpers.URL + "/login/%23%2F?account_id=1000000")
+	response, err := client.Get(
+		helpers.URL + "/login/%23%2F?account_id=1000000")
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(response)
+	// TODO make API request to /a/accounts/self
+	_ = response
+
 	return nil
 }
