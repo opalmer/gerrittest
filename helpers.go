@@ -5,6 +5,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"net/http"
 	"net/url"
+	"net/http/cookiejar"
 	"os"
 	"os/exec"
 	"strings"
@@ -70,15 +71,14 @@ func GetAddress() string {
 }
 
 // NewGerritHelpers produces a new *GerritHelpers struct.
-func NewGerritHelpers(container *Container) (*GerritHelpers, error) {
+func NewGerritHelpers(container *Container) *GerritHelpers {
 	address := GetAddress()
 	httpport := int(container.HTTP)
-	helpers := &GerritHelpers{
+	return &GerritHelpers{
 		PortHTTP: httpport,
 		PortSSH:  int(container.SSH),
 		Address:  address,
 		URL:      fmt.Sprintf("http://%s:%d", address, httpport)}
-	return helpers, helpers.Ping()
 }
 
 // Ping returns nil if Gerrit appears to be running. This will ensures that
@@ -102,5 +102,17 @@ func (helpers *GerritHelpers) Ping() error {
 // CreateAdministrator will create an administrative user and return
 // information about the account.
 func (helpers *GerritHelpers) CreateAdministrator() error {
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return err
+	}
+
+	client := &http.Client{Jar: jar}
+	response, err := client.Get(helpers.URL + "/login/%23%2F?account_id=1000000")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(response)
 	return nil
 }

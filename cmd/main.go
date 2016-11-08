@@ -7,6 +7,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/gerrittest"
 	"github.com/spf13/cobra"
+	"time"
 )
 
 var (
@@ -62,6 +63,22 @@ var (
 			if err != nil {
 				return err
 			}
+
+			helpers := client.Helpers(created)
+
+			log.Info("Waiting for Gerrit to come up...")
+			for {
+				if err := helpers.Ping(); err == nil {
+					break
+				}
+				time.Sleep(time.Second * 1)
+			}
+
+			if err := helpers.CreateAdministrator(); err != nil {
+				return err
+			}
+
+
 			printinfo(created)
 			return nil
 		}}

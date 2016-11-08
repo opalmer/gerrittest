@@ -3,8 +3,8 @@ package gerrittest
 import (
 	"context"
 	"errors"
-
 	"fmt"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -214,6 +214,6 @@ func (client *DockerClient) RemoveContainer(id string) error {
 }
 
 // Helpers returns a GerritHelpers struct for the given container.
-func (client *DockerClient) Helpers(input *Container) (*GerritHelpers, error) {
+func (client *DockerClient) Helpers(input *Container) *GerritHelpers {
 	return NewGerritHelpers(input)
 }
