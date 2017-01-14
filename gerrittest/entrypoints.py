@@ -13,8 +13,9 @@ from gerrittest.docker import (
 
 
 def subcommand_run(args):
-    command = run(
+    container_id, http_port, ssh_port = run(
         image=args.image, ip=args.ip, http_port=args.http, ssh_port=args.ssh)
+    print(container_id, http_port, ssh_port)
 
 
 def subcommand_get_port(args):

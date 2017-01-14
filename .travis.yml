@@ -9,7 +9,6 @@ services:
 
 script:
   - make -C docker build
-  - make build
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

@@ -92,4 +92,4 @@ def run(**kwargs):
     container_id = subprocess.check_output(command).strip()
     http_port = get_port(DEFAULT_HTTP, container_id)
     ssh_port = get_port(DEFAULT_SSH, container_id)
-    print(http_port, ssh_port)
+    return container_id, http_port, ssh_port
