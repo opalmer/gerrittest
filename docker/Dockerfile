@@ -23,11 +23,12 @@ ENV GERRIT_HOME ${GERRIT_HOME}
 ENV GERRIT_SITE ${GERRIT_SITE}
 ENV GERRIT_CANONICAL_URL ${GERRIT_CANONICAL_URL}
 
-# Create user and home of the installation
+# Setup the container with our initial dependencies.
 RUN set -x \
     && apk add --update --no-cache git openssh openssl bash curl
 
-# Pull in all the remote files
+# Setup the gerrit user, download all the required files and verify
+# the integrity of gerrit.war
 RUN set -x \
     && adduser -D -h "${GERRIT_HOME}" -g "Gerrit User" "${GERRIT_USER}" && mkdir -p ${GERRIT_HOME} \
     && curl -so ${GERRIT_HOME}/events-log.jar https://gerrit-ci.gerritforge.com/job/plugin-events-log-${PLUGIN_VERSION}/lastSuccessfulBuild/artifact/buck-out/gen/plugins/events-log/events-log.jar \
