@@ -20,7 +20,7 @@ a few commands and options:
  
 ```
 usage: gerrittest [-h] [--log-level {debug,info,warn,warning,error,critical}]
-                  {run,get-port} ...
+                  {run,get-port,self-test} ...
 
 Wraps the the `docker` command to run gerrittests
 
@@ -31,9 +31,11 @@ optional arguments:
                         impact command line output.
 
 Subcommands:
-  {run,get-port}
+  {run,get-port,self-test}
     run                 Runs Gerrit in the docker container.
     get-port            Returns the requested port for the provided container.
+    self-test           Runs a sequence of sub-commands intended to 'self
+                        test' the gerrittest command.
 ```
 
 ## Run
@@ -50,13 +52,4 @@ e3e7d684faa0110a6243186d0ff9b7379cf1dc068f731a3a60822901e002fa71
 > http_port=$(gerrittest --log-level debug get-port http $container_id)
 > echo $ssh_port $http_port
 32774 32775
-```
-
-**Querying Container Ports**
-
-```bash
-> gerrittest get-port ssh $(container_id)
-32776
-> gerrittest get-port http $(container_id)
-32777
 ```
