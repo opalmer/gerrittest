@@ -20,29 +20,39 @@ a few different sub-commands, use `--help` to see them.
 
 ## Run
 
-Below is an example of how the `gerrittest` command could be used. In this
-case the following takes places:
-
-* Run a container with Gerrit
-* Obtain the http/ssh ports
-* Create the admin account, add an ssh key and return it.
+Below is an example of how the `gerrittest` command could be used. This 
+output is pulled from ``./test.sh``
 
 ```
-> container_id=$(gerrittest run)
-> ssh_port=$(gerrittest get-port ssh $container_id)
-> http_port=$(gerrittest get-port http $container_id)
-> rsa_key=$(gerrittest --log-level debug create-admin $container_id)
-2017-01-21 17:18:10,802 DEBUG docker inspect --type container d3bd5a5205a6cd10da96446a1d14d96de11081c792e1d25cc1476e3dc441602b
-2017-01-21 17:18:10,812 DEBUG docker inspect --type container d3bd5a5205a6cd10da96446a1d14d96de11081c792e1d25cc1476e3dc441602b
-2017-01-21 17:18:10,820 DEBUG Creating admin account.
-2017-01-21 17:18:10,927 DEBUG GET http://172.30.0.1:32873/login/%23%2F?account_id=1000000 (response: 200)
-2017-01-21 17:18:10,961 DEBUG GET http://172.30.0.1:32873/a/accounts/self (response: 200)
-2017-01-21 17:18:10,961 DEBUG Generating RSA key.
-2017-01-21 17:18:10,964 DEBUG ssh-keygen -b 2048 -t rsa -f /tmp/tmphDJOEc/id_rsa -q -N ""
-2017-01-21 17:18:10,998 DEBUG docker inspect --type container d3bd5a5205a6cd10da96446a1d14d96de11081c792e1d25cc1476e3dc441602b
-2017-01-21 17:18:11,007 DEBUG Adding RSA key /tmp/tmphDJOEc/id_rsa to admin
-2017-01-21 17:18:11,007 DEBUG POST http://172.30.0.1:32873/a/accounts/self/sshkeys
-2017-01-21 17:18:11,109 DEBUG ssh -o LogLevel=quiet -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i /tmp/tmphDJOEc/id_rsa -p 32872 admin@172.30.0.1 gerrit version
-> echo $container_id $ssh_port $http_port $rsa_key
-d3bd5a5205a6cd10da96446a1d14d96de11081c792e1d25cc1476e3dc441602b 32774 32775 /tmp/tmphDJOEc/id_rsa
+++ gerrittest --log-level debug run
+2017-01-21 18:00:56,367 DEBUG docker run --detach --label gerrittest=1 --publish 8080 --publish 29418 opalmer/gerrittest:latest 
++ container_id=999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36
++ gerrittest --log-level debug wait 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36
+2017-01-21 18:00:56,922 DEBUG Waiting for 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36 to become active
+2017-01-21 18:00:56,922 DEBUG docker inspect --type container 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36 
+2017-01-21 18:00:56,932 DEBUG docker inspect --type container 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36 
+2017-01-21 18:00:56,942 DEBUG docker inspect --type container 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36 
+2017-01-21 18:00:56,951 DEBUG Waiting on 172.30.0.1:32893
+2017-01-21 18:01:03,269 DEBUG docker inspect --type container 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36 
+2017-01-21 18:01:03,283 DEBUG Waiting on 172.30.0.1:32892
++ gerrittest --log-level debug get-port ssh 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36
+2017-01-21 18:01:03,454 DEBUG docker inspect --type container 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36 
+32892
++ gerrittest --log-level debug get-port http 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36
+2017-01-21 18:01:03,616 DEBUG docker inspect --type container 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36 
+32893
++ gerrittest --log-level debug create-admin 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36
+2017-01-21 18:01:03,768 DEBUG docker inspect --type container 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36 
+2017-01-21 18:01:03,777 DEBUG docker inspect --type container 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36 
+2017-01-21 18:01:03,786 DEBUG Creating admin account.
+2017-01-21 18:01:03,873 DEBUG GET http://172.30.0.1:32893/login/%23%2F?account_id=1000000 (response: 200)
+2017-01-21 18:01:03,908 DEBUG GET http://172.30.0.1:32893/a/accounts/self (response: 200)
+2017-01-21 18:01:03,909 DEBUG Generating RSA key.
+2017-01-21 18:01:03,911 DEBUG ssh-keygen -b 2048 -t rsa -f /tmp/tmpY8ljAL/id_rsa -q -N ""
+2017-01-21 18:01:04,039 DEBUG docker inspect --type container 999ed2823460ab340eaf52a912d29c2ab3daccbf38e2474d7d4cb96aeb0cde36 
+2017-01-21 18:01:04,049 DEBUG Adding RSA key /tmp/tmpY8ljAL/id_rsa to admin
+2017-01-21 18:01:04,049 DEBUG POST http://172.30.0.1:32893/a/accounts/self/sshkeys
+2017-01-21 18:01:04,158 DEBUG ssh -o LogLevel=quiet -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i /tmp/tmpY8ljAL/id_rsa -p 32892 admin@172.30.0.1 gerrit version 
+/tmp/tmpY8ljAL/id_rsa
+
 ```
