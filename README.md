@@ -11,7 +11,16 @@ container to run Gerrit and a Makefile with some useful helpers.
 * Install docker
 * Install gerrittest, typically inside a virtualenv, one of two ways:
   * `pip install gerrittest`
-  * Clone down down the repository, `pip install -e .` 
+  * Clone down down the repository, `pip install -e .`
+   
+## Testing
+
+The gerrittest project can be tested locally. To build the container and
+the gerrittest command run:
+
+```
+make check
+```
 
 ## Command
 
