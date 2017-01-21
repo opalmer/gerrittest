@@ -20,7 +20,7 @@ a few commands and options:
  
 ```
 usage: gerrittest [-h] [--log-level {debug,info,warn,warning,error,critical}]
-                  {run,get-port,self-test} ...
+                  {run,get-port,ps,kill,self-test} ...
 
 Wraps the the `docker` command to run gerrittests
 
@@ -31,11 +31,15 @@ optional arguments:
                         impact command line output.
 
 Subcommands:
-  {run,get-port,self-test}
+  {run,get-port,ps,kill,self-test}
     run                 Runs Gerrit in the docker container.
     get-port            Returns the requested port for the provided container.
+    ps                  Returns a list of running containers gerrittest
+                        containers
+    kill                Kills and removes containers started by gerrittest
     self-test           Runs a sequence of sub-commands intended to 'self
                         test' the gerrittest command.
+
 ```
 
 ## Run
