@@ -4,22 +4,23 @@ utilities for handling command line input.
 """
 
 from __future__ import print_function
-import argparse
-import subprocess
-import sys
 
+import argparse
+import logging
+import sys
+from subprocess import CalledProcessError
+
+from gerrittest.command import check_output
 from gerrittest.docker import (
-    DEFAULT_IMAGE, DEFAULT_HTTP, DEFAULT_SSH, run, get_port)
+    DEFAULT_IMAGE, DEFAULT_HTTP, DEFAULT_SSH, get_run_command, get_port)
+from gerrittest.logger import logger
 
 
 def subcommand_run(args):
     """Implements subcommand `run`"""
-    container_id, http_port, ssh_port = run(
+    command = get_run_command(
         image=args.image, ip=args.ip, http_port=args.http, ssh_port=args.ssh)
-    if args.verbose:
-        print(container_id, http_port, ssh_port)
-        return
-    print(container_id)
+    print(check_output(command).strip())
 
 
 def subcommand_get_port(args):
@@ -46,16 +47,17 @@ def make_parser():
     """Creates and returns a parser for handling command line input"""
     parser = argparse.ArgumentParser(
         description="Wraps the the `docker` command to run gerrittests")
+    parser.add_argument(
+        "--log-level", default="info",
+        choices=("debug", "info", "warn", "warning", "error", "critical"),
+        help="Sets the logging level for gerrittest. This does not impact "
+             "command line output.")
     subparsers = parser.add_subparsers(title="Subcommands")
 
     # subcommand: run
     run = subparsers.add_parser(
         "run", help="Runs Gerrit in the docker container.")
     run.set_defaults(func=subcommand_run)
-    run.add_argument(
-        "-v", "--verbose", default=False, action="store_true",
-        help="If provided then display the mapped ports too. Without this "
-             "only the spawned container's ID will be shown.")
     run.add_argument(
         "--image", default=DEFAULT_IMAGE,
         help="The docker image to test with.")
@@ -79,8 +81,6 @@ def make_parser():
         help="Returns the requested port for the provided container.")
     ports.add_argument(
         "port", choices=("http", "ssh"), help="The port to retrieve.")
-    ports.add_argument(
-        "container", help="The container to retrieve the port for.")
     add_container_argument(ports)
     ports.set_defaults(func=subcommand_get_port)
     return parser
@@ -91,9 +91,12 @@ def main():
     parser = make_parser()
     args = parser.parse_args()
 
+    level = logging.getLevelName(args.log_level.upper())
+    logger.setLevel(level)
+
     try:
-        subprocess.check_output(["docker", "version"])
-    except subprocess.CalledProcessError:
+        check_output(["docker", "version"], logged=False)
+    except CalledProcessError:
         raise RuntimeError(
             "`docker version` failed. Please make sure docker is running and "
             "that you can connect to it.")

@@ -2,12 +2,15 @@
 from __future__ import print_function
 
 import json
-import subprocess
+import sys
+
+from gerrittest.logger import logger
+from gerrittest.command import check_output
 
 DEFAULT_IMAGE = "opalmer/gerrittest:latest"
 DEFAULT_HTTP = 8080
 DEFAULT_SSH = 29418
-DEFAULT_RANDOM = 0
+DEFAULT_RANDOM = "random"
 
 
 def get_run_command(
@@ -33,6 +36,7 @@ def get_run_command(
 
     """
     command = ["docker", "run", "--detach"]
+
     try:
         http_port = int(http_port)
     except ValueError:
@@ -67,24 +71,42 @@ def get_run_command(
         "--publish", ":".join(http), "--publish", ":".join(ssh), image]
 
 
-def inspect(container_id, expected_status="running"):
-    results = json.loads(
-        subprocess.check_output(
-            ["docker", "inspect", "--type", "container", container_id]))
+def inspect(container_id, required_status="running"):
+    """
+    Returns the results of the `docker inspect` command as
+    json.
+
+    :param str container_id:
+        The container id to return status for.
+
+    :param str required_status:
+        The status of the container must match this value otherwise
+        ValueError will be raised.
+    """
+    results = json.loads(check_output(
+        ["docker", "inspect", "--type", "container", container_id]))
+
     if len(results) != 1:
-        raise ValueError(
-            "Found %s containers for %r. Expected exactly "
-            "one." % (len(results), container_id))
+        logger.error(
+            "Expected exactly one container but found %s for %s",
+            len(results), container_id)
+        sys.exit(1)
 
     data = results[0]
-    if expected_status is not None and data["State"]["Status"] != expected_status:
-        raise ValueError(
-            "Container %r state: %r != %r" % (
-                container_id, data["State"]["Status"], expected_status))
-    return data
+    if required_status and data["State"]["Status"] != required_status:
+        logger.error(
+            "Container %s (state: %s, expected: %s)",
+            container_id, data["State"]["Status"], required_status)
+        raise ValueError("Unxpected container status.")
+
+    return results[0]
 
 
 def get_port(internal_port, container):
+    """
+    This function will return the exposed port for the requested internal port
+    and container.
+    """
     assert isinstance(internal_port, int)
 
     data = inspect(container)
@@ -93,11 +115,3 @@ def get_port(internal_port, container):
             if len(info) != 1:
                 raise ValueError("Expected exactly one entry for the port")
             return int(info[0]["HostPort"])
-
-
-def run(**kwargs):
-    command = get_run_command(**kwargs)
-    container_id = subprocess.check_output(command).strip()
-    http_port = get_port(DEFAULT_HTTP, container_id)
-    ssh_port = get_port(DEFAULT_SSH, container_id)
-    return container_id, http_port, ssh_port
