@@ -17,7 +17,7 @@ setup(
         "console_scripts": ["gerrittest = gerrittest.entrypoints:main"]
     },
     install_requires=(
-      "requests",
+        "requests",
     ),
     classifiers=(
         "Development Status :: 2 - Pre-Alpha",
