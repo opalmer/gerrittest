@@ -68,7 +68,11 @@ def get_run_command(
         ssh = publish_components + [str(ssh_port), str(DEFAULT_SSH)]
 
     return command + [
-        "--publish", ":".join(http), "--publish", ":".join(ssh), image]
+        "--label", "gerrittest=1",
+        "--publish", ":".join(http),
+        "--publish", ":".join(ssh),
+        image # must always be last
+    ]
 
 
 def inspect(container_id, required_status="running"):
@@ -115,3 +119,25 @@ def get_port(internal_port, container):
             if len(info) != 1:
                 raise ValueError("Expected exactly one entry for the port")
             return int(info[0]["HostPort"])
+
+
+def list_containers(show_all=False):
+    """
+    This function prints out a list of all gerritest containers. Any
+    container run with `gerritest run` should be returned.
+    """
+    command = ["docker", "ps", "--format", '"{{.ID}}"']
+    if show_all:
+        command += ["-a"]
+
+    for container_id in check_output(command).splitlines():
+        container_id = container_id.replace('"', "")
+        data = inspect(container_id, required_status="")
+
+        if data["Config"]["Labels"].get("gerrittest") == "1":
+            yield container_id.strip()
+
+
+def remove_container(container_id):
+    """Removes the requested container. Ignores any errors"""
+    return check_output(["docker", "rm", "-f", container_id])
