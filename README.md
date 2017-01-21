@@ -24,14 +24,14 @@ container to run Gerrit and a Makefile with some useful helpers.
 
 **Using Randomly Mapped Ports**
 
-```commandline
+```bash
 > gerrittest run --http 0 --ssh 0
 d9b38348d075c96af7691abe0e9a4b74fd293062bd8a329a6185116769a80fff
 ```
 
 **Retrieve Ports After Launch**
 
-```commandline
+```bash
 > gerrittest get-port ssh d9b
 32776
 > gerrittest get-port http d9b
