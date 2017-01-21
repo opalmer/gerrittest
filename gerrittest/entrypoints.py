@@ -13,12 +13,17 @@ from gerrittest.docker import (
 
 
 def subcommand_run(args):
+    """Implements subcommand `run`"""
     container_id, http_port, ssh_port = run(
         image=args.image, ip=args.ip, http_port=args.http, ssh_port=args.ssh)
-    print(container_id, http_port, ssh_port)
+    if args.verbose:
+        print(container_id, http_port, ssh_port)
+        return
+    print(container_id)
 
 
 def subcommand_get_port(args):
+    """Implements subcommand `get-port`"""
     if args.port == "http":
         internal_port = DEFAULT_HTTP
     elif args.port == "ssh":
@@ -42,6 +47,10 @@ def make_parser():
     run = subparsers.add_parser(
         "run", help="Runs Gerrit in the docker container.")
     run.set_defaults(func=subcommand_run)
+    run.add_argument(
+        "-v", "--verbose", default=False, action="store_true",
+        help="If provided then display the mapped ports too. Without this "
+             "only the spawned container's ID will be shown.")
     run.add_argument(
         "--image", default=DEFAULT_IMAGE,
         help="The docker image to test with.")

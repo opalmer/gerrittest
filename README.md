@@ -26,7 +26,7 @@ container to run Gerrit and a Makefile with some useful helpers.
 
 ```commandline
 > gerrittest run --http 0 --ssh 0
-d9b38348d075c96af7691abe0e9a4b74fd293062bd8a329a6185116769a80fff 32777 32776
+d9b38348d075c96af7691abe0e9a4b74fd293062bd8a329a6185116769a80fff
 ```
 
 **Retrieve Ports After Launch**
