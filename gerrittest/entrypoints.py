@@ -37,6 +37,11 @@ def subcommand_get_port(args):
     print(port)
 
 
+def add_container_argument(parser):
+    parser.add_argument(
+        "container", help="The container to retrieve the port for.")
+
+
 def make_parser():
     """Creates and returns a parser for handling command line input"""
     parser = argparse.ArgumentParser(
@@ -67,14 +72,15 @@ def make_parser():
              "ssh port. 29418 by default, 0 will assign a random port.")
 
     # subcommand: ports
-    run = subparsers.add_parser(
+    ports = subparsers.add_parser(
         "get-port",
         help="Returns the requested port for the provided container.")
-    run.add_argument(
+    ports.add_argument(
         "port", choices=("http", "ssh"), help="The port to retrieve.")
-    run.add_argument(
+    ports.add_argument(
         "container", help="The container to retrieve the port for.")
-    run.set_defaults(func=subcommand_get_port)
+    add_container_argument(ports)
+    ports.set_defaults(func=subcommand_get_port)
     return parser
 
 
