@@ -63,13 +63,15 @@ def make_parser():
         "--ip", default=None,
         help="The IP address to publish ports on.")
     run.add_argument(
-        "--http", default=DEFAULT_HTTP, type=int,
-        help="Defines which local port will be mapped to the exported "
-             "http port. 8080 by default, 0 will assign a random port.")
+        "--http", default="random",
+        help="Defines what local port should be mapped to the exported "
+             "http port. Defaults to 'random' but an explict port may be "
+             "provided instead.")
     run.add_argument(
-        "--ssh", default=DEFAULT_SSH, type=int,
-        help="Defines which local port will be mapped to the exported "
-             "ssh port. 29418 by default, 0 will assign a random port.")
+        "--ssh", default="random",
+        help="Defines what local port should be mapped to the exported "
+             "ssh port. Defaults to 'random' but an explit port may be "
+             "provided instead.")
 
     # subcommand: ports
     ports = subparsers.add_parser(
