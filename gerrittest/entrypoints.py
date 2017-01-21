@@ -38,6 +38,11 @@ def subcommand_get_port(args):
     print(port)
 
 
+def subcommand_self_test(args):
+    """Implements the subcommand: `self-test`"""
+
+
+
 def add_container_argument(parser):
     parser.add_argument(
         "container", help="The container to retrieve the port for.")
@@ -83,6 +88,13 @@ def make_parser():
         "port", choices=("http", "ssh"), help="The port to retrieve.")
     add_container_argument(ports)
     ports.set_defaults(func=subcommand_get_port)
+
+    # subcommand: self-check
+    self_test = subparsers.add_parser(
+        "self-test",
+        help="Runs a sequence of sub-commands intended to 'self test' "
+             "the gerrittest command.")
+    self_test.set_defaults(func=subcommand_self_test)
     return parser
 
 
