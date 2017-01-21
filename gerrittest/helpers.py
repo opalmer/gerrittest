@@ -1,15 +1,16 @@
 import tempfile
 import os
 import time
+import socket
 from os.path import join
 
 import requests
 from requests.auth import HTTPDigestAuth
 from requests.cookies import RequestsCookieJar
-from requests.exceptions import  ConnectionError
 
 from gerrittest.logger import logger
 from gerrittest.command import check_output
+from gerrittest.docker import inspect, get_port, get_network_gateway
 
 
 def create_admin(address, port):
@@ -74,3 +75,37 @@ def add_rsa_key(address, http_port, ssh_port, username, password, key_path):
         "admin@%s" % address,
         "gerrit", "version"
     ])
+
+
+def wait_socket(address, port):
+    """
+    Waits a server to be listening on the provided address/port combination.
+    """
+    logger.debug("Waiting on %s:%s", address, port)
+
+    while True:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.connect((address, port))
+            break
+
+        except socket.error:
+            time.sleep(.1)
+
+        finally:
+            sock.close()
+
+
+def wait(container_id):
+    """
+    Waits for the specified container to start running and begin listening
+    on the http/ssh ports.
+    """
+    logger.debug("Waiting for %s to become active", container_id)
+
+    while not inspect(container_id)["State"]["Running"]:
+        time.sleep(.1)
+
+    address = get_network_gateway(container_id)
+    wait_socket(address, get_port("http", container_id))
+    wait_socket(address, get_port("ssh", container_id))
