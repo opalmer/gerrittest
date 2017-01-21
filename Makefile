@@ -6,4 +6,4 @@ build:
 	pip install -e .
 
 test:
-	gerrittest --log-level debug self-test
+	./test.sh
