@@ -13,27 +13,50 @@ container to run Gerrit and a Makefile with some useful helpers.
   * `pip install gerrittest`
   * Clone down CreateClone down the repository, `pip install -e .` 
 
+## Command
+
+The gerrittest package provides a `gerrittest` command. This command has
+a few commands and options:
+ 
+```
+usage: gerrittest [-h] [--log-level {debug,info,warn,warning,error,critical}]
+                  {run,get-port} ...
+
+Wraps the the `docker` command to run gerrittests
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --log-level {debug,info,warn,warning,error,critical}
+                        Sets the logging level for gerrittest. This does not
+                        impact command line output.
+
+Subcommands:
+  {run,get-port}
+    run                 Runs Gerrit in the docker container.
+    get-port            Returns the requested port for the provided container.
+```
 
 ## Run
 
-**Using Default Ports**
+**Running Gerrit**
 ```bash
-> gerrittest run
-39bce5010cd0bb34889cc1f20dd6251a54c41aa717342d4e2a2fe8fc9ac91102 8080 29418
+> container_id=$(gerrittest --log-level debug run)
+2017-01-21 14:14:02,528 DEBUG docker version
+2017-01-21 14:14:02,537 DEBUG docker run --detach --publish 8080 --publish 29418 opalmer/gerrittest:latest
+> echo $container_id
+e3e7d684faa0110a6243186d0ff9b7379cf1dc068f731a3a60822901e002fa71
+> ssh_port=$(gerrittest --log-level debug get-port ssh $container_id)
+2017-01-21 14:16:46,948 DEBUG docker inspect --type container e3e7d684faa0110a6243186d0ff9b7379cf1dc068f731a3a60822901e002fa71
+> http_port=$(gerrittest --log-level debug get-port http $container_id)
+> echo $ssh_port $http_port
+32774 32775
 ```
 
-**Using Randomly Mapped Ports**
+**Querying Container Ports**
 
 ```bash
-> gerrittest run --http 0 --ssh 0
-d9b38348d075c96af7691abe0e9a4b74fd293062bd8a329a6185116769a80fff
-```
-
-**Retrieve Ports After Launch**
-
-```bash
-> gerrittest get-port ssh d9b
+> gerrittest get-port ssh $(container_id)
 32776
-> gerrittest get-port http d9b
+> gerrittest get-port http $(container_id)
 32777
 ```
