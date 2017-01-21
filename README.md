@@ -11,36 +11,12 @@ container to run Gerrit and a Makefile with some useful helpers.
 * Install docker
 * Install gerrittest, typically inside a virtualenv, one of two ways:
   * `pip install gerrittest`
-  * Clone down CreateClone down the repository, `pip install -e .` 
+  * Clone down down the repository, `pip install -e .` 
 
 ## Command
 
 The gerrittest package provides a `gerrittest` command. This command has
-a few commands and options:
- 
-```
-usage: gerrittest [-h] [--log-level {debug,info,warn,warning,error,critical}]
-                  {run,get-port,ps,kill,self-test} ...
-
-Wraps the the `docker` command to run gerrittests
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --log-level {debug,info,warn,warning,error,critical}
-                        Sets the logging level for gerrittest. This does not
-                        impact command line output.
-
-Subcommands:
-  {run,get-port,ps,kill,self-test}
-    run                 Runs Gerrit in the docker container.
-    get-port            Returns the requested port for the provided container.
-    ps                  Returns a list of running containers gerrittest
-                        containers
-    kill                Kills and removes containers started by gerrittest
-    self-test           Runs a sequence of sub-commands intended to 'self
-                        test' the gerrittest command.
-
-```
+a few different sub-commands, use `--help` to see them.
 
 ## Run
 
