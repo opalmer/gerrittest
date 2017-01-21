@@ -111,6 +111,10 @@ def get_port(internal_port, container):
     This function will return the exposed port for the requested internal port
     and container.
     """
+    if internal_port == "http":
+        internal_port = DEFAULT_HTTP
+    if internal_port == "ssh":
+        internal_port = DEFAULT_SSH
     assert isinstance(internal_port, int)
 
     data = inspect(container)
@@ -141,3 +145,7 @@ def list_containers(show_all=False):
 def remove_container(container_id):
     """Removes the requested container. Ignores any errors"""
     return check_output(["docker", "rm", "-f", container_id])
+
+
+def get_network_gateway(container_id):
+    return inspect(container_id)["NetworkSettings"]["Gateway"]
