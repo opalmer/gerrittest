@@ -13,7 +13,9 @@ from subprocess import CalledProcessError
 from gerrittest.command import check_output
 from gerrittest.docker import (
     DEFAULT_IMAGE, DEFAULT_HTTP, DEFAULT_SSH, DEFAULT_RANDOM,
-    get_run_command, get_port, list_containers, remove_container)
+    get_run_command, get_port, list_containers, remove_container,
+    get_network_gateway)
+from gerrittest.helpers import create_admin, generate_rsa_key, add_rsa_key
 from gerrittest.logger import logger
 
 
@@ -83,36 +85,19 @@ def subcommand_kill(args, silent=False):
     return outputs
 
 
-def subcommand_self_test(args):
-    """Implements the subcommand: `self-test`"""
-    # Add additional arguments that are not set
-    # by the 'self-test' sub-command.
-    args.image = DEFAULT_IMAGE
-    args.http = DEFAULT_RANDOM
-    args.ssh = DEFAULT_RANDOM
-    args.ip = None
+def subcommand_create_admin(args, silent=False):
+    """Implements the subcommand: `create-admin"""
+    network_addr = get_network_gateway(args.container)
+    http_port = get_port("http", args.container)
 
-    # subcomman: run
-    container_id = subcommand_run(args, silent=True)
-    args.container = container_id
-    logger.info("Created container %s", container_id)
+    username, password = create_admin(network_addr, http_port)
+    key = generate_rsa_key()
+    ssh_port = get_port("ssh", args.container)
+    add_rsa_key(network_addr, http_port, ssh_port, username, password, key)
 
-    # subcommand: get-port
-    for port in ("http", "ssh"):
-        args.port = port
-        port = subcommand_get_port(args, silent=True)
-        logger.info("   %s port: %s", args.port, port)
-
-    # subcommand: ps
-    args.all = True
-    for found_container_id in subcommand_ps(args, silent=True):
-        logger.info("Found container: %s", found_container_id)
-
-    # subcommand: kill
-    args.containers = [container_id]
-
-    for container in subcommand_kill(args, silent=True):
-        logger.info("Killed %s", container)
+    if not silent:
+        print(key)
+    return key
 
 
 def make_parser():
@@ -182,12 +167,12 @@ def make_parser():
              "gerritest containers will be killed.")
     kill.set_defaults(func=subcommand_kill)
 
-    # subcommand: self-check
-    self_test = subparsers.add_parser(
-        "self-test",
-        help="Runs a sequence of sub-commands intended to 'self test' "
-             "the gerrittest command.")
-    self_test.set_defaults(func=subcommand_self_test)
+    create_admin = subparsers.add_parser(
+        "create-admin",
+        help="Creates an admin account and ssh key.")
+    create_admin.add_argument(
+        "container", help="The container to retrieve the port for.")
+    create_admin.set_defaults(func=subcommand_create_admin)
     return parser
 
 
