@@ -7,6 +7,7 @@ import subprocess
 DEFAULT_IMAGE = "opalmer/gerrittest:latest"
 DEFAULT_HTTP = 8080
 DEFAULT_SSH = 29418
+DEFAULT_RANDOM = 0
 
 
 def get_run_command(
@@ -43,14 +44,14 @@ def get_run_command(
 
     if http_port == DEFAULT_HTTP:
         http = publish_components + [str(DEFAULT_HTTP), str(DEFAULT_HTTP)]
-    elif http_port == 0:
+    elif http_port == DEFAULT_RANDOM:
         http = publish_components + [str(DEFAULT_HTTP)]
     else:
         http = publish_components + [str(http_port), str(DEFAULT_HTTP)]
 
     if ssh_port == DEFAULT_SSH:
         ssh = publish_components + [str(DEFAULT_SSH), str(DEFAULT_SSH)]
-    elif ssh_port == 0:
+    elif ssh_port == DEFAULT_RANDOM:
         ssh = publish_components + [str(DEFAULT_SSH)]
     else:
         ssh = publish_components + [str(ssh_port), str(DEFAULT_SSH)]
