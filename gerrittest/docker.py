@@ -24,15 +24,26 @@ def get_run_command(
         An explicit address which ports should be published to.
 
     :param int http_port:
-        The port to publish the http service on. Use `0` to bind
+        The port to publish the http service on. Supply `random` to bind
         the service to a random port.
 
     :param int ssh_port:
-    The port to publish the ssh service on. Use `0` to bind
+    The port to publish the ssh service on. Supply `random` to bind
         the service to a random port.
 
     """
     command = ["docker", "run", "--detach"]
+    try:
+        http_port = int(http_port)
+    except ValueError:
+        if http_port != "random":
+            raise ValueError("http port must be 'random' or an integer.")
+
+    try:
+        ssh_port = int(ssh_port)
+    except ValueError:
+        if ssh_port != "random":
+            raise ValueError("ssh port must be 'random' or an integer.")
 
     publish_prefix = ""
     if ip is not None:
@@ -42,16 +53,12 @@ def get_run_command(
     if ip is not None:
         publish_components += [ip]
 
-    if http_port == DEFAULT_HTTP:
-        http = publish_components + [str(DEFAULT_HTTP), str(DEFAULT_HTTP)]
-    elif http_port == DEFAULT_RANDOM:
+    if http_port == DEFAULT_RANDOM:
         http = publish_components + [str(DEFAULT_HTTP)]
     else:
         http = publish_components + [str(http_port), str(DEFAULT_HTTP)]
 
-    if ssh_port == DEFAULT_SSH:
-        ssh = publish_components + [str(DEFAULT_SSH), str(DEFAULT_SSH)]
-    elif ssh_port == DEFAULT_RANDOM:
+    if ssh_port == DEFAULT_RANDOM:
         ssh = publish_components + [str(DEFAULT_SSH)]
     else:
         ssh = publish_components + [str(ssh_port), str(DEFAULT_SSH)]
