@@ -9,7 +9,7 @@ container to run Gerrit and a Makefile with some useful helpers.
 ## Setup
 
 * Install docker
-* Install gerrittest, typically inside a virtualenv, one of two days:
+* Install gerrittest, typically inside a virtualenv, one of two ways:
   * `pip install gerrittest`
   * Clone down CreateClone down the repository, `pip install -e .` 
 
