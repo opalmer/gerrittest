@@ -62,17 +62,16 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 		username, password, pubKey, privKey, err := helpers.CreateAdmin()
 		adminUser = username
 		adminPassword = password
-		_ = pubKey
-		_ = privKey
-
 		if err != nil {
 			return err
 		}
+		if err := helpers.AddPublicKey(adminUser, adminPassword, pubKey); err != nil {
+			return err
+		}
+		if err := helpers.CheckSSHLogin(adminUser, privKey); err != nil {
+			return err
+		}
 	}
-
-	_ = adminUser
-	_ = adminPassword
-	fmt.Println(helpers.CreateSSHKeyPair())
 
 	return nil
 }

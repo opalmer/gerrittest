@@ -12,6 +12,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
+	"os"
+	"errors"
 )
 
 // Helpers provides a small set of utility functions
@@ -82,26 +84,57 @@ func (h *Helpers) CreateAdmin() (string, string, string, string, error) {
 	return "admin", "secret", pubKey, privKey, h.CheckHTTPLogin("admin", "secret")
 }
 
-// CheckLogin attempts to login as the requested user.
+// AddPublicKey adds the public key from the provided path to the provided user.
+func (h *Helpers) AddPublicKey(user string, password string, publicKeyPath string) error {
+	file, err := os.Open(publicKeyPath)
+	if err != nil {
+		return err
+	}
+	url := h.GetURL("/a/accounts/self/sshkeys")
+	logger := h.log.WithFields(log.Fields{
+		"url":   url,
+		"phase": "add-public-key",
+		"user":  user,
+		"path": publicKeyPath,
+	})
+	logger.Info()
+	request, err := http.NewRequest("POST", url, file)
+	if err != nil {
+		return err
+	}
+	request.SetBasicAuth(user, password)
+	_, err = http.DefaultClient.Do(request)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CheckHTTPLogin attempts to login as the requested user.
 func (h *Helpers) CheckHTTPLogin(user string, password string) error {
 	url := h.GetURL("/a/accounts/self")
-	logger := h.log.WithFields(log.Fields{
+	h.log.WithFields(log.Fields{
 		"url":   url,
 		"phase": "check-http-login",
 		"user":  user,
-	})
-	logger.Info()
-	request, err := http.NewRequest(
-		"GET",
-		fmt.Sprintf(
-			"http://%s:%d/a/accounts/self", h.http.Address, h.http.Public),
-		nil)
+	}).Info()
+	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
 	request.SetBasicAuth(user, password)
 	_, err = http.DefaultClient.Do(request)
 	return err
+}
+
+// CheckSSHLogin attempts to login as the requested user.
+func (h *Helpers) CheckSSHLogin(user string, privKeyPath string) error {
+	h.log.WithFields(log.Fields{
+		"phase": "check-ssh-login",
+		"user":  user,
+		"key": privKeyPath,
+	}).Info()
+	return errors.New("Not Implemented")
 }
 
 // NewHelpers returns a *Helpers struct
