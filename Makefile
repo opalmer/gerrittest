@@ -5,10 +5,13 @@ EXTRA_DEPENDENCIES = \
     github.com/kardianos/govendor \
     github.com/golang/lint/golint
 
-check: deps docker
+check: deps docker build test
 
 docker:
 	$(MAKE) -C docker build
+
+build:
+	go build cmd/gerrittest.go
 
 deps:
 	go get $(EXTRA_DEPENDENCIES)
