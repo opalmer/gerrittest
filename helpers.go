@@ -18,6 +18,12 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+var (
+	// ErrExpectedCreated may be returned when we're attemping to create
+	// a user and fail in the process of doing so.
+	ErrExpectedCreated = errors.New("Expected 201 Created")
+)
+
 // Helpers provides a small set of utility functions
 // for interacting with Gerrit inside the docker
 // container. This has few external dependencies so it's
@@ -110,9 +116,8 @@ func (h *Helpers) AddPublicKey(user string, password string, publicKeyPath strin
 		return err
 	}
 	if response.StatusCode != http.StatusCreated {
-		err := errors.New("Expected 201 Created")
-		h.log.WithError(err).WithField("response", response).Error()
-		return err
+		h.log.WithError(ErrExpectedCreated).WithField("response", response).Error()
+		return ErrExpectedCreated
 	}
 	return nil
 }
