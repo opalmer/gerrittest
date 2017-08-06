@@ -10,6 +10,9 @@ import (
 	"net/http"
 	"os"
 
+	"errors"
+	"net/http/cookiejar"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
@@ -20,14 +23,15 @@ import (
 // container. This has few external dependencies so it's
 // a decent way of interacting with Gerrit when testing.
 type Helpers struct {
-	HTTPPort *dockertest.Port
-	SSHPort  *dockertest.Port
-	log      *log.Entry
+	HTTP   *dockertest.Port
+	SSH    *dockertest.Port
+	log    *log.Entry
+	client *http.Client
 }
 
 // GetURL returns the full url by combining port information with a tail.
 func (h *Helpers) GetURL(tail string) string {
-	return fmt.Sprintf("HTTPPort://%s:%d%s", h.HTTPPort.Address, h.HTTPPort.Public, tail)
+	return fmt.Sprintf("http://%s:%d%s", h.HTTP.Address, h.HTTP.Public, tail)
 }
 
 // CreateSSHKeyPair generates a public and private SSH key pair then returns
@@ -69,7 +73,7 @@ func (h *Helpers) CreateAdmin() (string, string, string, string, error) {
 		"phase": "create-admin",
 	})
 	logger.Debug()
-	response, err := http.Get(url)
+	response, err := h.client.Get(url)
 	if err != nil {
 		logger.WithError(err).Error()
 		return "", "", "", "", err
@@ -101,8 +105,13 @@ func (h *Helpers) AddPublicKey(user string, password string, publicKeyPath strin
 		return err
 	}
 	request.SetBasicAuth(user, password)
-	_, err = http.DefaultClient.Do(request)
+	response, err := h.client.Do(request)
 	if err != nil {
+		return err
+	}
+	if response.StatusCode != http.StatusCreated {
+		err := errors.New("Expected 201 Created")
+		h.log.WithError(err).WithField("response", response).Error()
 		return err
 	}
 	return nil
@@ -113,7 +122,7 @@ func (h *Helpers) CheckHTTPLogin(user string, password string) error {
 	url := h.GetURL("/a/accounts/self")
 	h.log.WithFields(log.Fields{
 		"url":   url,
-		"phase": "check-HTTPPort-login",
+		"phase": "check-HTTP-login",
 		"user":  user,
 	}).Debug()
 	request, err := http.NewRequest("GET", url, nil)
@@ -121,19 +130,23 @@ func (h *Helpers) CheckHTTPLogin(user string, password string) error {
 		return err
 	}
 	request.SetBasicAuth(user, password)
-	_, err = http.DefaultClient.Do(request)
+	_, err = h.client.Do(request)
 	return err
 }
 
 // GetSSHClient returns an SSHPort client for connecting to Gerrit docker instances.
 func (h *Helpers) GetSSHClient(user *User) (*SSHClient, error) {
-	return NewSSHClient(user.Login, user.PrivateKey, h.SSHPort)
+	return NewSSHClient(user.Login, user.PrivateKey, h.SSH)
 }
 
 // NewHelpers returns a *Helpers struct
-func NewHelpers(http *dockertest.Port, ssh *dockertest.Port) *Helpers {
+func NewHelpers(httpPort *dockertest.Port, sshPort *dockertest.Port) *Helpers {
+	jar, _ := cookiejar.New(nil)
 	return &Helpers{
-		HTTPPort: http, SSHPort: ssh,
+		HTTP: httpPort, SSH: sshPort,
+		client: &http.Client{
+			Jar: jar,
+		},
 		log: log.WithFields(log.Fields{
 			"svc": "gerrittest",
 			"cmp": "helpers",

@@ -19,6 +19,10 @@ type Config struct {
 	// CreateAdmin when true will cause a default admin
 	// account to be created.
 	CreateAdmin bool
+
+	// Keep indicates if the container should be kept around
+	// after we're done and/or after failure.
+	Keep bool
 }
 
 // NewConfig produces a *Config struct with reasonable
@@ -29,5 +33,6 @@ func NewConfig() *Config {
 		PortSSH:     dockertest.RandomPort,
 		PortHTTP:    dockertest.RandomPort,
 		CreateAdmin: true,
+		Keep:        false,
 	}
 }

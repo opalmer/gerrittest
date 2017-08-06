@@ -9,8 +9,11 @@ import (
 
 var (
 	image = flag.String(
-		"image", "opalmer/gerrittest:latest",
+		"image", "opalmer/gerrittest:2.14.2",
 		"The Docker image to use to run Gerrit.")
+	keep = flag.Bool(
+		"keep", false,
+		"If provided, do not clean up containers.")
 	portHTTP = flag.Uint(
 		"http", uint(dockertest.RandomPort),
 		"The port to map to the HTTP service. Random by default.")
@@ -33,6 +36,7 @@ func main() {
 	cfg.Image = *image
 	cfg.PortSSH = uint16(*portSSH)
 	cfg.PortHTTP = uint16(*portHTTP)
+	cfg.Keep = *keep
 	if *debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	}

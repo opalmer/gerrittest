@@ -12,5 +12,5 @@ build:
 	  .
 
 push:
-	docker push opalmer/gerrittest:latest
 	docker push opalmer/gerrittest:$(GERRIT_VERSION)
+	docker push opalmer/gerrittest:latest

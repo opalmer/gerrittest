@@ -11,7 +11,7 @@ import (
 
 const (
 	// ExportedHTTPPort is the port exported by the docker container
-	// where the HTTPPort service is running.
+	// where the HTTP service is running.
 	ExportedHTTPPort = 8080
 
 	// ExportedSSHPort is the port exported by the docker container
@@ -39,6 +39,9 @@ type Service struct {
 // Close will terminate the running Gerrit container. This should be
 // called when you're done testing.
 func (s *Service) Close() error {
+	if s.cfg.Keep {
+		return nil
+	}
 	return s.svc.Terminate()
 }
 
@@ -50,8 +53,8 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 	}
 
 	// Wait for HTTP to be listening before moving forward.
-	s.URL = fmt.Sprintf("HTTPPort://%s:%d", portHTTP.Address, portHTTP.Public)
-	entry := logger.WithField("action", "wait-for-HTTPPort")
+	s.URL = fmt.Sprintf("http://%s:%d", portHTTP.Address, portHTTP.Public)
+	entry := logger.WithField("action", "wait-for-http")
 	start := time.Now()
 	entry.Debug()
 	for {
@@ -66,6 +69,10 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 
 	portSSH, err := s.svc.Container.Port(ExportedSSHPort)
 	if err != nil {
+		if s.cfg.Keep {
+			logger.WithError(err).Warn()
+			err = nil
+		}
 		return err
 	}
 	s.Helpers = NewHelpers(portHTTP, portSSH)
@@ -77,9 +84,17 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 		adminUser = username
 		adminPassword = password
 		if err != nil {
+			if s.cfg.Keep {
+				logger.WithError(err).Warn()
+				err = nil
+			}
 			return err
 		}
 		if err := s.Helpers.AddPublicKey(adminUser, adminPassword, pubKey); err != nil {
+			if s.cfg.Keep {
+				logger.WithError(err).Warn()
+				err = nil
+			}
 			return err
 		}
 		s.Admin = &User{
@@ -89,9 +104,17 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 		}
 		client, err := s.Helpers.GetSSHClient(s.Admin)
 		if err != nil {
+			if s.cfg.Keep {
+				logger.WithError(err).Warn()
+				err = nil
+			}
 			return err
 		}
 		if err := client.Close(); err != nil {
+			if s.cfg.Keep {
+				logger.WithError(err).Warn()
+				err = nil
+			}
 			return err
 		}
 	}
@@ -105,7 +128,6 @@ func (s *Service) Run() (*User, *Helpers, error) {
 	s.log.WithField("phase", "run").Debug()
 	s.svc.Ping = s.ping
 	if err := s.svc.Run(); err != nil {
-		defer s.svc.Terminate()
 		return nil, nil, err
 	}
 	return s.Admin, s.Helpers, nil
