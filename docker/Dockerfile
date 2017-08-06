@@ -31,10 +31,10 @@ RUN set -x \
 # the integrity of gerrit.war
 RUN set -x \
     && adduser -D -h "${GERRIT_HOME}" -g "Gerrit User" "${GERRIT_USER}" && mkdir -p ${GERRIT_HOME} \
-    && curl -so ${GERRIT_HOME}/events-log.jar https://gerrit-ci.gerritforge.com/job/plugin-events-log-${PLUGIN_VERSION}/lastSuccessfulBuild/artifact/buck-out/gen/plugins/events-log/events-log.jar \
-    && curl -so ${GERRIT_HOME}/delete-project.jar https://gerrit-ci.gerritforge.com/job/plugin-delete-project-${PLUGIN_VERSION}/lastSuccessfulBuild/artifact/buck-out/gen/plugins/delete-project/delete-project.jar \
-    && curl -so ${GERRIT_HOME}/bcprov-jdk15on-${BOUNCY_CASTLE_VERSION}.jar https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk15on/${BOUNCY_CASTLE_VERSION}/bcprov-jdk15on-${BOUNCY_CASTLE_VERSION}.jar \
-    && curl -so ${GERRIT_HOME}/bcpkix-jdk15on-${BOUNCY_CASTLE_VERSION}.jar https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-jdk15on/${BOUNCY_CASTLE_VERSION}/bcpkix-jdk15on-${BOUNCY_CASTLE_VERSION}.jar \
+    && curl -so ${GERRIT_SITE}/events-log.jar https://gerrit-ci.gerritforge.com/job/plugin-events-log-${PLUGIN_VERSION}/lastSuccessfulBuild/artifact/buck-out/gen/plugins/events-log/events-log.jar \
+    && curl -so ${GERRIT_SITE}/delete-project.jar https://gerrit-ci.gerritforge.com/job/plugin-delete-project-${PLUGIN_VERSION}/lastSuccessfulBuild/artifact/buck-out/gen/plugins/delete-project/delete-project.jar \
+    && curl -so ${GERRIT_SITE}/lib/bcprov-jdk15on-${BOUNCY_CASTLE_VERSION}.jar https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk15on/${BOUNCY_CASTLE_VERSION}/bcprov-jdk15on-${BOUNCY_CASTLE_VERSION}.jar \
+    && curl -so ${GERRIT_SITE}/lib/bcpkix-jdk15on-${BOUNCY_CASTLE_VERSION}.jar https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-jdk15on/${BOUNCY_CASTLE_VERSION}/bcpkix-jdk15on-${BOUNCY_CASTLE_VERSION}.jar \
     && curl -so ${GERRIT_HOME}/gerrit.war http://gerrit-releases.storage.googleapis.com/gerrit-${GERRIT_VERSION}.war  \
     && echo "${GERRIT_WAR_SHA1}  ${GERRIT_HOME}/gerrit.war" > ${GERRIT_HOME}/gerrit.war.sha1 \
     && sha1sum -c ${GERRIT_HOME}/gerrit.war.sha1 && rm ${GERRIT_HOME}/gerrit.war.sha1
