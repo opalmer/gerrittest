@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
-	"os"
-	"errors"
 )
 
 // Helpers provides a small set of utility functions
@@ -75,7 +74,7 @@ func (h *Helpers) CreateAdmin() (string, string, string, string, error) {
 		logger.WithError(err).Error()
 		return "", "", "", "", err
 	}
-	logger.WithField("code", response.StatusCode).Info()
+	logger.WithField("code", response.StatusCode).Debug()
 	pubKey, privKey, err := h.CreateSSHKeyPair()
 	if err != nil {
 		return "", "", "", "", err
@@ -91,13 +90,12 @@ func (h *Helpers) AddPublicKey(user string, password string, publicKeyPath strin
 		return err
 	}
 	url := h.GetURL("/a/accounts/self/sshkeys")
-	logger := h.log.WithFields(log.Fields{
+	h.log.WithFields(log.Fields{
 		"url":   url,
 		"phase": "add-public-key",
 		"user":  user,
-		"path": publicKeyPath,
-	})
-	logger.Info()
+		"path":  publicKeyPath,
+	}).Debug()
 	request, err := http.NewRequest("POST", url, file)
 	if err != nil {
 		return err
@@ -117,7 +115,7 @@ func (h *Helpers) CheckHTTPLogin(user string, password string) error {
 		"url":   url,
 		"phase": "check-http-login",
 		"user":  user,
-	}).Info()
+	}).Debug()
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -127,14 +125,9 @@ func (h *Helpers) CheckHTTPLogin(user string, password string) error {
 	return err
 }
 
-// CheckSSHLogin attempts to login as the requested user.
-func (h *Helpers) CheckSSHLogin(user string, privKeyPath string) error {
-	h.log.WithFields(log.Fields{
-		"phase": "check-ssh-login",
-		"user":  user,
-		"key": privKeyPath,
-	}).Info()
-	return errors.New("Not Implemented")
+// GetSSHClient returns an ssh client for connecting to Gerrit docker instances.
+func (h *Helpers) GetSSHClient(user *User) (*SSHClient, error) {
+	return NewSSHClient(user.Login, user.PrivateKey, h.ssh)
 }
 
 // NewHelpers returns a *Helpers struct

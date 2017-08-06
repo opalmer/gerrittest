@@ -38,7 +38,11 @@ func main() {
 	}
 
 	service := gerrittest.NewService(client, cfg)
-	if err := service.Run(); err != nil {
+	admin, helpers, err := service.Run()
+	if err != nil {
 		panic(err)
 	}
+	defer service.Close()
+	_ = admin
+	_ = helpers
 }
