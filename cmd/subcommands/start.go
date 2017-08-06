@@ -1,4 +1,4 @@
-package start
+package cmd
 
 import (
 	"encoding/json"
@@ -11,7 +11,8 @@ import (
 	"path/filepath"
 )
 
-var Cmd = &cobra.Command{
+// Start implements the `start` subcommand.
+var Start = &cobra.Command{
 	Use:   "start",
 	Short: "Responsible for starting an instance of Gerrit.",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -82,17 +83,7 @@ var Cmd = &cobra.Command{
 }
 
 func init() {
-	Cmd.Flags().String(
+	Stop.Flags().String(
 		"json", "",
-		"The location to write information about the service to. Any "+
-			"existing content will be overwritten.")
-	Cmd.Flags().String(
-		"image", "opalmer/gerrittest:2.14.2",
-		"The Docker image to spin up Gerrit.")
-	Cmd.Flags().Uint16(
-		"port-http", dockertest.RandomPort,
-		"The local port to map to Gerrit's REST API. Random by default.")
-	Cmd.Flags().Uint16(
-		"port-ssh", dockertest.RandomPort,
-		"The local port to map to Gerrit's REST API. Random by default.")
+		"The json file containing the container to stop.")
 }

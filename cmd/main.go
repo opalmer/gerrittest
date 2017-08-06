@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt" 
+	"fmt"
 	log "github.com/Sirupsen/logrus"
-	"github.com/opalmer/gerrittest/cmd/subcommands/start"
+	"github.com/opalmer/gerrittest/cmd/subcommands"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -36,5 +36,6 @@ func init() {
 	RootCmd.PersistentFlags().String(
 		"log-level", "warning",
 		"Configures the global logging level.")
-	RootCmd.AddCommand(start.Cmd)
+	RootCmd.AddCommand(cmd.Start)
+	RootCmd.AddCommand(cmd.Stop)
 }
