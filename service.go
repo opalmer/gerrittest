@@ -21,18 +21,18 @@ const (
 
 // User represents a single user for connecting to Gerrit.
 type User struct {
-	Login string
-	Password string
+	Login      string
+	Password   string
 	PrivateKey string
 }
 
 // Service used to store and information about the running service.
 type Service struct {
-	cfg    *Config
-	svc    *dockertest.Service
-	log    *log.Entry
-	URL    string
-	Admin *User
+	cfg     *Config
+	svc     *dockertest.Service
+	log     *log.Entry
+	URL     string
+	Admin   *User
 	Helpers *Helpers
 }
 
@@ -83,8 +83,8 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 			return err
 		}
 		s.Admin = &User{
-			Login: adminUser,
-			Password: adminPassword,
+			Login:      adminUser,
+			Password:   adminPassword,
 			PrivateKey: privKey,
 		}
 		client, err := s.Helpers.GetSSHClient(s.Admin)

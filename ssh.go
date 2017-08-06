@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"strings"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
-	"strings"
 )
 
 // SSHClient implements an SSH client for talking to
@@ -70,8 +71,8 @@ func NewSSHClient(user string, privateKeyPath string, port *dockertest.Port) (*S
 	sshClient, err := ssh.Dial(
 		"tcp", fmt.Sprintf("%s:%d", port.Address, port.Public),
 		&ssh.ClientConfig{
-			User: user,
-			Auth: []ssh.AuthMethod{ssh.PublicKeys(key)},
+			User:            user,
+			Auth:            []ssh.AuthMethod{ssh.PublicKeys(key)},
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		},
 	)
