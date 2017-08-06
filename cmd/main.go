@@ -40,13 +40,14 @@ func main() {
 	if *debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-
 	service := gerrittest.NewService(client, cfg)
-	admin, helpers, err := service.Run()
+
+	if !*keep {
+		defer service.Close()
+	}
+	_, _, err = service.Run()
 	if err != nil {
+		defer service.Close()
 		panic(err)
 	}
-	defer service.Close()
-	_ = admin
-	_ = helpers
 }
