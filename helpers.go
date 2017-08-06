@@ -20,14 +20,14 @@ import (
 // container. This has few external dependencies so it's
 // a decent way of interacting with Gerrit when testing.
 type Helpers struct {
-	http *dockertest.Port
-	ssh  *dockertest.Port
-	log  *log.Entry
+	HTTPPort *dockertest.Port
+	SSHPort  *dockertest.Port
+	log      *log.Entry
 }
 
 // GetURL returns the full url by combining port information with a tail.
 func (h *Helpers) GetURL(tail string) string {
-	return fmt.Sprintf("http://%s:%d%s", h.http.Address, h.http.Public, tail)
+	return fmt.Sprintf("HTTPPort://%s:%d%s", h.HTTPPort.Address, h.HTTPPort.Public, tail)
 }
 
 // CreateSSHKeyPair generates a public and private SSH key pair then returns
@@ -38,7 +38,7 @@ func (h *Helpers) CreateSSHKeyPair() (string, string, error) {
 		return "", "", err
 	}
 
-	privateKeyFile, err := ioutil.TempFile("", "ssh-rsa-")
+	privateKeyFile, err := ioutil.TempFile("", "SSHPort-rsa-")
 	defer privateKeyFile.Close()
 	if err != nil {
 		return "", "", err
@@ -113,7 +113,7 @@ func (h *Helpers) CheckHTTPLogin(user string, password string) error {
 	url := h.GetURL("/a/accounts/self")
 	h.log.WithFields(log.Fields{
 		"url":   url,
-		"phase": "check-http-login",
+		"phase": "check-HTTPPort-login",
 		"user":  user,
 	}).Debug()
 	request, err := http.NewRequest("GET", url, nil)
@@ -125,15 +125,15 @@ func (h *Helpers) CheckHTTPLogin(user string, password string) error {
 	return err
 }
 
-// GetSSHClient returns an ssh client for connecting to Gerrit docker instances.
+// GetSSHClient returns an SSHPort client for connecting to Gerrit docker instances.
 func (h *Helpers) GetSSHClient(user *User) (*SSHClient, error) {
-	return NewSSHClient(user.Login, user.PrivateKey, h.ssh)
+	return NewSSHClient(user.Login, user.PrivateKey, h.SSHPort)
 }
 
 // NewHelpers returns a *Helpers struct
 func NewHelpers(http *dockertest.Port, ssh *dockertest.Port) *Helpers {
 	return &Helpers{
-		http: http, ssh: ssh,
+		HTTPPort: http, SSHPort: ssh,
 		log: log.WithFields(log.Fields{
 			"svc": "gerrittest",
 			"cmp": "helpers",

@@ -11,11 +11,11 @@ import (
 
 const (
 	// ExportedHTTPPort is the port exported by the docker container
-	// where the http service is running.
+	// where the HTTPPort service is running.
 	ExportedHTTPPort = 8080
 
 	// ExportedSSHPort is the port exported by the docker container
-	// where the ssh service is running.
+	// where the SSHPort service is running.
 	ExportedSSHPort = 29418
 )
 
@@ -50,8 +50,8 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 	}
 
 	// Wait for HTTP to be listening before moving forward.
-	s.URL = fmt.Sprintf("http://%s:%d", portHTTP.Address, portHTTP.Public)
-	entry := logger.WithField("action", "wait-for-http")
+	s.URL = fmt.Sprintf("HTTPPort://%s:%d", portHTTP.Address, portHTTP.Public)
+	entry := logger.WithField("action", "wait-for-HTTPPort")
 	start := time.Now()
 	entry.Debug()
 	for {

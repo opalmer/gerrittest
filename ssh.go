@@ -18,7 +18,7 @@ type SSHClient struct {
 	Client *ssh.Client
 }
 
-// Close will close the ssh client and session.
+// Close will close the SSHPort client and session.
 func (s *SSHClient) Close() error {
 	return s.Client.Close()
 }
@@ -55,7 +55,7 @@ func (s *SSHClient) Version() (string, error) {
 func NewSSHClient(user string, privateKeyPath string, port *dockertest.Port) (*SSHClient, error) {
 	logger := log.WithFields(log.Fields{
 		"svc": "gerrittest",
-		"cmp": "ssh",
+		"cmp": "SSHPort",
 	})
 	data, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {
