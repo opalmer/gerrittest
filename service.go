@@ -21,17 +21,17 @@ const (
 
 // User represents a single user for connecting to Gerrit.
 type User struct {
-	Login      string
-	Password   string
-	PrivateKey string
+	Login      string `json:"login"`
+	Password   string `json:"password"`
+	PrivateKey string `json:"private_key"`
 }
 
 // Service used to store and information about the running service.
 type Service struct {
 	cfg     *Config
-	svc     *dockertest.Service
 	log     *log.Entry
 	URL     string
+	Service *dockertest.Service
 	Admin   *User
 	Helpers *Helpers
 }
@@ -42,12 +42,12 @@ func (s *Service) Close() error {
 	if s.cfg.Keep {
 		return nil
 	}
-	return s.svc.Terminate()
+	return s.Service.Terminate()
 }
 
 func (s *Service) ping(input *dockertest.PingInput) error {
 	logger := s.log.WithField("phase", "ping")
-	portHTTP, err := s.svc.Container.Port(ExportedHTTPPort)
+	portHTTP, err := s.Service.Container.Port(ExportedHTTPPort)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 	}
 	entry.WithField("duration", time.Since(start)).Debug()
 
-	portSSH, err := s.svc.Container.Port(ExportedSSHPort)
+	portSSH, err := s.Service.Container.Port(ExportedSSHPort)
 	if err != nil {
 		if s.cfg.Keep {
 			logger.WithError(err).Warn()
@@ -126,8 +126,8 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 // our own ping function.
 func (s *Service) Run() (*User, *Helpers, error) {
 	s.log.WithField("phase", "run").Debug()
-	s.svc.Ping = s.ping
-	if err := s.svc.Run(); err != nil {
+	s.Service.Ping = s.ping
+	if err := s.Service.Run(); err != nil {
 		return nil, nil, err
 	}
 	return s.Admin, s.Helpers, nil
@@ -149,7 +149,7 @@ func NewService(client *dockertest.DockerClient, cfg *Config) *Service {
 	svc := client.Service(input)
 	svc.Name = "gerrittest"
 	return &Service{
-		svc: svc, cfg: cfg,
+		Service: svc, cfg: cfg,
 		log: log.WithFields(log.Fields{
 			"svc": "gerrittest",
 			"cmp": "service",

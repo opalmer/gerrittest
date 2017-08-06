@@ -15,7 +15,7 @@ func (s *ServiceTest) TestNewServiceName(c *C) {
 	client, err := dockertest.NewClient()
 	c.Assert(err, IsNil)
 	service := NewService(client, NewConfig())
-	c.Assert(service.svc.Name, Equals, "gerrittest")
+	c.Assert(service.Service.Name, Equals, "gerrittest")
 }
 
 func (s *ServiceTest) TestPorts(c *C) {
@@ -24,7 +24,7 @@ func (s *ServiceTest) TestPorts(c *C) {
 	service := NewService(client, NewConfig())
 	hasSSH := false
 	hasHTTP := false
-	for _, spec := range service.svc.Input.Ports.Specs {
+	for _, spec := range service.Service.Input.Ports.Specs {
 		if spec.Private == ExportedHTTPPort {
 			hasHTTP = true
 		}

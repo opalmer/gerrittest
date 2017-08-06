@@ -1,53 +1,40 @@
 package main
 
 import (
-	"flag"
-	"github.com/Sirupsen/logrus"
-	"github.com/opalmer/dockertest"
-	"github.com/opalmer/gerrittest"
+	"fmt" 
+	log "github.com/Sirupsen/logrus"
+	"github.com/opalmer/gerrittest/cmd/subcommands/start"
+	"github.com/spf13/cobra"
+	"os"
 )
 
-var (
-	image = flag.String(
-		"image", "opalmer/gerrittest:2.14.2",
-		"The Docker image to use to run Gerrit.")
-	keep = flag.Bool(
-		"keep", false,
-		"If provided, do not clean up containers.")
-	portHTTP = flag.Uint(
-		"http", uint(dockertest.RandomPort),
-		"The port to map to the HTTP service. Random by default.")
-	portSSH = flag.Uint(
-		"ssh", uint(dockertest.RandomPort),
-		"The port to map to the HTTP service. Random by default.")
-	debug = flag.Bool(
-		"debug", false,
-		"If provided enable debug logging")
-)
+var RootCmd = &cobra.Command{
+	Use:   "gerrittest",
+	Short: "Command line tool for testing and working with Gerrit in Docker.",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		value, err := cmd.Flags().GetString("log-level")
+		if err != nil {
+			return err
+		}
+		level, err := log.ParseLevel(value)
+		if err != nil {
+			return err
+		}
+		log.SetLevel(level)
+		return nil
+	},
+}
 
 func main() {
-	flag.Parse()
-	client, err := dockertest.NewClient()
-	if err != nil {
-		panic(err)
+	if err := RootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
+}
 
-	cfg := gerrittest.NewConfig()
-	cfg.Image = *image
-	cfg.PortSSH = uint16(*portSSH)
-	cfg.PortHTTP = uint16(*portHTTP)
-	cfg.Keep = *keep
-	if *debug {
-		logrus.SetLevel(logrus.DebugLevel)
-	}
-	service := gerrittest.NewService(client, cfg)
-
-	if !*keep {
-		defer service.Close()
-	}
-	_, _, err = service.Run()
-	if err != nil {
-		defer service.Close()
-		panic(err)
-	}
+func init() {
+	RootCmd.PersistentFlags().String(
+		"log-level", "warning",
+		"Configures the global logging level.")
+	RootCmd.AddCommand(start.Cmd)
 }
