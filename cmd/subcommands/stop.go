@@ -42,17 +42,7 @@ var Stop = &cobra.Command{
 }
 
 func init() {
-	Start.Flags().String(
+	Stop.Flags().String(
 		"json", "",
-		"The location to write information about the service to. Any "+
-			"existing content will be overwritten.")
-	Start.Flags().String(
-		"image", "opalmer/gerrittest:2.14.2",
-		"The Docker image to spin up Gerrit.")
-	Start.Flags().Uint16(
-		"port-http", dockertest.RandomPort,
-		"The local port to map to Gerrit's REST API. Random by default.")
-	Start.Flags().Uint16(
-		"port-ssh", dockertest.RandomPort,
-		"The local port to map to Gerrit's REST API. Random by default.")
+		"The json file containing the container to stop.")
 }

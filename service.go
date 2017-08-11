@@ -143,7 +143,7 @@ func NewService(client *dockertest.DockerClient, cfg *Config) *Service {
 	})
 	input.Ports.Add(&dockertest.Port{
 		Private:  ExportedSSHPort,
-		Public:   cfg.PortHTTP,
+		Public:   cfg.PortSSH,
 		Protocol: dockertest.ProtocolTCP,
 	})
 	svc := client.Service(input)
