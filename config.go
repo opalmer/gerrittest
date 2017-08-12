@@ -29,6 +29,7 @@ type Config struct {
 	// admin.
 	PublicKey ssh.PublicKey
 
+	// PrivateKeyPath is used internally by gerrittest.
 	PrivateKeyPath string
 }
 
