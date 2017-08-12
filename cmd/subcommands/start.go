@@ -1,131 +1,125 @@
 package cmd
 
 import (
-	"encoding/json"
-	"errors"
+	"context"
+	"crypto/rsa"
+	"fmt"
 	"github.com/opalmer/dockertest"
 	"github.com/opalmer/gerrittest"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"time"
 )
+
+func getSSHKeys(cmd *cobra.Command) (ssh.PublicKey, *rsa.PrivateKey, string, error) {
+	privateKeyPath, err := cmd.Flags().GetString("private-key")
+	if err != nil {
+		return nil, nil, "", err
+	}
+
+	if privateKeyPath == "" {
+		public, private, err := gerrittest.GenerateSSHKeys()
+		if err != nil {
+			return nil, nil, "", err
+		}
+		return public, private, "", err
+	}
+	public, private, err := gerrittest.ReadSSHKeys(privateKeyPath)
+
+	return public, private, privateKeyPath, nil
+}
+
+// NewConfigFromCommand converts a command to a config struct.
+func NewConfigFromCommand(cmd *cobra.Command) (*gerrittest.Config, error) {
+	path, err := cmd.Flags().GetString("json")
+	if err != nil {
+		return nil, err
+	}
+	if path == "" {
+		file, err := ioutil.TempFile("", "")
+		if err != nil {
+			return nil, err
+		}
+		path = file.Name()
+		if err := file.Close(); err != nil {
+			return nil, nil
+		}
+		fmt.Println(path)
+
+		if err := os.Remove(path); err != nil {
+			return nil, err
+		}
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return nil, err
+	}
+
+	image, err := cmd.Flags().GetString("image")
+	if err != nil {
+		return nil, err
+	}
+
+	portHTTP, err := cmd.Flags().GetUint16("port-http")
+	if err != nil {
+		return nil, err
+	}
+
+	portSSH, err := cmd.Flags().GetUint16("port-ssh")
+	if err != nil {
+		return nil, err
+	}
+
+	noCleanup, err := cmd.Flags().GetBool("no-cleanup")
+	if err != nil {
+		return nil, nil
+	}
+
+	return &gerrittest.Config{
+		Image:            image,
+		PortSSH:          portSSH,
+		PortHTTP:         portHTTP,
+		CleanupOnFailure: noCleanup == false,
+	}, nil
+}
 
 // Start implements the `start` subcommand.
 var Start = &cobra.Command{
 	Use:   "start",
 	Short: "Responsible for starting an instance of Gerrit.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		privateKeyPath, err := cmd.Flags().GetString("private-key")
+		cfg, err := NewConfigFromCommand(cmd)
 		if err != nil {
 			return err
 		}
 
-		var publicKey ssh.PublicKey
-		if privateKeyPath != "" {
-			public, err := gerrittest.ReadSSHPrivateKey(privateKeyPath)
-			publicKey = public
-			if err != nil {
-				return err
+		// Setup timeout and Ctrl+C handling.
+		timeout, err := cmd.Flags().GetDuration("timeout")
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		interrupts := make(chan os.Signal, 1)
+		signal.Notify(interrupts, os.Interrupt)
+		go func() {
+			for range interrupts {
+				cancel()
 			}
+		}()
 
-		} else {
-			public, private, err := gerrittest.GenerateSSHKey()
-			publicKey = public
-			if err != nil {
-				return err
-			}
-			privateKeyFile, err := ioutil.TempFile("", "")
-			if err != nil {
-				return err
-			}
-			privateKeyPath = privateKeyFile.Name()
-
-			if err := gerrittest.WritePrivateKey(private, privateKeyFile.Name()); err != nil {
-				return err
-			}
-		}
-
-		path, err := cmd.Flags().GetString("json")
+		service, err := gerrittest.Start(ctx, cfg)
 		if err != nil {
 			return err
 		}
-		if path == "" {
-			return errors.New("--json not provided")
-		}
-		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-			return err
-		}
-
-		image, err := cmd.Flags().GetString("image")
-		if err != nil {
-			return err
-		}
-
-		portHTTP, err := cmd.Flags().GetUint16("port-http")
-		if err != nil {
-			return err
-		}
-
-		portSSH, err := cmd.Flags().GetUint16("port-ssh")
-		if err != nil {
-			return err
-		}
-
-		noCleanup, err := cmd.Flags().GetBool("no-cleanup")
-		if err != nil {
-			return nil
-		}
-
-		docker, err := dockertest.NewClient()
-		if err != nil {
-			return err
-		}
-
-		cfg := gerrittest.NewConfig()
-		cfg.Image = image
-		cfg.PortHTTP = portHTTP
-		cfg.PortSSH = portSSH
-		cfg.PublicKey = publicKey
-		cfg.PrivateKeyPath = privateKeyPath
-		cfg.Keep = noCleanup
-
-		// Start the service
-		svc := gerrittest.NewService(docker, cfg)
-		admin, helpers, err := svc.Run()
-		if err != nil {
-			return err
-		}
-
-		client, err := helpers.GetSSHClient(admin)
-		if err != nil {
-			return err
-		}
-		defer client.Close()
-
-		version, err := client.Version()
-		if err != nil {
-			return err
-		}
-
-		spec := &gerrittest.ServiceSpec{
-			Admin:     admin,
-			Container: svc.Service.Container.ID(),
-			Version:   version,
-			SSH:       helpers.SSH,
-			HTTP:      helpers.HTTP,
-		}
-		data, err := json.Marshal(spec)
-		if err != nil {
-			return err
-		}
-
-		return ioutil.WriteFile(path, data, 0600)
+		_ = service
+		return nil
 	},
 }
 
 func init() {
+	Start.Flags().Duration(
+		"timeout", time.Minute*2,
+		"The maximum amount of time to wait for the service to come up.")
 	Start.Flags().BoolP(
 		"no-cleanup", "n", false,
 		"If provided then do not cleanup the container on failure. "+
