@@ -2,6 +2,7 @@ package gerrittest
 
 import (
 	"github.com/opalmer/dockertest"
+	"golang.org/x/crypto/ssh"
 )
 
 // Config is used to tell the *Service struct what setup steps
@@ -23,16 +24,24 @@ type Config struct {
 	// Keep indicates if the container should be kept around
 	// after we're done and/or after failure.
 	Keep bool
+
+	// PublicKey is the key to use to access the service as
+	// admin.
+	PublicKey ssh.PublicKey
+
+	PrivateKeyPath string
 }
 
 // NewConfig produces a *Config struct with reasonable
 // default values.
 func NewConfig() *Config {
 	return &Config{
-		Image:       "opalmer/gerrittest:latest",
-		PortSSH:     dockertest.RandomPort,
-		PortHTTP:    dockertest.RandomPort,
-		CreateAdmin: true,
-		Keep:        false,
+		Image:          "opalmer/gerrittest:latest",
+		PortSSH:        dockertest.RandomPort,
+		PortHTTP:       dockertest.RandomPort,
+		CreateAdmin:    true,
+		Keep:           false,
+		PublicKey:      nil,
+		PrivateKeyPath: "",
 	}
 }

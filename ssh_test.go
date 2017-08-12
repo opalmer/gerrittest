@@ -1,6 +1,9 @@
 package gerrittest
 
 import (
+	"io/ioutil"
+	"os"
+
 	"github.com/opalmer/dockertest"
 	. "gopkg.in/check.v1"
 )
@@ -36,4 +39,35 @@ func (s *SSHTest) TestRun(c *C) {
 	c.Assert(ssh.Close(), IsNil)
 	c.Assert(svc.Close(), IsNil)
 	//ssh.Run()
+}
+
+func (s *SSHTest) TestGenerateSSHKey(c *C) {
+	_, _, err := GenerateSSHKey()
+	c.Assert(err, IsNil)
+}
+
+func (s *SSHTest) TestWriteSSHKeys(c *C) {
+	_, private, err := GenerateSSHKey()
+	c.Assert(err, IsNil)
+
+	privateFile, err := ioutil.TempFile("", "")
+	c.Assert(err, IsNil)
+	defer os.Remove(privateFile.Name())
+	c.Assert(os.Remove(privateFile.Name()), IsNil)
+	c.Assert(WritePrivateKey(private, privateFile.Name()), IsNil)
+}
+
+func (s *SSHTest) TestReadSSHPrivateKey(c *C) {
+	_, private, err := GenerateSSHKey()
+	c.Assert(err, IsNil)
+
+	// Write key yto disk
+	privateFile, err := ioutil.TempFile("", "")
+	c.Assert(err, IsNil)
+	defer os.Remove(privateFile.Name())
+	c.Assert(os.Remove(privateFile.Name()), IsNil)
+	c.Assert(WritePrivateKey(private, privateFile.Name()), IsNil)
+
+	_, err = ReadSSHPrivateKey(privateFile.Name())
+	c.Assert(err, IsNil)
 }

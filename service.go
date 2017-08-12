@@ -80,7 +80,7 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 	var adminUser string
 	var adminPassword string
 	if s.cfg.CreateAdmin {
-		username, password, pubKey, privKey, err := s.Helpers.CreateAdmin()
+		username, password, err := s.Helpers.CreateAdmin()
 		adminUser = username
 		adminPassword = password
 		if err != nil {
@@ -90,7 +90,7 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 			}
 			return err
 		}
-		if err := s.Helpers.AddPublicKey(adminUser, adminPassword, pubKey); err != nil {
+		if err := s.Helpers.AddPublicKey(adminUser, adminPassword, s.cfg.PublicKey); err != nil {
 			if s.cfg.Keep {
 				logger.WithError(err).Warn()
 				err = nil
@@ -100,7 +100,7 @@ func (s *Service) ping(input *dockertest.PingInput) error {
 		s.Admin = &User{
 			Login:      adminUser,
 			Password:   adminPassword,
-			PrivateKey: privKey,
+			PrivateKey: s.cfg.PrivateKeyPath,
 		}
 		client, err := s.Helpers.GetSSHClient(s.Admin)
 		if err != nil {
