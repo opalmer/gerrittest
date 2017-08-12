@@ -73,6 +73,11 @@ var Start = &cobra.Command{
 			return err
 		}
 
+		noCleanup, err := cmd.Flags().GetBool("no-cleanup")
+		if err != nil {
+			return nil
+		}
+
 		docker, err := dockertest.NewClient()
 		if err != nil {
 			return err
@@ -84,6 +89,9 @@ var Start = &cobra.Command{
 		cfg.PortSSH = portSSH
 		cfg.PublicKey = publicKey
 		cfg.PrivateKeyPath = privateKeyPath
+		cfg.Keep = noCleanup
+
+		// Start the service
 		svc := gerrittest.NewService(docker, cfg)
 		admin, helpers, err := svc.Run()
 		if err != nil {
@@ -118,6 +126,10 @@ var Start = &cobra.Command{
 }
 
 func init() {
+	Start.Flags().BoolP(
+		"no-cleanup", "n", false,
+		"If provided then do not cleanup the container on failure. "+
+			"Useful when debugging changes to the docker image.")
 	Start.Flags().String(
 		"json", "",
 		"The location to write information about the service to. Any "+
