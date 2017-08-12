@@ -96,8 +96,8 @@ func NewSSHClient(user string, privateKeyPath string, port *dockertest.Port) (*S
 	return client, err
 }
 
-// GenerateSSHKey will generate and return an SSH key pair.
-func GenerateSSHKey() (ssh.PublicKey, *rsa.PrivateKey, error) {
+// GenerateSSHKeys will generate and return an SSH key pair.
+func GenerateSSHKeys() (ssh.PublicKey, *rsa.PrivateKey, error) {
 	private, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, nil, err
@@ -106,16 +106,21 @@ func GenerateSSHKey() (ssh.PublicKey, *rsa.PrivateKey, error) {
 	return public, private, err
 }
 
-// ReadPrivateKey will read the provided private key and return the public
-// portion.
-func ReadSSHPrivateKey(path string) (ssh.PublicKey, error) {
+// ReadSSHKeys will read the provided private key and return the public and
+// private portions.
+func ReadSSHKeys(path string) (ssh.PublicKey, *rsa.PrivateKey, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	signer, err := ssh.ParsePrivateKey(data)
-	return signer.PublicKey(), err
+	private, err := x509.ParsePKCS1PrivateKey(data)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	public, err := ssh.NewPublicKey(&private.PublicKey)
+	return public, private, nil
 }
 
 // WritePrivateKey will take a private key and write out the public

@@ -12,12 +12,11 @@ type SSHTest struct{}
 
 var _ = Suite(&SSHTest{})
 
-func (s *SSHTest) newClient(c *C) (*Service, *SSHClient) {
+func (s *SSHTest) newClient(c *C) (*runner, *SSHClient) {
 	client, err := dockertest.NewClient()
 	c.Assert(err, IsNil)
-	cfg := NewConfig()
-	cfg.Image = "opalmer/gerrittest:2.14.2"
-	service := NewService(client, cfg)
+	cfg := &Config{Image: "opalmer/gerrittest:2.14.2"}
+	service := NewRunner(client, cfg)
 	user, helpers, err := service.Run()
 	c.Assert(err, IsNil)
 	ssh, err := helpers.GetSSHClient(user)
@@ -42,12 +41,12 @@ func (s *SSHTest) TestRun(c *C) {
 }
 
 func (s *SSHTest) TestGenerateSSHKey(c *C) {
-	_, _, err := GenerateSSHKey()
+	_, _, err := GenerateSSHKeys()
 	c.Assert(err, IsNil)
 }
 
 func (s *SSHTest) TestWriteSSHKeys(c *C) {
-	_, private, err := GenerateSSHKey()
+	_, private, err := GenerateSSHKeys()
 	c.Assert(err, IsNil)
 
 	privateFile, err := ioutil.TempFile("", "")
@@ -58,7 +57,7 @@ func (s *SSHTest) TestWriteSSHKeys(c *C) {
 }
 
 func (s *SSHTest) TestReadSSHPrivateKey(c *C) {
-	_, private, err := GenerateSSHKey()
+	_, private, err := GenerateSSHKeys()
 	c.Assert(err, IsNil)
 
 	// Write key yto disk
@@ -68,6 +67,6 @@ func (s *SSHTest) TestReadSSHPrivateKey(c *C) {
 	c.Assert(os.Remove(privateFile.Name()), IsNil)
 	c.Assert(WritePrivateKey(private, privateFile.Name()), IsNil)
 
-	_, err = ReadSSHPrivateKey(privateFile.Name())
+	_, _, err = ReadSSHKeys(privateFile.Name())
 	c.Assert(err, IsNil)
 }
