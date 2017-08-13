@@ -1,7 +1,6 @@
 package gerrittest
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -102,31 +101,6 @@ func (h *Helpers) AddPublicKeyFromPath(user string, password string, publicKeyPa
 		"path":  publicKeyPath,
 	}).Debug()
 	request, err := http.NewRequest("POST", url, file)
-	if err != nil {
-		return err
-	}
-	request.SetBasicAuth(user, password)
-	response, err := h.client.Do(request)
-	if err != nil {
-		return err
-	}
-	if response.StatusCode != http.StatusCreated {
-		h.log.WithError(ErrExpectedCreated).WithField("response", response).Error()
-		return ErrExpectedCreated
-	}
-	return nil
-}
-
-func (h *Helpers) AddPublicKey(user string, password string, publicKey ssh.PublicKey) error {
-	url := h.GetURL("/a/accounts/self/sshkeys")
-	h.log.WithFields(log.Fields{
-		"url":   url,
-		"phase": "add-public-key",
-		"user":  user,
-	}).Debug()
-
-	request, err := http.NewRequest("POST", url,
-		bytes.NewReader(ssh.MarshalAuthorizedKey(publicKey)))
 	if err != nil {
 		return err
 	}

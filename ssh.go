@@ -29,6 +29,7 @@ func (s *SSHClient) Close() error {
 	return s.Client.Close()
 }
 
+// Run executes a command over ssh.
 func (s *SSHClient) Run(command string) ([]byte, []byte, error) {
 	logger := s.log.WithField("cmd", command)
 	session, err := s.Client.NewSession()
