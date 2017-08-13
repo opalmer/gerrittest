@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"time"
+	"encoding/json"
 )
 
 func getSSHKeys(cmd *cobra.Command) (ssh.PublicKey, *rsa.PrivateKey, string, error) {
@@ -35,29 +36,6 @@ func getSSHKeys(cmd *cobra.Command) (ssh.PublicKey, *rsa.PrivateKey, string, err
 
 // NewConfigFromCommand converts a command to a config struct.
 func NewConfigFromCommand(cmd *cobra.Command) (*gerrittest.Config, error) {
-	path, err := cmd.Flags().GetString("json")
-	if err != nil {
-		return nil, err
-	}
-	if path == "" {
-		file, err := ioutil.TempFile("", "")
-		if err != nil {
-			return nil, err
-		}
-		path = file.Name()
-		if err := file.Close(); err != nil {
-			return nil, nil
-		}
-		fmt.Println(path)
-
-		if err := os.Remove(path); err != nil {
-			return nil, err
-		}
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		return nil, err
-	}
-
 	image, err := cmd.Flags().GetString("image")
 	if err != nil {
 		return nil, err
@@ -86,6 +64,26 @@ func NewConfigFromCommand(cmd *cobra.Command) (*gerrittest.Config, error) {
 	}, nil
 }
 
+func jsonOutput(cmd *cobra.Command, spec *gerrittest.ServiceSpec) error {
+	data, err := json.MarshalIndent(spec, "", " ")
+	if err != nil {
+		return err
+	}
+
+	jsonPath, err := cmd.Flags().GetString("json")
+	if err != nil {
+		return err
+	}
+	if jsonPath != "" {
+		if err := os.MkdirAll(filepath.Dir(jsonPath), 0700); err != nil {
+			return err
+		}
+		return ioutil.WriteFile(jsonPath, data, 0600)
+	}
+	fmt.Println(string(data))
+	return nil
+}
+
 // Start implements the `start` subcommand.
 var Start = &cobra.Command{
 	Use:   "start",
@@ -95,7 +93,6 @@ var Start = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
 		// Setup timeout and Ctrl+C handling.
 		timeout, err := cmd.Flags().GetDuration("timeout")
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -107,10 +104,15 @@ var Start = &cobra.Command{
 			}
 		}()
 
+		spec := &gerrittest.ServiceSpec{Admin: &gerrittest.User{}}
 		service, err := gerrittest.Start(ctx, cfg)
 		if err != nil {
 			return err
 		}
+
+		spec.HTTP = service.HTTPPort
+		spec.SSH = service.SSHPort
+		spec.Container = service.Container.ID()
 
 		startonly, err := cmd.Flags().GetBool("start-only")
 		if startonly {
@@ -130,19 +132,20 @@ var Start = &cobra.Command{
 			return err
 		}
 
-		// Make an authenticated request by retrieving account
-		// information.
-		if err := client.GetAccount("self"); err != nil {
+		account, err := client.GetAccount("self")
+		if err != nil {
 			return err
 		}
+		spec.Admin.Login = account.Username
 
 		password, err := client.GeneratePassword()
 		if err != nil {
 			return err
 		}
-		fmt.Println(password)
+		spec.Admin.Password = password
 
-		return nil
+
+		return jsonOutput(cmd, spec)
 	},
 }
 
