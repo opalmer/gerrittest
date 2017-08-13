@@ -187,7 +187,7 @@ func GetService(cfg *Config) (*dockertest.Service, error) {
 
 	svc.Input.AddEnvironmentVar(
 		"GERRIT_CANONICAL_URL",
-		fmt.Sprintf("http://localhost:%d/", cfg.PortHTTP))
+		fmt.Sprintf("http://127.0.0.1:%d/", cfg.PortHTTP))
 	return svc, nil
 }
 
