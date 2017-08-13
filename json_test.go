@@ -1,12 +1,13 @@
 package gerrittest
 
 import (
-	. "gopkg.in/check.v1"
+	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"os"
-	"io"
-	"bytes"
+
+	. "gopkg.in/check.v1"
 )
 
 type JSONTest struct{}
