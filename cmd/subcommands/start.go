@@ -111,11 +111,33 @@ var Start = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
 		client, err := service.HTTPClient()
 		if err != nil {
 			return err
 		}
-		return client.Login("admin")
+
+		// Hitting /login/ will produce a cookie that can be used
+		// for authenticated requests. Also, this first request
+		// causes the first account to be created which happens
+		// to be the admin account.
+		if err := client.Login("admin"); err != nil {
+			return err
+		}
+
+		// Make an authenticated request by retrieving account
+		// information.
+		if err := client.GetAccount("self"); err != nil {
+			return err
+		}
+
+		password, err := client.GeneratePassword()
+		if err != nil {
+			return err
+		}
+		fmt.Println(password)
+
+		return nil
 	},
 }
 
