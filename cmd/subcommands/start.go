@@ -112,6 +112,11 @@ var Start = &cobra.Command{
 			return err
 		}
 
+		startonly, err := cmd.Flags().GetBool("start-only")
+		if startonly {
+			return nil
+		}
+
 		client, err := service.HTTPClient()
 		if err != nil {
 			return err
@@ -127,15 +132,15 @@ var Start = &cobra.Command{
 
 		// Make an authenticated request by retrieving account
 		// information.
-		if err := client.GetAccount("self"); err != nil {
-			return err
-		}
-
-		password, err := client.GeneratePassword()
-		if err != nil {
-			return err
-		}
-		fmt.Println(password)
+		//if err := client.GetAccount("self"); err != nil {
+		//	return err
+		//}
+		//
+		//password, err := client.GeneratePassword()
+		//if err != nil {
+		//	return err
+		//}
+		//fmt.Println(password)
 
 		return nil
 	},
@@ -165,4 +170,7 @@ func init() {
 	Start.Flags().StringP(
 		"private-key", "i", "",
 		"If provided then use this private key instead of generating one.")
+	Start.Flags().Bool(
+		"start-only", false,
+		"If provided just start the container, don't setup anything else.")
 }

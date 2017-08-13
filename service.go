@@ -43,7 +43,7 @@ type Service struct {
 // HTTPClient constructs and returns a basic client for interacting with
 // the service.
 func (s *Service) HTTPClient() (*HTTPClient, error) {
-	return NewHTTPClient(s)
+	return NewHTTPClient(s, "admin")
 }
 
 // runner used to run Gerrit and wait for it to come up.
