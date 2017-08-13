@@ -133,12 +133,12 @@ func (h *HTTPClient) GeneratePassword() (string, error) {
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No
 // validation to ensure the service is actually running is performed.
 func NewHTTPClient(service *Service, username string) (*HTTPClient, error) {
-	jar, err := cookiejar.New(&cookiejar.Options{})
+	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: nil})
 	if err != nil {
 		return nil, err
 	}
 	return &HTTPClient{
-		Client: &http.Client{},
+		Client: &http.Client{Jar: jar},
 		Prefix: fmt.Sprintf(
 			"http://%s:%d", service.HTTPPort.Address, service.HTTPPort.Public),
 		User: username,
