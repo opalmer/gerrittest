@@ -2,42 +2,33 @@ FROM java:openjdk-8-jre-alpine
 
 MAINTAINER Oliver Palmer <oliverpalmer@opalmer.com>
 
-# Commonly overriden inputs.
-ARG GERRIT_MAJOR_VERSION=2.13
-ARG GERRIT_VERSION=2.13.5
-ARG GERRIT_WAR_SHA1=4995181ada7c6dc0465c671167ac00f962d18ae6
-
-# Less common overrides
-ARG PLUGIN_VERSION=stable-${GERRIT_MAJOR_VERSION}
-ARG BOUNCY_CASTLE_VERSION=1.54
-ARG PLUGIN_VERSION=stable-${GERRIT_MAJOR_MINOR}
-
 ARG GERRIT_HOME=/var/gerrit
-ARG GERRIT_SITE=${GERRIT_HOME}/review_site
+ARG GERRIT_SITE=${GERRIT_HOME}
 ARG GERRIT_USER=gerrit
 ARG GERRIT_INIT_ARGS=""
 ARG GERRIT_CANONICAL_URL="http://localhost:8080/"
-
-# Establish environment variables (used by entrypoint.sh)
 ENV GERRIT_HOME ${GERRIT_HOME}
 ENV GERRIT_SITE ${GERRIT_SITE}
 ENV GERRIT_CANONICAL_URL ${GERRIT_CANONICAL_URL}
 
-# Setup the container with our initial dependencies.
+# Initial setup. These will rarely change so we perform these steps first
+# so the results are cached.
 RUN set -x \
-    && apk add --update --no-cache git openssh openssl bash curl
+    && apk add --update --no-cache git openssh openssl bash curl \
+    && adduser -D -h "${GERRIT_HOME}" -g "Gerrit User" "${GERRIT_USER}"
 
-# Setup the gerrit user, download all the required files and verify
-# the integrity of gerrit.war
+ARG BOUNCY_CASTLE_VERSION=1.54
+ARG GERRIT_WAR_URL=https://gerrit-releases.storage.googleapis.com/gerrit-2.14.2.war
+ARG GERRIT_WAR_SHA1=e57c23f17457e14ecfd8da6b2750a94fe65f8970
+
+# Drop in the Gerrit war file and setup the site.
 RUN set -x \
-    && adduser -D -h "${GERRIT_HOME}" -g "Gerrit User" "${GERRIT_USER}" && mkdir -p ${GERRIT_HOME} \
-    && curl -so ${GERRIT_SITE}/events-log.jar https://gerrit-ci.gerritforge.com/job/plugin-events-log-${PLUGIN_VERSION}/lastSuccessfulBuild/artifact/buck-out/gen/plugins/events-log/events-log.jar \
-    && curl -so ${GERRIT_SITE}/delete-project.jar https://gerrit-ci.gerritforge.com/job/plugin-delete-project-${PLUGIN_VERSION}/lastSuccessfulBuild/artifact/buck-out/gen/plugins/delete-project/delete-project.jar \
-    && curl -so ${GERRIT_SITE}/lib/bcprov-jdk15on-${BOUNCY_CASTLE_VERSION}.jar https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk15on/${BOUNCY_CASTLE_VERSION}/bcprov-jdk15on-${BOUNCY_CASTLE_VERSION}.jar \
-    && curl -so ${GERRIT_SITE}/lib/bcpkix-jdk15on-${BOUNCY_CASTLE_VERSION}.jar https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-jdk15on/${BOUNCY_CASTLE_VERSION}/bcpkix-jdk15on-${BOUNCY_CASTLE_VERSION}.jar \
-    && curl -so ${GERRIT_HOME}/gerrit.war http://gerrit-releases.storage.googleapis.com/gerrit-${GERRIT_VERSION}.war  \
-    && echo "${GERRIT_WAR_SHA1}  ${GERRIT_HOME}/gerrit.war" > ${GERRIT_HOME}/gerrit.war.sha1 \
-    && sha1sum -c ${GERRIT_HOME}/gerrit.war.sha1 && rm ${GERRIT_HOME}/gerrit.war.sha1
+    && mkdir -p ${GERRIT_HOME}/bin \
+    && curl -Lso ${GERRIT_HOME}/bin/gerrit.war ${GERRIT_WAR_URL} \
+    && echo "${GERRIT_WAR_SHA1}  ${GERRIT_HOME}/bin/gerrit.war" | sha1sum -c - \
+    && java -jar ${GERRIT_HOME}/bin/gerrit.war init --batch --no-auto-start -d ${GERRIT_SITE}
+#    && curl -so ${GERRIT_SITE}/lib/bcprov-jdk15on-${BOUNCY_CASTLE_VERSION}.jar https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk15on/${BOUNCY_CASTLE_VERSION}/bcprov-jdk15on-${BOUNCY_CASTLE_VERSION}.jar \
+#    && curl -so ${GERRIT_SITE}/lib/bcpkix-jdk15on-${BOUNCY_CASTLE_VERSION}.jar https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-jdk15on/${BOUNCY_CASTLE_VERSION}/bcpkix-jdk15on-${BOUNCY_CASTLE_VERSION}.jar \
 
 # Add files
 COPY /entrypoint.sh /
