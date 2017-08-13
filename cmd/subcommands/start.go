@@ -111,8 +111,11 @@ var Start = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_ = service
-		return nil
+		client, err := service.HTTPClient()
+		if err != nil {
+			return err
+		}
+		return client.Login("admin")
 	},
 }
 
