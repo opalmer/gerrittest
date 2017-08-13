@@ -90,7 +90,7 @@ func (h *HTTPClient) Do(request *http.Request, expectedCode int) (*http.Response
 
 // Login will attempt to hit /login/ as the given user.
 func (h *HTTPClient) Login() error {
-	request, err := h.NewRequest("GET", "/login/", nil)
+	request, err := h.NewRequest(http.MethodGet, "/login/", nil)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (h *HTTPClient) Login() error {
 
 // GetAccount will return information about the
 func (h *HTTPClient) GetAccount(username string) error {
-	request, err := h.NewRequest("GET", fmt.Sprintf("/a/accounts/%s", username), nil)
+	request, err := h.NewRequest(http.MethodGet, fmt.Sprintf("/a/accounts/%s", username), nil)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (h *HTTPClient) GetAccount(username string) error {
 // only works for the current account (the one which set the cookie
 // in GetAccount())
 func (h *HTTPClient) GeneratePassword() (string, error) {
-	request, err := h.NewRequest("PUT", "/a/accounts/self/password.http", nil)
+	request, err := h.NewRequest(http.MethodPut, "/a/accounts/self/password.http", nil)
 	if err != nil {
 		return "", err
 	}
