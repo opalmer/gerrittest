@@ -1,16 +1,15 @@
 package gerrittest
 
 import (
-	"fmt"
-	"net/http"
-	"net/http/cookiejar"
 	"bytes"
+	"fmt"
 	"io"
+	"net/http"
+	"strings"
+	"time"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/go-gerrit"
-	"time"
-	"io/ioutil"
-	"strings"
 )
 
 // HTTPClient is a simple client for talking to Gerrit within a
@@ -21,22 +20,20 @@ import (
 type HTTPClient struct {
 	Client *http.Client
 	Prefix string
-	User string
+	User   string
 	log    *log.Entry
 }
-
 
 // URL concatenates the prefix and the given tai.
 func (h *HTTPClient) URL(tail string) string {
 	return h.Prefix + tail
 }
 
-
 // NewRequest constructs a new http.Request, sets the proper headers and then
 // logs the request.
-func (h *HTTPClient) NewRequest(method string, tail string, body io.Reader) (*http.Request, error){
-	url := h.URL(tail)
-	request, err := http.NewRequest(method, url, body)
+func (h *HTTPClient) NewRequest(method string, tail string, body io.Reader) (*http.Request, error) {
+	requestURL := h.URL(tail)
+	request, err := http.NewRequest(method, requestURL, body)
 	if err != nil {
 		return nil, err
 	}
@@ -49,21 +46,21 @@ func (h *HTTPClient) NewRequest(method string, tail string, body io.Reader) (*ht
 	}
 
 	h.log.WithFields(log.Fields{
-		"type": "request",
-		"method": method,
-		"url": url,
+		"type":    "request",
+		"method":  method,
+		"url":     requestURL,
 		"cookies": request.Cookies(),
 		"headers": request.Header,
 	}).Debug()
 	return request, nil
 }
 
-// Do performs the request using the internal client.
+// Do performs the request using the internal http client.
 func (h *HTTPClient) Do(request *http.Request, expectedCode int) (*http.Response, error) {
 	logger := h.log.WithFields(log.Fields{
-		"type": "response",
+		"type":   "response",
 		"method": request.Method,
-		"url": request.URL,
+		"url":    request.URL,
 	})
 	if expectedCode != 0 {
 		logger = logger.WithField("status-expected", expectedCode)
@@ -77,9 +74,9 @@ func (h *HTTPClient) Do(request *http.Request, expectedCode int) (*http.Response
 	}
 	logger.WithFields(log.Fields{
 		"duration": time.Since(start),
-		"status": response.StatusCode,
-		"cookies": response.Cookies(),
-		"headers": response.Header,
+		"status":   response.StatusCode,
+		"cookies":  response.Cookies(),
+		"headers":  response.Header,
 	}).Debug()
 	if expectedCode == 0 {
 		return response, err
@@ -133,15 +130,11 @@ func (h *HTTPClient) GeneratePassword() (string, error) {
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No
 // validation to ensure the service is actually running is performed.
 func NewHTTPClient(service *Service, username string) (*HTTPClient, error) {
-	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: nil})
-	if err != nil {
-		return nil, err
-	}
 	return &HTTPClient{
-		Client: &http.Client{Jar: jar},
+		Client: &http.Client{Jar: NewCookieJar()},
 		Prefix: fmt.Sprintf(
 			"http://%s:%d", service.HTTPPort.Address, service.HTTPPort.Public),
 		User: username,
-		log: log.WithField("cmp", "http"),
+		log:  log.WithField("cmp", "http"),
 	}, nil
 }
