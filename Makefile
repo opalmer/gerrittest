@@ -2,8 +2,8 @@ PACKAGES = $(shell go list . | grep -v /vendor/)
 PACKAGE_DIRS = $(shell go list -f '{{ .Dir }}' ./... | grep -v /vendor/)
 SOURCES = $(shell for f in $(PACKAGES); do ls $$GOPATH/src/$$f/*.go; done)
 EXTRA_DEPENDENCIES = \
-    github.com/kardianos/govendor \
-    github.com/golang/lint/golint
+    github.com/golang/lint/golint \
+    github.com/golang/dep/cmd/dep
 
 check: deps docker build test lint
 
@@ -22,7 +22,7 @@ deps:
 
 fmt:
 	goimports -w $(SOURCES)
-	go fmt ./...
+	go fmt $(SOURCES)
 
 test:
 	go test -race -coverprofile=coverage.txt -covermode=atomic -check.v $(PACKAGES)
