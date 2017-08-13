@@ -1,7 +1,6 @@
 package gerrittest
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +8,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"bytes"
+	"net/url"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/go-gerrit"
@@ -21,6 +23,7 @@ func GetResponseBody(response *http.Response) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(string(body))
 	if err := response.Body.Close(); err != nil {
 		return nil, err
 	}
@@ -60,6 +63,13 @@ func (h *HTTPClient) NewRequest(method string, tail string, body io.Reader) (*ht
 		request.Header.Add("X-User", h.User)
 	}
 
+	for _, cookie := range h.Client.Jar.Cookies(&url.URL{Host: "localhost"}) {
+		request.AddCookie(cookie)
+		if cookie.Name == "XSRF_TOKEN" {
+			request.Header.Set("X-Gerrit-Auth", cookie.Value)
+		}
+	}
+
 	h.log.WithFields(log.Fields{
 		"type":    "request",
 		"method":  method,
@@ -71,7 +81,7 @@ func (h *HTTPClient) NewRequest(method string, tail string, body io.Reader) (*ht
 }
 
 // Do performs the request using the internal http client.
-func (h *HTTPClient) Do(request *http.Request, expectedCode int) (*http.Response, error) {
+func (h *HTTPClient) Do(request *http.Request, body []byte, expectedCode int) (*http.Response, error) {
 	logger := h.log.WithFields(log.Fields{
 		"type":   "response",
 		"method": request.Method,
@@ -79,6 +89,11 @@ func (h *HTTPClient) Do(request *http.Request, expectedCode int) (*http.Response
 	})
 	if expectedCode != 0 {
 		logger = logger.WithField("status-expected", expectedCode)
+	}
+	if body != nil {
+		request.Header.Add("Content-Type", "application/json")
+		logger = logger.WithField("body", string(body))
+		request.Body = ioutil.NopCloser(bytes.NewReader(body))
 	}
 
 	start := time.Now()
@@ -109,7 +124,7 @@ func (h *HTTPClient) Login() error {
 	if err != nil {
 		return err
 	}
-	_, err = h.Do(request, http.StatusOK)
+	_, err = h.Do(request, nil, http.StatusOK)
 	return err
 }
 
@@ -119,7 +134,7 @@ func (h *HTTPClient) GetAccount(username string) (*gerrit.AccountInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	response, err := h.Do(request, http.StatusOK)
+	response, err := h.Do(request, nil, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
@@ -135,19 +150,23 @@ func (h *HTTPClient) GetAccount(username string) (*gerrit.AccountInfo, error) {
 // only works for the current account (the one which set the cookie
 // in GetAccount())
 func (h *HTTPClient) GeneratePassword() (string, error) {
-	request, err := h.NewRequest(http.MethodPut, "/a/accounts/self/password.http", nil)
+	request, err := h.NewRequest(
+		http.MethodPut, "/a/accounts/self/password.http", nil)
 	if err != nil {
 		return "", err
 	}
-	response, err := h.Do(request, http.StatusOK)
-	defer response.Body.Close()
 
-	data := &bytes.Buffer{}
-	_, err = io.Copy(data, response.Body)
+	response, err := h.Do(request, []byte("{\"generate\": true}"), http.StatusOK)
 	if err != nil {
 		return "", err
 	}
-	return string(gerrit.RemoveMagicPrefixLine(data.Bytes())), err
+
+	body, err := GetResponseBody(response)
+	if err != nil {
+		return "", err
+	}
+	output := strings.TrimSpace(string(body))
+	return output[1 : len(output)-1], nil
 }
 
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No

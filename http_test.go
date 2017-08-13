@@ -92,7 +92,7 @@ func (s *HTTPTest) TestDo(c *C) {
 	client.Prefix = ts.URL
 	request, err := client.NewRequest(http.MethodGet, "/", nil)
 	c.Assert(err, IsNil)
-	response, err := client.Do(request, http.StatusOK)
+	response, err := client.Do(request, nil, http.StatusOK)
 	c.Assert(err, IsNil)
 	body, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
