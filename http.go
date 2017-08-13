@@ -86,7 +86,7 @@ func (h *HTTPClient) GeneratePassword() (string, error) {
 		"url":    url,
 	})
 	request, err := http.NewRequest("PUT", url, nil)
-	request.Header.Ad d("X-User", "admin")
+	request.Header.Add("X-User", "admin")
 	if err != nil {
 		return "", err
 	}
