@@ -2,12 +2,10 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"github.com/opalmer/dockertest"
 	"github.com/opalmer/gerrittest"
 	"github.com/spf13/cobra"
-	"io/ioutil"
 )
 
 // Stop implements the `stop` subcommand.
@@ -22,13 +20,9 @@ var Stop = &cobra.Command{
 		if path == "" {
 			return errors.New("--json not provided")
 		}
-		// Read the file
-		var spec gerrittest.ServiceSpec
-		data, err := ioutil.ReadFile(path)
+
+		spec, err := gerrittest.ReadServiceSpecFromArg(cmd)
 		if err != nil {
-			return err
-		}
-		if err := json.Unmarshal(data, &spec); err != nil {
 			return err
 		}
 
