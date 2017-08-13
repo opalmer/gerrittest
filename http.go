@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
-
 	"bytes"
 	"io"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/go-gerrit"
 	"time"
+	"io/ioutil"
+	"strings"
 )
 
 // HTTPClient is a simple client for talking to Gerrit within a
@@ -40,7 +40,14 @@ func (h *HTTPClient) NewRequest(method string, tail string, body io.Reader) (*ht
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Add("X-User", h.User)
+
+	// If the url is not prefixed with /a/ then assume we're relying
+	// on X-User to tell Gerrit to trust our request. In all other cases
+	// the cookie Gerrit gives us back will be relies
+	if !strings.HasPrefix(tail, "/a/") {
+		request.Header.Add("X-User", h.User)
+	}
+
 	h.log.WithFields(log.Fields{
 		"type": "request",
 		"method": method,
@@ -51,8 +58,8 @@ func (h *HTTPClient) NewRequest(method string, tail string, body io.Reader) (*ht
 	return request, nil
 }
 
-// MakeRequest performs the request using the internal client.
-func (h *HTTPClient) MakeRequest(request *http.Request, expectedCode int) (*http.Response, error) {
+// Do performs the request using the internal client.
+func (h *HTTPClient) Do(request *http.Request, expectedCode int) (*http.Response, error) {
 	logger := h.log.WithFields(log.Fields{
 		"type": "response",
 		"method": request.Method,
@@ -85,12 +92,12 @@ func (h *HTTPClient) MakeRequest(request *http.Request, expectedCode int) (*http
 }
 
 // Login will attempt to hit /login/ as the given user.
-func (h *HTTPClient) Login(username string) error {
+func (h *HTTPClient) Login() error {
 	request, err := h.NewRequest("GET", "/login/", nil)
 	if err != nil {
 		return err
 	}
-	_, err = h.MakeRequest(request, http.StatusOK)
+	_, err = h.Do(request, http.StatusOK)
 	return err
 }
 
@@ -100,7 +107,7 @@ func (h *HTTPClient) GetAccount(username string) error {
 	if err != nil {
 		return err
 	}
-	_, err = h.MakeRequest(request, http.StatusOK)
+	_, err = h.Do(request, http.StatusOK)
 	return err
 }
 
@@ -112,7 +119,7 @@ func (h *HTTPClient) GeneratePassword() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	response, err := h.MakeRequest(request, http.StatusOK)
+	response, err := h.Do(request, http.StatusOK)
 	defer response.Body.Close()
 
 	data := &bytes.Buffer{}
@@ -126,12 +133,12 @@ func (h *HTTPClient) GeneratePassword() (string, error) {
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No
 // validation to ensure the service is actually running is performed.
 func NewHTTPClient(service *Service, username string) (*HTTPClient, error) {
-	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: nil})
+	jar, err := cookiejar.New(&cookiejar.Options{})
 	if err != nil {
 		return nil, err
 	}
 	return &HTTPClient{
-		Client: &http.Client{Jar: jar},
+		Client: &http.Client{},
 		Prefix: fmt.Sprintf(
 			"http://%s:%d", service.HTTPPort.Address, service.HTTPPort.Public),
 		User: username,
