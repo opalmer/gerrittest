@@ -1,12 +1,11 @@
 package gerrittest
 
 import (
+	"bytes"
 	"fmt"
-	"net/http"
-
-	"net/http/httptest"
-
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/dockertest"
@@ -44,6 +43,14 @@ func newClient(c *C) *HTTPClient {
 	client, err := NewHTTPClient(svc, "foobar")
 	c.Assert(err, IsNil)
 	return client
+}
+
+func (s *HTTPTest) TestGetResponseBody(c *C) {
+	body := ioutil.NopCloser(bytes.NewBufferString(")]}'\nfoobar"))
+	response := &http.Response{Body: body}
+	data, err := GetResponseBody(response)
+	c.Assert(err, IsNil)
+	c.Assert(data, DeepEquals, []byte("foobar"))
 }
 
 func (s *HTTPTest) TestNewHTTPClient(c *C) {

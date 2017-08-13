@@ -2,8 +2,10 @@ package gerrittest
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -11,6 +13,19 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/go-gerrit"
 )
+
+// GetResponseBody returns the body of the given response as bytes with the
+// magic prefix removed.
+func GetResponseBody(response *http.Response) ([]byte, error) {
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	if err := response.Body.Close(); err != nil {
+		return nil, err
+	}
+	return gerrit.RemoveMagicPrefixLine(body), nil
+}
 
 // HTTPClient is a simple client for talking to Gerrit within a
 // container. This is not intended as a replacement for go-gerrit.
@@ -99,13 +114,21 @@ func (h *HTTPClient) Login() error {
 }
 
 // GetAccount will return information about the
-func (h *HTTPClient) GetAccount(username string) error {
+func (h *HTTPClient) GetAccount(username string) (*gerrit.AccountInfo, error) {
 	request, err := h.NewRequest(http.MethodGet, fmt.Sprintf("/a/accounts/%s", username), nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, err = h.Do(request, http.StatusOK)
-	return err
+	response, err := h.Do(request, http.StatusOK)
+	if err != nil {
+		return nil, err
+	}
+	body, err := GetResponseBody(response)
+	if err != nil {
+		return nil, err
+	}
+	account := &gerrit.AccountInfo{}
+	return account, json.Unmarshal(body, account)
 }
 
 // GeneratePassword generates and returns the account password. Note, this
