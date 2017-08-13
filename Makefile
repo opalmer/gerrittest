@@ -5,7 +5,7 @@ EXTRA_DEPENDENCIES = \
     github.com/kardianos/govendor \
     github.com/golang/lint/golint
 
-check: deps docker build test
+check: deps docker build test lint
 
 docker:
 	$(MAKE) -C docker build
@@ -13,15 +13,16 @@ docker:
 build:
 	go build cmd/gerrittest.go
 
+lint:
+	golint -set_exit_status $(PACKAGES)
+
 deps:
 	go get $(EXTRA_DEPENDENCIES)
-	govendor sync
-	rm -rf $(GOPATH)/src/github.com/docker/docker/vendor
-	rm -rf vendor/github.com/docker/docker/vendor
+	dep ensure
 
 fmt:
 	goimports -w $(SOURCES)
 	go fmt ./...
 
 test:
-	go test -race -v -check.v ./...
+	go test -race -coverprofile=coverage.txt -covermode=atomic -check.v $(PACKAGES)

@@ -1,0 +1,82 @@
+
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#  name = "github.com/x/y"
+#  version = "2.4.0"
+
+# NOTE: The below dependencies are mainly used for testing
+# purposes. This mirrors the dependencies required of
+
+required = ["github.com/docker/distribution/reference"]
+
+[[constraint]]
+  name = "github.com/opalmer/dockertest"
+  version = "0.3.6"
+
+[[constraint]]
+  name = "github.com/Microsoft/go-winio"
+  version = "0.4.5"
+
+[[constraint]]
+  name = "github.com/Sirupsen/logrus"
+  version = "1.0.2"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/crewjam/errset"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/docker/distribution"
+
+[[constraint]]
+  name = "github.com/docker/docker"
+  version = "17.5.0-ce-rc3"
+
+[[constraint]]
+  name = "github.com/docker/go-connections"
+  version = "0.2.1"
+
+[[constraint]]
+  name = "github.com/docker/go-units"
+  version = "0.3.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/docker/libtrust"
+
+[[constraint]]
+  name = "github.com/opencontainers/go-digest"
+  version = "1.0.0-rc0"
+
+[[constraint]]
+  name = "github.com/pkg/errors"
+  version = "0.8.0"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/net"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/sys"
+
+[[constraint]]
+  branch = "v1"
+  name = "gopkg.in/check.v1"
