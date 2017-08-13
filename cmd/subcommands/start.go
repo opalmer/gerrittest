@@ -126,21 +126,21 @@ var Start = &cobra.Command{
 		// for authenticated requests. Also, this first request
 		// causes the first account to be created which happens
 		// to be the admin account.
-		if err := client.Login("admin"); err != nil {
+		if err := client.Login(); err != nil {
 			return err
 		}
 
 		// Make an authenticated request by retrieving account
 		// information.
-		//if err := client.GetAccount("self"); err != nil {
-		//	return err
-		//}
-		//
-		//password, err := client.GeneratePassword()
-		//if err != nil {
-		//	return err
-		//}
-		//fmt.Println(password)
+		if err := client.GetAccount("self"); err != nil {
+			return err
+		}
+
+		password, err := client.GeneratePassword()
+		if err != nil {
+			return err
+		}
+		fmt.Println(password)
 
 		return nil
 	},
