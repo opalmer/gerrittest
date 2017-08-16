@@ -11,7 +11,7 @@ import (
 // Stop implements the `stop` subcommand.
 var Stop = &cobra.Command{
 	Use:   "stop",
-	Short: "Responsible for starting an instance of Gerrit.",
+	Short: "Responsible for stopping an instance of Gerrit.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path, err := cmd.Flags().GetString("json")
 		if err != nil {
