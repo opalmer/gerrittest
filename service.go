@@ -3,13 +3,11 @@ package gerrittest
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"time"
-
 	"net"
-
+	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/dockertest"
