@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// RootCmd is the main command line tool. Subcommands are implemented
+// in the subcommands/ folder.
 var RootCmd = &cobra.Command{
 	Use:   "gerrittest",
 	Short: "Command line tool for testing and working with Gerrit in Docker.",

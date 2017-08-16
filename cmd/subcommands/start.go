@@ -125,7 +125,7 @@ var Start = &cobra.Command{
 			return err
 		}
 		if public == nil {
-			return errors.New("Internal error, failed to retrieve public key!")
+			return errors.New("internal error, failed to retrieve public key")
 		}
 
 		spec := &gerrittest.ServiceSpec{Admin: &gerrittest.User{}}
