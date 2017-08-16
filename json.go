@@ -11,10 +11,12 @@ import (
 // ServiceSpec is used to serialize information about an instance
 // of Gerrit.
 type ServiceSpec struct {
-	Admin     *User            `json:"admin"`
-	Container string           `json:"container"`
-	SSH       *dockertest.Port `json:"ssh"`
-	HTTP      *dockertest.Port `json:"http"`
+	Admin      *User            `json:"admin"`
+	Container  string           `json:"container"`
+	SSH        *dockertest.Port `json:"ssh"`
+	HTTP       *dockertest.Port `json:"http"`
+	URL        string           `json:"url"`
+	SSHCommand string           `json:"ssh_command"`
 }
 
 // ReadServiceSpec reads and returns a *ServiceSpec from a file.
