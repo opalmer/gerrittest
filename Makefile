@@ -35,9 +35,9 @@ test:
 # coverage runs the tests to collect coverage but does not attempt to look
 # for race conditions.
 coverage: $(patsubst %,%.coverage,$(PACKAGES))
-	@rm -f .gocoverage/cover.out
-	gocovmerge .gocoverage/*.out > .gocoverage/cover.out
-	go tool cover -html=.gocoverage/cover.out -o .gocoverage/index.html
+	@rm -f .gocoverage/cover.txt
+	gocovmerge .gocoverage/*.out > coverage.txt
+	go tool cover -html=coverage.txt -o .gocoverage/index.html
 
 %.coverage:
 	@[ -d .gocoverage ] || mkdir .gocoverage
