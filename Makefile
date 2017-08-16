@@ -25,4 +25,4 @@ fmt:
 	go fmt $(SOURCES)
 
 test:
-	go test -race -coverprofile=coverage.txt -covermode=atomic -check.v $(PACKAGES)
+	go test -race -v -coverprofile=coverage.txt -covermode=atomic $(PACKAGES)

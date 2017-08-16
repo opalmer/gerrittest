@@ -21,15 +21,12 @@ type ServiceSpec struct {
 
 // ReadServiceSpec reads and returns a *ServiceSpec from a file.
 func ReadServiceSpec(path string) (*ServiceSpec, error) {
-	var spec ServiceSpec
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	if err := json.Unmarshal(data, &spec); err != nil {
-		return nil, err
-	}
-	return &spec, nil
+	spec := &ServiceSpec{}
+	return spec, json.Unmarshal(data, spec)
 }
 
 // ReadServiceSpecFromArg is identical to ReadServiceSpec except we're

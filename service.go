@@ -33,6 +33,7 @@ type User struct {
 // Service is a struct representing a running instance of Gerrit
 // inside of a docker container.
 type Service struct {
+	Service   *dockertest.Service
 	Container *dockertest.ContainerInfo
 	HTTPPort  *dockertest.Port
 	SSHPort   *dockertest.Port
@@ -40,7 +41,7 @@ type Service struct {
 
 // HTTPClient constructs and returns a basic client for interacting with
 // the service.
-func (s *Service) HTTPClient() (*HTTPClient, error) {
+func (s *Service) HTTPClient() *HTTPClient {
 	return NewHTTPClient(s, "admin")
 }
 
@@ -205,15 +206,14 @@ func Start(parent context.Context, cfg *Config) (*Service, error) {
 		cfg:    cfg,
 		cancel: cancel,
 	}
-
 	service.Ping = run.ping
-	err = service.Run()
-	if err != nil {
-		logger.WithError(err).Error()
+
+	if err := service.Run(); err != nil {
 		return nil, err
 	}
 
 	return &Service{
+		Service:   service,
 		Container: service.Container,
 		HTTPPort:  run.http,
 		SSHPort:   run.ssh,

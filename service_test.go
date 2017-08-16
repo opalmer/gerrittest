@@ -1,38 +1,66 @@
 package gerrittest
 
 import (
-	"time"
-
+	"context"
 	"fmt"
 	"net"
+	"testing"
+	"time"
 
 	"github.com/opalmer/dockertest"
-	. "gopkg.in/check.v1"
 )
 
-type RunnerTest struct{}
-
-var _ = Suite(&RunnerTest{})
-
-func (s *RunnerTest) TestGetService(c *C) {
+func TestGetService(t *testing.T) {
 	cfg := &Config{
 		PortHTTP: dockertest.RandomPort,
 	}
+
 	svc, err := GetService(cfg)
-	c.Assert(len(svc.Input.Ports.Specs), Equals, 2)
-	c.Assert(err, IsNil)
-	c.Assert(svc.Name, Equals, "gerrittest")
-	c.Assert(svc.Timeout, DeepEquals, time.Minute*10)
-	if cfg.PortHTTP == dockertest.RandomPort {
-		c.Fail()
+	if err != nil {
+		t.Fatal(err)
 	}
-	c.Assert(len(svc.Input.Environment), Equals, 1)
+	if svc.Name != "gerrittest" {
+		t.Fatal()
+	}
+	if svc.Timeout != time.Minute*10 {
+		t.Fatal()
+	}
+	if cfg.PortHTTP == dockertest.RandomPort {
+		t.Fatal()
+	}
+	if len(svc.Input.Environment) != 1 {
+		t.Fatal()
+	}
 }
 
-func (s *RunnerTest) TestGetRandomPort(c *C) {
+func TestGetRandomPort(t *testing.T) {
 	port, err := GetRandomPort()
-	c.Assert(err, IsNil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We expect nothing to be listening on the port GetRandomPort()
+	// returned. If something is listening then we didn't close the port
+	// before leaving GetRandomPort().
 	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-	c.Assert(err, NotNil)
-	c.Assert(conn, IsNil)
+	if err == nil {
+		t.Fatal()
+	}
+	if conn != nil {
+		t.Fatal()
+	}
+}
+
+func TestStart(t *testing.T) {
+	cfg := &Config{
+		Image:            DefaultImage,
+		PortSSH:          dockertest.RandomPort,
+		PortHTTP:         dockertest.RandomPort,
+		CleanupOnFailure: true,
+	}
+	svc, err := Start(context.Background(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer svc.Service.Terminate()
 }

@@ -23,10 +23,7 @@ func GetResponseBody(response *http.Response) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := response.Body.Close(); err != nil {
-		return nil, err
-	}
-	return gerrit.RemoveMagicPrefixLine(body), nil
+	return gerrit.RemoveMagicPrefixLine(body), response.Body.Close()
 }
 
 // HTTPClient is a simple client for talking to Gerrit within a
@@ -202,18 +199,17 @@ func (h *HTTPClient) InsertPublicKey(key ssh.PublicKey) error {
 		return err
 	}
 	request.Header.Set("Content-Type", "plain/text")
-
 	_, _, err = h.Do(request, http.StatusCreated)
 	return err
 }
 
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No
 // validation to ensure the service is actually running is performed.
-func NewHTTPClient(service *Service, username string) (*HTTPClient, error) {
+func NewHTTPClient(service *Service, username string) *HTTPClient {
 	return &HTTPClient{
 		Client: &http.Client{Jar: NewCookieJar()},
 		Prefix: fmt.Sprintf(
 			"http://%s:%d", service.HTTPPort.Address, service.HTTPPort.Public),
 		User: username,
-	}, nil
+	}
 }

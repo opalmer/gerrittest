@@ -142,11 +142,7 @@ var Start = &cobra.Command{
 			return nil
 		}
 
-		client, err := service.HTTPClient()
-		if err != nil {
-			return err
-		}
-
+		client := service.HTTPClient()
 		spec.URL = client.Prefix
 
 		// Hitting /login/ will produce a cookie that can be used
@@ -208,7 +204,7 @@ func init() {
 		"The location to write information about the service to. Any "+
 			"existing content will be overwritten.")
 	Start.Flags().String(
-		"image", "opalmer/gerrittest:2.14.2",
+		"image", gerrittest.DefaultImage,
 		"The Docker image to spin up Gerrit.")
 	Start.Flags().Uint16(
 		"port-http", dockertest.RandomPort,

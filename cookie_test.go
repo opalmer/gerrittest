@@ -3,27 +3,23 @@ package gerrittest
 import (
 	"net/http"
 	"net/url"
-
-	. "gopkg.in/check.v1"
+	"testing"
 )
 
-type CookieTest struct{}
-
-var _ = Suite(&CookieTest{})
-
-func (s *CookieTest) TestHostname(c *C) {
-	hostnames := map[string]string{
-		"127.0.0.1":       "localhost",
-		"localhost":       "localhost",
-		"foo.example.com": "foo.example.com",
+func TestHostname(t *testing.T) {
+	expected := map[string]string{
+		"127.0.0.1": "localhost",
+		"localhost": "localhost",
+		"foobar":    "foobar",
 	}
-
-	for host, expected := range hostnames {
-		c.Assert(hostname(&url.URL{Host: host}), Equals, expected)
+	for name, value := range expected {
+		if hostname(&url.URL{Host: name}) != value {
+			t.Fatalf("%s != %s", name, value)
+		}
 	}
 }
 
-func (s *CookieTest) TestCookieJar_SetCookies(c *C) {
+func TestCookieJar_SetCookies(t *testing.T) {
 	jar := NewCookieJar()
 	u := &url.URL{Host: "127.0.0.1"}
 	cookies := []*http.Cookie{{
@@ -34,12 +30,13 @@ func (s *CookieTest) TestCookieJar_SetCookies(c *C) {
 	expected := map[string]map[string]*http.Cookie{}
 	expected["localhost"] = map[string]*http.Cookie{}
 	expected["localhost"]["foo"] = cookies[0]
-
 	jar.SetCookies(u, cookies)
-	c.Assert(jar.cookies, DeepEquals, expected)
+	if jar.cookies["localhost"]["foo"] != cookies[0] {
+		t.Fatal()
+	}
 }
 
-func (s *CookieTest) TestCookieJar_Cookies(c *C) {
+func TestCookieJar_Cookies(t *testing.T) {
 	jar := NewCookieJar()
 	u := &url.URL{Host: "127.0.0.1"}
 	cookies := []*http.Cookie{{
@@ -49,5 +46,18 @@ func (s *CookieTest) TestCookieJar_Cookies(c *C) {
 	}}
 
 	jar.SetCookies(u, cookies)
-	c.Assert(jar.Cookies(u), DeepEquals, cookies)
+	result := jar.Cookies(u)
+
+	for i, cookie := range cookies {
+		stored := result[i]
+		if cookie.Name != stored.Name {
+			t.Fatal()
+		}
+		if cookie.Path != stored.Path {
+			t.Fatal()
+		}
+		if cookie.Value != stored.Value {
+			t.Fatal()
+		}
+	}
 }
