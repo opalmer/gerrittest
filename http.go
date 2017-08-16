@@ -1,19 +1,19 @@
 package gerrittest
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
-	"bytes"
-	"net/url"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/go-gerrit"
+	"golang.org/x/crypto/ssh"
 )
 
 // GetResponseBody returns the body of the given response as bytes with the
@@ -23,7 +23,6 @@ func GetResponseBody(response *http.Response) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(string(body))
 	if err := response.Body.Close(); err != nil {
 		return nil, err
 	}
@@ -129,8 +128,8 @@ func (h *HTTPClient) Login() error {
 }
 
 // GetAccount will return information about the
-func (h *HTTPClient) GetAccount(username string) (*gerrit.AccountInfo, error) {
-	request, err := h.NewRequest(http.MethodGet, fmt.Sprintf("/a/accounts/%s", username), nil)
+func (h *HTTPClient) GetAccount() (*gerrit.AccountInfo, error) {
+	request, err := h.NewRequest(http.MethodGet, "/a/accounts/self", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -167,6 +166,34 @@ func (h *HTTPClient) GeneratePassword() (string, error) {
 	}
 	output := strings.TrimSpace(string(body))
 	return output[1 : len(output)-1], nil
+}
+
+// SetPassword sets the http password to the given value.
+func (h *HTTPClient) SetPassword(password string) error {
+	request, err := h.NewRequest(
+		http.MethodPut, "/a/accounts/self/password.http", nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = h.Do(
+		request, []byte(fmt.Sprintf("{\"http_password\": \"%s\"}", password)), http.StatusOK)
+	if err != nil {
+		return err
+	}
+}
+
+// InsertPublicKey will insert the provided public key.
+func (h *HTTPClient) InsertPublicKey(key ssh.PublicKey) error {
+	request, err := h.NewRequest(
+		http.MethodPost, "/a/accounts/self/sshkeys", nil)
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("Content-Type", "plain/text")
+	_, err = h.Do(request, ssh.MarshalAuthorizedKey(key), http.StatusCreated)
+	return err
 }
 
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No

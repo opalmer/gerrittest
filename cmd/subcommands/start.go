@@ -27,10 +27,20 @@ func getSSHKeys(cmd *cobra.Command) (ssh.PublicKey, *rsa.PrivateKey, string, err
 		if err != nil {
 			return nil, nil, "", err
 		}
-		return public, private, "", err
+		file, err := ioutil.TempFile("", "id_rsa-")
+		if err != nil {
+			return nil, nil, "", err
+		}
+		if err := file.Close(); err != nil {
+			return nil, nil, "", err
+		}
+		if err := gerrittest.WritePrivateKey(private, file.Name()); err != nil {
+			return nil, nil, "", err
+		}
+
+		return public, private, file.Name(), err
 	}
 	public, private, err := gerrittest.ReadSSHKeys(privateKeyPath)
-
 	return public, private, privateKeyPath, nil
 }
 
@@ -124,6 +134,8 @@ var Start = &cobra.Command{
 			return err
 		}
 
+		spec.URL = client.Prefix
+
 		// Hitting /login/ will produce a cookie that can be used
 		// for authenticated requests. Also, this first request
 		// causes the first account to be created which happens
@@ -132,19 +144,45 @@ var Start = &cobra.Command{
 			return err
 		}
 
-		account, err := client.GetAccount("self")
+		account, err := client.GetAccount()
 		if err != nil {
 			return err
 		}
 		spec.Admin.Login = account.Username
 
-		password, err := client.GeneratePassword()
+		// Password setup
+		passwd, err := cmd.Flags().GetString("password")
 		if err != nil {
 			return err
 		}
-		spec.Admin.Password = password
+		if passwd == "" {
+			password, err := client.GeneratePassword()
+			if err != nil {
+				return err
+			}
+			spec.Admin.Password = password
 
+		} else {
+			if err := client.SetPassword(passwd); err != nil {
+				return err
+			}
+			spec.Admin.Password = passwd
+		}
 
+		// Insert ssh key
+		public, _, privateKeyPath, err := getSSHKeys(cmd)
+		if err != nil {
+			return err
+		}
+		if err := client.InsertPublicKey(public); err != nil {
+			return err
+		}
+		spec.Admin.PrivateKey = privateKeyPath
+		spec.SSHCommand = fmt.Sprintf(
+			"ssh -p %d -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no " +
+				"%s", spec.SSH.Public, spec.Admin.PrivateKey, spec.SSH.Address)
+
+		// TODO connect with SSH client and run a test command
 		return jsonOutput(cmd, spec)
 	},
 }
@@ -176,4 +214,8 @@ func init() {
 	Start.Flags().Bool(
 		"start-only", false,
 		"If provided just start the container, don't setup anything else.")
+	Start.Flags().StringP(
+		"password", "p", "",
+		"If provided then use this value for the admin password instead " +
+			"of generating one.")
 }
