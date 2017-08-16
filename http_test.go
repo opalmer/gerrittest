@@ -94,9 +94,6 @@ func TestHTTPClient_NewRequest(t *testing.T) {
 	if request.Method != http.MethodGet {
 		t.Fatal()
 	}
-	if request.Method != http.MethodGet {
-		t.Fatal()
-	}
 	var body bytes.Buffer
 	io.Copy(&body, request.Body)
 	if body.String() != "foo" {
