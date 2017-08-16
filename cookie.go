@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
-
-	log "github.com/Sirupsen/logrus"
 )
 
 func hostname(u *url.URL) string {
@@ -22,7 +20,6 @@ func hostname(u *url.URL) string {
 // local development.
 type CookieJar struct {
 	mtx     *sync.Mutex
-	log     *log.Entry
 	cookies map[string]map[string]*http.Cookie
 }
 
@@ -30,13 +27,9 @@ type CookieJar struct {
 func (c *CookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	logger := c.log.WithFields(log.Fields{
-		"action": "set",
-	})
 	host := hostname(u)
 	hostCookies, ok := c.cookies[host]
 	if !ok {
-		logger = logger.WithField("init", true)
 		hostCookies = map[string]*http.Cookie{}
 		c.cookies[host] = hostCookies
 	}
@@ -46,19 +39,12 @@ func (c *CookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 		hostCookies[cookie.Name] = cookie
 		keys = append(keys, cookie.Name)
 	}
-	logger.WithFields(log.Fields{
-		"set":     keys,
-		"cookies": len(hostCookies),
-	}).Debug()
 }
 
 // Cookies returns the cookies associated with the given url.
 func (c *CookieJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	logger := c.log.WithFields(log.Fields{
-		"action": "get",
-	})
 	host := hostname(u)
 	hostCookies, _ := c.cookies[host]
 	names := []string{}
@@ -66,9 +52,6 @@ func (c *CookieJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
 		names = append(names, cookie.Name)
 		cookies = append(cookies, cookie)
 	}
-	logger.WithFields(log.Fields{
-		"names": names,
-	}).Debug()
 	return cookies
 }
 
@@ -77,6 +60,5 @@ func NewCookieJar() *CookieJar {
 	return &CookieJar{
 		mtx:     &sync.Mutex{},
 		cookies: map[string]map[string]*http.Cookie{},
-		log:     log.WithField("cmp", "cookie"),
 	}
 }
