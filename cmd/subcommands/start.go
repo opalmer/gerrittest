@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"crypto/rsa"
 	"fmt"
 	"github.com/opalmer/dockertest"
 	"github.com/opalmer/gerrittest"
@@ -14,34 +13,40 @@ import (
 	"path/filepath"
 	"time"
 	"encoding/json"
+	"errors"
 )
 
-func getSSHKeys(cmd *cobra.Command) (ssh.PublicKey, *rsa.PrivateKey, string, error) {
+func getSSHKeys(cmd *cobra.Command) (ssh.PublicKey, ssh.Signer, string, error) {
 	privateKeyPath, err := cmd.Flags().GetString("private-key")
 	if err != nil {
 		return nil, nil, "", err
 	}
 
+	// No private key given, generate one instead.
 	if privateKeyPath == "" {
-		public, private, err := gerrittest.GenerateSSHKeys()
+		private, err := gerrittest.GenerateRSAKey()
 		if err != nil {
 			return nil, nil, "", err
 		}
+
 		file, err := ioutil.TempFile("", "id_rsa-")
 		if err != nil {
 			return nil, nil, "", err
 		}
-		if err := file.Close(); err != nil {
+		defer file.Close()
+		if err := gerrittest.WriteRSAKey(private, file); err != nil {
 			return nil, nil, "", err
 		}
-		if err := gerrittest.WritePrivateKey(private, file.Name()); err != nil {
+		signer, err := ssh.NewSignerFromKey(private)
+		if err != nil {
 			return nil, nil, "", err
 		}
 
-		return public, private, file.Name(), err
+		return signer.PublicKey(), signer, file.Name(), err
 	}
+
 	public, private, err := gerrittest.ReadSSHKeys(privateKeyPath)
-	return public, private, privateKeyPath, nil
+	return public, private, privateKeyPath, err
 }
 
 // NewConfigFromCommand converts a command to a config struct.
@@ -114,6 +119,14 @@ var Start = &cobra.Command{
 			}
 		}()
 
+		public, _, privateKeyPath, err := getSSHKeys(cmd)
+		if err != nil {
+			return err
+		}
+		if public == nil {
+			return errors.New("Internal error, failed to retrieve public key!")
+		}
+
 		spec := &gerrittest.ServiceSpec{Admin: &gerrittest.User{}}
 		service, err := gerrittest.Start(ctx, cfg)
 		if err != nil {
@@ -170,10 +183,6 @@ var Start = &cobra.Command{
 		}
 
 		// Insert ssh key
-		public, _, privateKeyPath, err := getSSHKeys(cmd)
-		if err != nil {
-			return err
-		}
 		if err := client.InsertPublicKey(public); err != nil {
 			return err
 		}
@@ -182,7 +191,6 @@ var Start = &cobra.Command{
 			"ssh -p %d -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no " +
 				"%s", spec.SSH.Public, spec.Admin.PrivateKey, spec.SSH.Address)
 
-		// TODO connect with SSH client and run a test command
 		return jsonOutput(cmd, spec)
 	},
 }

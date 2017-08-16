@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -97,48 +96,39 @@ func NewSSHClient(user string, privateKeyPath string, port *dockertest.Port) (*S
 	return client, err
 }
 
-// GenerateSSHKeys will generate and return an SSH key pair.
-func GenerateSSHKeys() (ssh.PublicKey, *rsa.PrivateKey, error) {
+// GenerateRSAKey will generate and return an SSH key pair.
+func GenerateRSAKey() (*rsa.PrivateKey, error) {
 	private, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	public, err := ssh.NewPublicKey(&private.PublicKey)
-	return public, private, err
+	if err := private.Validate(); err != nil {
+		return nil, err
+	}
+	return private, nil
 }
 
 // ReadSSHKeys will read the provided private key and return the public and
 // private portions.
-func ReadSSHKeys(path string) (ssh.PublicKey, *rsa.PrivateKey, error) {
+func ReadSSHKeys(path string) (ssh.PublicKey, ssh.Signer, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	private, err := x509.ParsePKCS1PrivateKey(data)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	public, err := ssh.NewPublicKey(&private.PublicKey)
-	return public, private, nil
+	signer, err := ssh.ParsePrivateKey(data)
+	return signer.PublicKey(), signer, err
 }
 
-// WritePrivateKey will take a private key and write out the public
+// WriteRSAKey will take a private key and write out the public
 // and private portions to disk.
-func WritePrivateKey(key *rsa.PrivateKey, private string) error {
-	if err := os.MkdirAll(filepath.Dir(private), 0700); err != nil {
+func WriteRSAKey(key *rsa.PrivateKey, file *os.File) error {
+	if err := key.Validate(); err != nil {
 		return err
 	}
 
-	// Write private key to disk
-	privateKeyPEM := &pem.Block{
+	return pem.Encode(file, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
-	}
-	privateFile, err := os.OpenFile(private, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-	return pem.Encode(privateFile, privateKeyPEM)
+	})
 }
