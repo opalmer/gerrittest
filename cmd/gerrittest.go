@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/gerrittest/cmd/subcommands"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var RootCmd = &cobra.Command{

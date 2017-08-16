@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"errors"
+
 	"github.com/opalmer/dockertest"
 	"github.com/opalmer/gerrittest"
 	"github.com/spf13/cobra"

@@ -2,18 +2,19 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/opalmer/dockertest"
-	"github.com/opalmer/gerrittest"
-	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"time"
-	"encoding/json"
-	"errors"
+
+	"github.com/opalmer/dockertest"
+	"github.com/opalmer/gerrittest"
+	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh"
 )
 
 func getSSHKeys(cmd *cobra.Command) (ssh.PublicKey, ssh.Signer, string, error) {
@@ -184,8 +185,18 @@ var Start = &cobra.Command{
 		}
 		spec.Admin.PrivateKey = privateKeyPath
 		spec.SSHCommand = fmt.Sprintf(
-			"ssh -p %d -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no " +
+			"ssh -p %d -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "+
 				"%s@%s", spec.SSH.Public, spec.Admin.PrivateKey, spec.Admin.Login, spec.SSH.Address)
+
+		// Setup the SSH client and make sure we're able to connect.
+		sshClient, err := gerrittest.NewSSHClient(
+			spec.Admin.Login, spec.Admin.PrivateKey, spec.SSH)
+		if err != nil {
+			return err
+		}
+		if _, err := sshClient.Version(); err != nil {
+			return err
+		}
 
 		return jsonOutput(cmd, spec)
 	},
@@ -220,6 +231,6 @@ func init() {
 		"If provided just start the container, don't setup anything else.")
 	Start.Flags().StringP(
 		"password", "p", "",
-		"If provided then use this value for the admin password instead " +
+		"If provided then use this value for the admin password instead "+
 			"of generating one.")
 }
