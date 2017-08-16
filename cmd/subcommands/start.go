@@ -182,14 +182,14 @@ var Start = &cobra.Command{
 			spec.Admin.Password = passwd
 		}
 
-		// Insert ssh key
+		// Insert ssh key and test
 		if err := client.InsertPublicKey(public); err != nil {
 			return err
 		}
 		spec.Admin.PrivateKey = privateKeyPath
 		spec.SSHCommand = fmt.Sprintf(
 			"ssh -p %d -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no " +
-				"%s", spec.SSH.Public, spec.Admin.PrivateKey, spec.SSH.Address)
+				"%s@%s", spec.SSH.Public, spec.Admin.PrivateKey, spec.Admin.Login, spec.SSH.Address)
 
 		return jsonOutput(cmd, spec)
 	},

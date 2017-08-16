@@ -39,7 +39,7 @@ $ gerrittest start
   "protocol": "tcp"
  },
  "url": "http://127.0.0.1:36965",
- "ssh_command": "ssh -p 32783 -i /tmp/id_rsa-158272732 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no 127.0.0.1"
+ "ssh_command": "ssh -p 32783 -i /tmp/id_rsa-158272732 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@127.0.0.1"
 }
 ```
    
