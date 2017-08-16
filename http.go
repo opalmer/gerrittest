@@ -178,9 +178,7 @@ func (h *HTTPClient) SetPassword(password string) error {
 
 	_, err = h.Do(
 		request, []byte(fmt.Sprintf("{\"http_password\": \"%s\"}", password)), http.StatusOK)
-	if err != nil {
-		return err
-	}
+	return err
 }
 
 // InsertPublicKey will insert the provided public key.
