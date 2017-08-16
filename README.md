@@ -12,6 +12,36 @@ is available via godoc: https://godoc.org/github.com/opalmer/gerrittest
 
 * Install docker
 * `go install github.com/opalmer/gerrittest/cmd`
+
+## Command Line Usage
+
+### Start
+
+```
+$ gerrittest start
+{
+ "admin": {
+  "login": "admin",
+  "password": "+YzOzJ9xBftJnvyWrSOSHqrviFlPCP2J7IPxUspKNg",
+  "private_key": "/tmp/id_rsa-158272732"
+ },
+ "container": "b90671cb7d192131102cd599df5cfa4d4b4ca78f6857da0a41272f2063a22530",
+ "ssh": {
+  "Private": 29418,
+  "port": 32783,
+  "address": "127.0.0.1",
+  "protocol": "tcp"
+ },
+ "http": {
+  "Private": 8080,
+  "port": 36965,
+  "address": "127.0.0.1",
+  "protocol": "tcp"
+ },
+ "url": "http://127.0.0.1:36965",
+ "ssh_command": "ssh -p 32783 -i /tmp/id_rsa-158272732 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no 127.0.0.1"
+}
+```
    
 ## Testing
 
