@@ -29,6 +29,7 @@ func GetResponseBody(response *http.Response) ([]byte, error) {
 	return gerrit.RemoveMagicPrefixLine(body), nil
 }
 
+
 // HTTPClient is a simple client for talking to Gerrit within a
 // container. This is not intended as a replacement for go-gerrit.
 // Instead, it's intended to get validate that Gerrit is setup
@@ -48,9 +49,15 @@ func (h *HTTPClient) URL(tail string) string {
 
 // NewRequest constructs a new http.Request, sets the proper headers and then
 // logs the request.
-func (h *HTTPClient) NewRequest(method string, tail string, body io.Reader) (*http.Request, error) {
+func (h *HTTPClient) NewRequest(method string, tail string, body []byte) (*http.Request, error) {
 	requestURL := h.URL(tail)
-	request, err := http.NewRequest(method, requestURL, body)
+
+	var bodyReader io.Reader
+	if body != nil {
+		bodyReader = bytes.NewReader(body)
+	}
+
+	request, err := http.NewRequest(method, requestURL, bodyReader)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +87,7 @@ func (h *HTTPClient) NewRequest(method string, tail string, body io.Reader) (*ht
 }
 
 // Do performs the request using the internal http client.
-func (h *HTTPClient) Do(request *http.Request, body []byte, expectedCode int) (*http.Response, error) {
+func (h *HTTPClient) Do(request *http.Request, expectedCode int) (*http.Response, error) {
 	logger := h.log.WithFields(log.Fields{
 		"type":   "response",
 		"method": request.Method,
@@ -88,11 +95,6 @@ func (h *HTTPClient) Do(request *http.Request, body []byte, expectedCode int) (*
 	})
 	if expectedCode != 0 {
 		logger = logger.WithField("status-expected", expectedCode)
-	}
-	if body != nil {
-		request.Header.Add("Content-Type", "application/json")
-		logger = logger.WithField("body", string(body))
-		request.Body = ioutil.NopCloser(bytes.NewReader(body))
 	}
 
 	start := time.Now()
@@ -123,7 +125,7 @@ func (h *HTTPClient) Login() error {
 	if err != nil {
 		return err
 	}
-	_, err = h.Do(request, nil, http.StatusOK)
+	_, err = h.Do(request, http.StatusOK)
 	return err
 }
 
@@ -133,7 +135,7 @@ func (h *HTTPClient) GetAccount() (*gerrit.AccountInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	response, err := h.Do(request, nil, http.StatusOK)
+	response, err := h.Do(request, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
@@ -149,48 +151,59 @@ func (h *HTTPClient) GetAccount() (*gerrit.AccountInfo, error) {
 // only works for the current account (the one which set the cookie
 // in GetAccount())
 func (h *HTTPClient) GeneratePassword() (string, error) {
-	request, err := h.NewRequest(
-		http.MethodPut, "/a/accounts/self/password.http", nil)
+	body, err := json.Marshal(&gerrit.HTTPPasswordInput{Generate: true})
 	if err != nil {
 		return "", err
 	}
 
-	response, err := h.Do(request, []byte("{\"generate\": true}"), http.StatusOK)
+	request, err := h.NewRequest(http.MethodPut, "/a/accounts/self/password.http", body)
 	if err != nil {
 		return "", err
 	}
 
-	body, err := GetResponseBody(response)
+	response, err := h.Do(request, http.StatusOK)
 	if err != nil {
 		return "", err
 	}
-	output := strings.TrimSpace(string(body))
+
+	responseBody, err := GetResponseBody(response)
+	if err != nil {
+		return "", err
+	}
+
+	// The generated password includes quotes, the below code removes
+	// those quotes.
+	output := strings.TrimSpace(string(responseBody))
 	return output[1 : len(output)-1], nil
 }
 
 // SetPassword sets the http password to the given value.
 func (h *HTTPClient) SetPassword(password string) error {
-	request, err := h.NewRequest(
-		http.MethodPut, "/a/accounts/self/password.http", nil)
+	body, err := json.Marshal(&gerrit.HTTPPasswordInput{HTTPPassword: password})
 	if err != nil {
 		return err
 	}
 
-	_, err = h.Do(
-		request, []byte(fmt.Sprintf("{\"http_password\": \"%s\"}", password)), http.StatusOK)
+	request, err := h.NewRequest(
+		http.MethodPut, "/a/accounts/self/password.http", body)
+	if err != nil {
+		return err
+	}
+
+	_, err = h.Do(request, http.StatusOK)
 	return err
 }
 
 // InsertPublicKey will insert the provided public key.
 func (h *HTTPClient) InsertPublicKey(key ssh.PublicKey) error {
 	request, err := h.NewRequest(
-		http.MethodPost, "/a/accounts/self/sshkeys", nil)
+		http.MethodPost, "/a/accounts/self/sshkeys", ssh.MarshalAuthorizedKey(key))
 	if err != nil {
 		return err
 	}
-
 	request.Header.Set("Content-Type", "plain/text")
-	_, err = h.Do(request, ssh.MarshalAuthorizedKey(key), http.StatusCreated)
+
+	_, err = h.Do(request, http.StatusCreated)
 	return err
 }
 
