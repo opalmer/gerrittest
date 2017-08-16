@@ -38,5 +38,4 @@ func init() {
 		"Configures the global logging level.")
 	RootCmd.AddCommand(cmd.Start)
 	RootCmd.AddCommand(cmd.Stop)
-	RootCmd.AddCommand(cmd.CreateAccount)
 }
