@@ -11,7 +11,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/andygrunwald/go-gerrit"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
 )
@@ -156,7 +155,7 @@ func TestHTTPClient_Login(t *testing.T) {
 func TestHTTPClient_GetAccount(t *testing.T) {
 	expected := httptest.NewRecorder()
 	expected.Code = http.StatusOK
-	body, err := json.Marshal(&gerrit.AccountInfo{
+	body, err := json.Marshal(&AccountInfo{
 		Name: "foobar",
 	})
 	if err != nil {
@@ -181,7 +180,7 @@ func TestHTTPClient_GetAccount(t *testing.T) {
 func TestHTTPClient_GeneratePassword(t *testing.T) {
 	expected := httptest.NewRecorder()
 	expected.Code = http.StatusOK
-	body, err := json.Marshal(&gerrit.AccountInfo{
+	body, err := json.Marshal(&AccountInfo{
 		Name: "foobar",
 	})
 	if err != nil {

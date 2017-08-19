@@ -12,9 +12,10 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/andygrunwald/go-gerrit"
 	"golang.org/x/crypto/ssh"
 )
+
+var magicPrefix = []byte(")]}'\n")
 
 // GetResponseBody returns the body of the given response as bytes with the
 // magic prefix removed.
@@ -23,7 +24,10 @@ func GetResponseBody(response *http.Response) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gerrit.RemoveMagicPrefixLine(body), response.Body.Close()
+	if bytes.HasPrefix(body, magicPrefix) {
+		body = body[5:]
+	}
+	return body, response.Body.Close()
 }
 
 // HTTPClient is a simple client for talking to Gerrit within a
@@ -133,7 +137,7 @@ func (h *HTTPClient) Login() error {
 }
 
 // GetAccount will return information about the
-func (h *HTTPClient) GetAccount() (*gerrit.AccountInfo, error) {
+func (h *HTTPClient) GetAccount() (*AccountInfo, error) {
 	request, err := h.NewRequest(http.MethodGet, "/a/accounts/self", nil)
 	if err != nil {
 		return nil, err
@@ -144,7 +148,7 @@ func (h *HTTPClient) GetAccount() (*gerrit.AccountInfo, error) {
 		return nil, err
 	}
 
-	account := &gerrit.AccountInfo{}
+	account := &AccountInfo{}
 	return account, json.Unmarshal(body, account)
 }
 
@@ -152,7 +156,7 @@ func (h *HTTPClient) GetAccount() (*gerrit.AccountInfo, error) {
 // only works for the current account (the one which set the cookie
 // in GetAccount())
 func (h *HTTPClient) GeneratePassword() (string, error) {
-	body, err := json.Marshal(&gerrit.HTTPPasswordInput{Generate: true})
+	body, err := json.Marshal(&HTTPPasswordInput{Generate: true})
 	if err != nil {
 		return "", err
 	}
@@ -175,7 +179,7 @@ func (h *HTTPClient) GeneratePassword() (string, error) {
 
 // SetPassword sets the http password to the given value.
 func (h *HTTPClient) SetPassword(password string) error {
-	body, err := json.Marshal(&gerrit.HTTPPasswordInput{HTTPPassword: password})
+	body, err := json.Marshal(&HTTPPasswordInput{HTTPPassword: password})
 	if err != nil {
 		return err
 	}
