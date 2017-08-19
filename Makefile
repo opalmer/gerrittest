@@ -10,7 +10,7 @@ EXTRA_DEPENDENCIES = \
     github.com/golang/dep/cmd/dep \
     github.com/wadey/gocovmerge
 
-check: deps docker build test coverage lint
+check: deps vet docker lint build test coverage
 
 docker:
 	$(MAKE) -C docker build
@@ -24,6 +24,9 @@ lint:
 deps:
 	go get $(EXTRA_DEPENDENCIES)
 	dep ensure
+
+vet:
+	go vet $(PACKAGES)
 
 fmt:
 	gofmt -w -s $(SOURCES)
