@@ -13,9 +13,10 @@ is available via godoc: https://godoc.org/github.com/opalmer/gerrittest
 * Install docker
 * `go install github.com/opalmer/gerrittest/cmd`
 
-## Command Line Usage
+## Usage
 
-### Start
+### Command Line
+#### gerrittest - start
 
 ```
 $ gerrittest start
@@ -42,7 +43,32 @@ $ gerrittest start
  "ssh_command": "ssh -p 32783 -i /tmp/id_rsa-158272732 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@127.0.0.1"
 }
 ```
-   
+
+### API
+### Basic Usage
+
+The produces nearly almost identical results to `gerrittest start` above.
+
+```go
+import (
+	"context"
+	"github.com/opalmer/gerrittest"
+)
+
+func main()  {
+	service, err := gerrittest.Start(context.Background(), gerrittest.NewConfig())
+	if err != nil {
+		panic(err)
+	}
+	setup := &Setup{Service: service}
+	spec, httpClient, sshClient, err := setup.Init()
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+
 ## Testing
 
 The gerrittest project can be tested locally. To build the container and
