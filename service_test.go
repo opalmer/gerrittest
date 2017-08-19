@@ -62,3 +62,13 @@ func TestStart(t *testing.T) {
 	}
 	defer svc.Service.Terminate()
 }
+
+// You can start the Gerrit service using the Start() function. This only
+// starts the container and returns information about the service.
+func ExampleStart() {
+	svc, err := Start(context.Background(), NewConfig())
+	if err != nil {
+		panic(err)
+	}
+	defer svc.Service.Terminate()
+}
