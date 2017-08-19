@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/opalmer/dockertest"
+	"github.com/prometheus/common/log"
 )
 
 func TestGetService(t *testing.T) {
@@ -68,7 +69,28 @@ func TestStart(t *testing.T) {
 func ExampleStart() {
 	svc, err := Start(context.Background(), NewConfig())
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	defer svc.Service.Terminate()
+	defer svc.Service.Terminate() // Terminate the container when you're done.
+}
+
+// Once you've started the service you'll want to setup Gerrit inside
+// the container. Running Setup.Init will cause the administrative user to
+// be created, generate an http api password and insert a public key for ssh
+// access.
+func ExampleSetup() {
+	svc, err := Start(context.Background(), NewConfig())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer svc.Service.Terminate() // Terminate the container when you're done.
+
+	setup := &Setup{Service: svc}
+	spec, http, ssh, err := setup.Init()
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = spec
+	_ = http
+	_ = ssh
 }

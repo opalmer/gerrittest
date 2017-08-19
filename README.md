@@ -62,10 +62,13 @@ func main()  {
 		panic(err)
 	}
 	setup := &Setup{Service: service}
-	spec, httpClient, sshClient, err := setup.Init()
+	spec, http, ssh, err := setup.Init()
 	if err != nil {
 		panic(err)
 	}
+	_ = spec
+	_ = http
+	_ = ssh
 }
 ```
 
