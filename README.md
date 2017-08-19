@@ -2,8 +2,8 @@
 
 [![Build Status](https://travis-ci.org/opalmer/gerrittest.svg?branch=master)](https://travis-ci.org/opalmer/gerrittest)
 [![codecov](https://codecov.io/gh/opalmer/gerrittest/branch/master/graph/badge.svg)](https://codecov.io/gh/opalmer/gerrittest)
-[![GoDoc](https://godoc.org/github.com/opalmer/dockertest?status.svg)](https://godoc.org/github.com/opalmer/dockertest)
 [![Go Report Card](https://goreportcard.com/badge/github.com/opalmer/gerrittest)](https://goreportcard.com/report/github.com/opalmer/gerrittest)
+[![GoDoc](https://godoc.org/github.com/opalmer/dockertest?status.svg)](https://godoc.org/github.com/opalmer/dockertest)
 
 This project is meant to assist in testing Gerrit. It provides a docker
 container to run Gerrit and a Makefile with some useful helpers. Documentation 
