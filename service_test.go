@@ -2,13 +2,19 @@ package gerrittest
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/dockertest"
-	"github.com/prometheus/common/log"
+	"golang.org/x/crypto/ssh"
 )
 
 func TestGetService(t *testing.T) {
@@ -62,6 +68,115 @@ func TestStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer svc.Service.Terminate()
+}
+
+func TestRunner_waitPortOpen_cancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	run := runner{
+		ctx: ctx,
+	}
+
+	err := run.waitPortOpen(&dockertest.Port{Address: "127.0.0.1", Public: 0})
+	if err != context.Canceled {
+		t.Fatal(err)
+	}
+}
+
+func TestRunner_waitPortOpen_dialError(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	run := runner{
+		ctx: ctx,
+	}
+	go func() {
+		time.Sleep(time.Second * 1)
+		cancel()
+	}()
+
+	if err := run.waitPortOpen(&dockertest.Port{Address: "127.0.0.1", Public: 65535}); err != context.Canceled {
+		t.Fatal(err)
+	}
+}
+
+func TestRunner_waitListenHTTP_cancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	run := runner{
+		ctx: ctx,
+	}
+	if err := run.waitListenHTTP(&dockertest.Port{Address: "127.0.0.1", Public: 65535}); err != context.Canceled {
+		t.Fatal(err)
+	}
+}
+
+func TestRunner_waitListenHTTP_badCode(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	run := runner{
+		ctx: ctx,
+	}
+	count := make(chan int, 1)
+	count <- 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		current := <-count
+		current++
+		count <- current
+		if current < 3 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	defer server.Close()
+
+	if err := run.waitListenHTTP(&dockertest.Port{Address: "127.0.0.1", Public: 65535}); err != context.Canceled {
+		t.Fatal(err)
+	}
+}
+
+func TestSetup_err(t *testing.T) {
+	setup := Setup{}
+	expected := errors.New("testing")
+	a, b, c, err := setup.err(log.WithField("phase", "test"), expected)
+	if a != nil {
+		t.Fatal()
+	}
+	if b != nil {
+		t.Fatal()
+	}
+	if c != nil {
+		t.Fatal()
+	}
+	if err != expected {
+		t.Fatal(err)
+	}
+}
+
+func TestSetup_getKeyPath(t *testing.T) {
+	key, err := GenerateRSAKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := ioutil.TempFile("", "")
+	defer os.Remove(file.Name())
+	generatedSigner, err := ssh.NewSignerFromKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := WriteRSAKey(key, file); err != nil {
+		t.Fatal(err)
+	}
+
+	setup := &Setup{PrivateKeyPath: file.Name()}
+	_, signer, err := setup.getKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(signer.PublicKey().Marshal()) != string(generatedSigner.PublicKey().Marshal()) {
+		t.Fatal()
+	}
 }
 
 // You can start the Gerrit service using the Start() function. This only

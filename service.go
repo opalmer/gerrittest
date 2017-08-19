@@ -26,6 +26,12 @@ const (
 	ExportedSSHPort = 29418
 )
 
+var (
+	// WaitDelay is used as a delay to prevent us from hammering ports while
+	// waiting for Gerrit to be listening or responding.
+	WaitDelay = time.Millisecond * 200
+)
+
 // User represents a single user for connecting to Gerrit.
 type User struct {
 	Login      string `json:"login"`
@@ -42,17 +48,11 @@ type Service struct {
 	SSHPort   *dockertest.Port
 }
 
-// HTTPClient constructs and returns a basic client for interacting with
-// the service.
-func (s *Service) HTTPClient() *HTTPClient {
-	return NewHTTPClient(s, "admin")
-}
-
 // runner used to run Gerrit and wait for it to come up.
 type runner struct {
 	ctx    context.Context
-	cfg    *Config
 	cancel context.CancelFunc
+	cfg    *Config
 	log    *log.Entry
 	http   *dockertest.Port
 	ssh    *dockertest.Port
@@ -60,7 +60,7 @@ type runner struct {
 
 func (s *runner) waitPortOpen(port *dockertest.Port) error {
 	addr := fmt.Sprintf("%s:%d", port.Address, port.Public)
-	ticker := time.NewTicker(time.Millisecond * 200)
+	ticker := time.NewTicker(WaitDelay)
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -68,7 +68,6 @@ func (s *runner) waitPortOpen(port *dockertest.Port) error {
 		case <-ticker.C:
 			conn, err := net.Dial("tcp", addr)
 			if err != nil {
-				conn.Close()
 				continue
 			}
 			return conn.Close()
@@ -78,7 +77,7 @@ func (s *runner) waitPortOpen(port *dockertest.Port) error {
 
 func (s *runner) waitListenHTTP(port *dockertest.Port) error {
 	url := fmt.Sprintf("http://%s:%d", port.Address, port.Public)
-	ticker := time.NewTicker(time.Millisecond * 200)
+	ticker := time.NewTicker(WaitDelay)
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -132,9 +131,6 @@ func (s *runner) ping(input *dockertest.PingInput) error {
 	})
 	err = s.waitListenHTTP(portHTTP)
 	logger.WithField("duration", time.Since(start)).Debug()
-	if err != nil {
-		logger.WithError(err).Error()
-	}
 	s.http = portHTTP
 	s.ssh = portSSH
 	return err
