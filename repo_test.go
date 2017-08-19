@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -52,4 +53,59 @@ func TestRepository_Destroy(t *testing.T) {
 	if _, err := os.Stat(repo.Root); err == nil {
 		t.Fatal()
 	}
+}
+
+func TestRepository_AddFile(t *testing.T) {
+	repo := newRepo(t, "")
+	defer repo.Destroy()
+	if err := repo.AddFile("foo/bar", []byte("Hello world"), 0600); err != nil {
+		t.Fatal()
+	}
+	path := filepath.Join(repo.Root, "foo", "bar")
+	if _, err := os.Stat(path); err != nil {
+		t.Fatal(err)
+	}
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "Hello world" {
+		t.Fatal()
+	}
+}
+
+func TestRepository_Commit(t *testing.T) {
+	repo := newRepo(t, "")
+	defer repo.Destroy()
+	if err := repo.AddFile("foo/bar", []byte("Hello world"), 0600); err != nil {
+		t.Fatal()
+	}
+	if err := repo.Commit("some commit"); err != nil {
+		t.Fatal(err)
+	}
+	stdout, _, err := repo.Run([]string{"show"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout, "some commit") {
+		t.Fatal()
+	}
+}
+
+func TestRepository_Amend(t *testing.T) {
+	repo := newRepo(t, "")
+	defer repo.Destroy()
+	if err := repo.AddFile("foo/bar", []byte("Hello world"), 0600); err != nil {
+		t.Fatal()
+	}
+	if err := repo.Commit("some commit"); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.AddFile("foo/bar2", []byte("Hello world"), 0600); err != nil {
+		t.Fatal()
+	}
+	if err := repo.Amend(); err != nil {
+		t.Fatal(err)
+	}
+
 }

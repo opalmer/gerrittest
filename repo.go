@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"time"
 
+	"path/filepath"
+
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -50,11 +52,11 @@ func (r *Repository) Run(args []string) (string, string, error) {
 	cmd := exec.CommandContext(ctx, r.Git, args...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
-
 	start := time.Now()
 	logger = logger.WithFields(log.Fields{
 		"duration": time.Since(start),
 	})
+
 	if err := cmd.Run(); err != nil {
 		logger = logger.WithError(err)
 		logger.Warn()
@@ -90,6 +92,59 @@ func (r *Repository) Destroy() error {
 		"path":   r.Root,
 	}).Debug()
 	return os.RemoveAll(r.Root)
+}
+
+// Add adds a single file to the repository.
+func (r *Repository) Add(relative string) error {
+	r.log.WithFields(log.Fields{
+		"action": "add",
+		"path":   relative,
+	}).Debug()
+	_, _, err := r.Run([]string{"add", relative})
+	return err
+}
+
+// AddFile performs multiple steps in a single command:
+//  - Write a file to disk using the given path. The path itself should
+//    be relative to the repository root. Any parent paths will be automatically
+//    created.
+//  - Set the permissions of the file.
+//  - Add the file to the git repository.
+func (r *Repository) AddFile(relative string, content []byte, mode os.FileMode) error {
+	logger := r.log.WithFields(log.Fields{
+		"action": "add-file",
+		"path":   relative,
+	})
+	absolute := filepath.Join(r.Root, relative)
+	if err := os.MkdirAll(filepath.Dir(absolute), 0700); err != nil {
+		logger.WithError(err).Warn()
+		return err
+	}
+	if err := ioutil.WriteFile(absolute, content, mode); err != nil {
+		logger.WithError(err).Warn()
+		return err
+	}
+	return r.Add(relative)
+}
+
+// Commit will commit any pending changes with the provided message.
+func (r *Repository) Commit(message string) error {
+	r.log.WithFields(log.Fields{
+		"action":  "commit",
+		"message": message,
+	}).Debug()
+	_, _, err := r.Run([]string{"commit", "-m", message, "--quiet"})
+	return err
+}
+
+// Amend amends the current commit without changing the commit message.
+func (r *Repository) Amend() error {
+	r.log.WithFields(log.Fields{
+		"action": "amend",
+	}).Debug()
+	_, _, err := r.Run(
+		[]string{"commit", "--quiet", "--amend", "--no-edit", "--allow-empty"})
+	return err
 }
 
 // NewRepository creates and returns a *Repository struct. If root is defined
