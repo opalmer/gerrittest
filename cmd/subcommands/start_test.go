@@ -12,6 +12,10 @@ import (
 )
 
 func TestStart(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
 	file, err := ioutil.TempFile("", "")
 	if err != nil {
 		t.Fatal(err)

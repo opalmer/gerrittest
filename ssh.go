@@ -102,9 +102,6 @@ func GenerateRSAKey() (*rsa.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := private.Validate(); err != nil {
-		return nil, err
-	}
 	return private, nil
 }
 
@@ -126,7 +123,7 @@ func WriteRSAKey(key *rsa.PrivateKey, file *os.File) error {
 	if err := key.Validate(); err != nil {
 		return err
 	}
-
+	defer file.Close()
 	return pem.Encode(file, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),

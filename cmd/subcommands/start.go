@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,41 +13,7 @@ import (
 	"github.com/opalmer/dockertest"
 	"github.com/opalmer/gerrittest"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh"
 )
-
-func getSSHKeys(cmd *cobra.Command) (ssh.PublicKey, ssh.Signer, string, error) {
-	privateKeyPath, err := cmd.Flags().GetString("private-key")
-	if err != nil {
-		return nil, nil, "", err
-	}
-
-	// No private key given, generate one instead.
-	if privateKeyPath == "" {
-		private, err := gerrittest.GenerateRSAKey()
-		if err != nil {
-			return nil, nil, "", err
-		}
-
-		file, err := ioutil.TempFile("", "id_rsa-")
-		if err != nil {
-			return nil, nil, "", err
-		}
-		defer file.Close()
-		if err := gerrittest.WriteRSAKey(private, file); err != nil {
-			return nil, nil, "", err
-		}
-		signer, err := ssh.NewSignerFromKey(private)
-		if err != nil {
-			return nil, nil, "", err
-		}
-
-		return signer.PublicKey(), signer, file.Name(), err
-	}
-
-	public, private, err := gerrittest.ReadSSHKeys(privateKeyPath)
-	return public, private, privateKeyPath, err
-}
 
 // NewConfigFromCommand converts a command to a config struct.
 func NewConfigFromCommand(cmd *cobra.Command) (*gerrittest.Config, error) {
@@ -120,84 +85,36 @@ var Start = &cobra.Command{
 			}
 		}()
 
-		public, _, privateKeyPath, err := getSSHKeys(cmd)
-		if err != nil {
-			return err
-		}
-		if public == nil {
-			return errors.New("internal error, failed to retrieve public key")
-		}
-
-		spec := &gerrittest.ServiceSpec{Admin: &gerrittest.User{}}
 		service, err := gerrittest.Start(ctx, cfg)
 		if err != nil {
 			return err
 		}
-
-		spec.HTTP = service.HTTPPort
-		spec.SSH = service.SSHPort
-		spec.Container = service.Container.ID()
 
 		startonly, err := cmd.Flags().GetBool("start-only")
 		if startonly {
 			return nil
 		}
 
-		client := service.HTTPClient()
-		spec.URL = client.Prefix
-
-		// Hitting /login/ will produce a cookie that can be used
-		// for authenticated requests. Also, this first request
-		// causes the first account to be created which happens
-		// to be the admin account.
-		if err := client.Login(); err != nil {
-			return err
-		}
-
-		account, err := client.GetAccount()
+		password, err := cmd.Flags().GetString("password")
 		if err != nil {
 			return err
 		}
-		spec.Admin.Login = account.Username
 
-		// Password setup
-		passwd, err := cmd.Flags().GetString("password")
+		privateKeyPath, err := cmd.Flags().GetString("private-key")
 		if err != nil {
 			return err
 		}
-		if passwd == "" {
-			password, err := client.GeneratePassword()
-			if err != nil {
-				return err
-			}
-			spec.Admin.Password = password
 
-		} else {
-			if err := client.SetPassword(passwd); err != nil {
-				return err
-			}
-			spec.Admin.Password = passwd
+		setup := &gerrittest.Setup{
+			Service:        service,
+			Password:       password,
+			PrivateKeyPath: privateKeyPath,
 		}
 
-		// Insert ssh key and test
-		if err := client.InsertPublicKey(public); err != nil {
-			return err
-		}
-		spec.Admin.PrivateKey = privateKeyPath
-		spec.SSHCommand = fmt.Sprintf(
-			"ssh -p %d -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "+
-				"%s@%s", spec.SSH.Public, spec.Admin.PrivateKey, spec.Admin.Login, spec.SSH.Address)
-
-		// Setup the SSH client and make sure we're able to connect.
-		sshClient, err := gerrittest.NewSSHClient(
-			spec.Admin.Login, spec.Admin.PrivateKey, spec.SSH)
+		spec, _, _, err := setup.Init()
 		if err != nil {
 			return err
 		}
-		if _, err := sshClient.Version(); err != nil {
-			return err
-		}
-
 		return jsonOutput(cmd, spec)
 	},
 }

@@ -52,13 +52,11 @@ func TestGetRandomPort(t *testing.T) {
 }
 
 func TestStart(t *testing.T) {
-	cfg := &Config{
-		Image:            DefaultImage,
-		PortSSH:          dockertest.RandomPort,
-		PortHTTP:         dockertest.RandomPort,
-		CleanupOnFailure: true,
+	if testing.Short() {
+		t.Skip()
 	}
-	svc, err := Start(context.Background(), cfg)
+
+	svc, err := Start(context.Background(), NewConfig())
 	if err != nil {
 		t.Fatal(err)
 	}

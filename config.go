@@ -1,10 +1,15 @@
 package gerrittest
 
-import "os"
+import (
+	"os"
+
+	"github.com/opalmer/dockertest"
+)
 
 var (
-	// DefaultImage defines the default docker image to use in tests,
-	// the command, etc.
+	// DefaultImage defines the default docker image to use in
+	// NewConfig(). This may be overridden with the $GERRITTEST_DOCKER_IMAGE
+	// environment variable.
 	DefaultImage = "opalmer/gerrittest:2.14.2"
 )
 
@@ -25,8 +30,16 @@ type Config struct {
 	CleanupOnFailure bool
 }
 
-func init() {
+// NewConfig produces a *Config struct with reasonable defaults.
+func NewConfig() *Config {
+	image := DefaultImage
 	if value, set := os.LookupEnv("GERRITTEST_DOCKER_IMAGE"); set {
-		DefaultImage = value
+		image = value
+	}
+	return &Config{
+		Image:            image,
+		PortSSH:          dockertest.RandomPort,
+		PortHTTP:         dockertest.RandomPort,
+		CleanupOnFailure: true,
 	}
 }
