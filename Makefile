@@ -26,7 +26,7 @@ deps:
 	dep ensure
 
 fmt:
-	go fmt $(PACKAGES)
+	gofmt -w -s $(SOURCES)
 	goimports -w $(SOURCES)
 
 test:
