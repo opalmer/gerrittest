@@ -58,8 +58,10 @@ func TestRepository_Destroy(t *testing.T) {
 func TestRepository_AddFile(t *testing.T) {
 	repo := newRepo(t, "")
 	defer repo.Destroy()
-	if err := repo.AddFile("foo/bar", []byte("Hello world"), 0600); err != nil {
-		t.Fatal()
+	input := &FileInput{Path: "foo/bar", Content: []byte("Hello world")}
+
+	if err := repo.AddFile(input); err != nil {
+		t.Fatal(err)
 	}
 	path := filepath.Join(repo.Root, "foo", "bar")
 	if _, err := os.Stat(path); err != nil {
@@ -77,8 +79,9 @@ func TestRepository_AddFile(t *testing.T) {
 func TestRepository_Commit(t *testing.T) {
 	repo := newRepo(t, "")
 	defer repo.Destroy()
-	if err := repo.AddFile("foo/bar", []byte("Hello world"), 0600); err != nil {
-		t.Fatal()
+	input := &FileInput{Path: "foo/bar", Content: []byte("Hello world")}
+	if err := repo.AddFile(input); err != nil {
+		t.Fatal(err)
 	}
 	if err := repo.Commit("some commit"); err != nil {
 		t.Fatal(err)
@@ -95,17 +98,16 @@ func TestRepository_Commit(t *testing.T) {
 func TestRepository_Amend(t *testing.T) {
 	repo := newRepo(t, "")
 	defer repo.Destroy()
-	if err := repo.AddFile("foo/bar", []byte("Hello world"), 0600); err != nil {
-		t.Fatal()
+	if err := repo.AddFile(&FileInput{Path: "foo/bar", Content: []byte("Hello world")}); err != nil {
+		t.Fatal(err)
 	}
 	if err := repo.Commit("some commit"); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.AddFile("foo/bar2", []byte("Hello world"), 0600); err != nil {
+	if err := repo.AddFile(&FileInput{Path: "foo/bar2", Content: []byte("Hello world")}); err != nil {
 		t.Fatal()
 	}
 	if err := repo.Amend(); err != nil {
 		t.Fatal(err)
 	}
-
 }

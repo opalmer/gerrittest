@@ -6,9 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"time"
-
 	"path/filepath"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -17,7 +16,32 @@ var (
 	// CommandTimeout is the default amount of time to wait
 	// for a git command to finish.
 	CommandTimeout = time.Second * 60
+
+	// DefaultDirectoryMode is used when creating parent directories
+	// for files.
+	DefaultDirectoryMode os.FileMode = 0700
+
+	// DefaultFileMode is returned by FileInput.GetMode if no mode
+	// has been set.
+	DefaultFileMode os.FileMode = 0600
 )
+
+// FileInput defines all the information necessary to add a single file to
+// a repository.
+type FileInput struct {
+	Path    string
+	Content []byte
+	Mode    os.FileMode
+}
+
+// GetMode returns the mode of the file. If no mode has been set `0600` will
+// be returned.
+func (f *FileInput) GetMode() os.FileMode {
+	if f.Mode == 0 {
+		return DefaultFileMode
+	}
+	return f.Mode
+}
 
 // Repository is a basic wrapper for a git repository. This does not
 // fully implement all git commands, just enough to work with
@@ -53,26 +77,31 @@ func (r *Repository) Run(args []string) (string, string, error) {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	start := time.Now()
+	err = cmd.Run()
+	duration := time.Since(start)
+	outstr := stdout.String()
+	errstr := stderr.String()
 	logger = logger.WithFields(log.Fields{
-		"duration": time.Since(start),
+		"duration": duration,
+		"stdout":   outstr,
+		"stderr":   errstr,
 	})
 
-	if err := cmd.Run(); err != nil {
-		logger = logger.WithError(err)
+	if err != nil {
 		logger.Warn()
 		defer os.Chdir(cwd)
-		return stdout.String(), stderr.String(), err
+		return outstr, errstr, err
 	}
 
 	logger.Debug()
-	return stdout.String(), stderr.String(), os.Chdir(cwd)
+	return outstr, errstr, os.Chdir(cwd)
 }
 
 // Init will create the repository if it does not exist. This function
 // does nothing if the path on disk already appears to be a repository.
 func (r *Repository) Init() error {
 	if _, err := os.Stat(r.Root); os.IsNotExist(err) {
-		if err := os.MkdirAll(r.Root, 0700); err != nil {
+		if err := os.MkdirAll(r.Root, DefaultDirectoryMode); err != nil {
 			return err
 		}
 	}
@@ -95,12 +124,12 @@ func (r *Repository) Destroy() error {
 }
 
 // Add adds a single file to the repository.
-func (r *Repository) Add(relative string) error {
+func (r *Repository) Add(input *FileInput) error {
 	r.log.WithFields(log.Fields{
 		"action": "add",
-		"path":   relative,
+		"path":   input.Path,
 	}).Debug()
-	_, _, err := r.Run([]string{"add", relative})
+	_, _, err := r.Run([]string{"add", input.Path})
 	return err
 }
 
@@ -110,21 +139,25 @@ func (r *Repository) Add(relative string) error {
 //    created.
 //  - Set the permissions of the file.
 //  - Add the file to the git repository.
-func (r *Repository) AddFile(relative string, content []byte, mode os.FileMode) error {
+func (r *Repository) AddFile(input *FileInput) error {
 	logger := r.log.WithFields(log.Fields{
 		"action": "add-file",
-		"path":   relative,
+		"path":   input.Path,
 	})
-	absolute := filepath.Join(r.Root, relative)
-	if err := os.MkdirAll(filepath.Dir(absolute), 0700); err != nil {
+
+	absolute := filepath.Join(r.Root, input.Path)
+	logger = logger.WithField("phase", "mkdir")
+	if err := os.MkdirAll(filepath.Dir(absolute), DefaultDirectoryMode); err != nil {
 		logger.WithError(err).Warn()
 		return err
 	}
-	if err := ioutil.WriteFile(absolute, content, mode); err != nil {
+
+	logger = logger.WithField("phase", "write")
+	if err := ioutil.WriteFile(absolute, input.Content, input.GetMode()); err != nil {
 		logger.WithError(err).Warn()
 		return err
 	}
-	return r.Add(relative)
+	return r.Add(input)
 }
 
 // Commit will commit any pending changes with the provided message.

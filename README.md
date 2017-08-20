@@ -81,3 +81,10 @@ the gerrittest command run:
 ```
 $ make check
 ```
+
+You can also skip some of the slower tests and control the log level
+specifically:
+
+```
+$ go test -v -gerrittest.loglevel=debug -short github.com/opalmer/gerrittest
+```
