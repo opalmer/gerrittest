@@ -10,6 +10,13 @@ EXTRA_DEPENDENCIES = \
     github.com/golang/dep/cmd/dep \
     github.com/wadey/gocovmerge
 
+TEST_CMD_PREFIX ?= go test -v
+
+TESTCMD = $(TEST_CMD_PREFIX)
+ifdef TEST_SHORT
+TESTCMD := $(TESTCMD) -short
+endif
+
 check: deps vet docker lint build test coverage
 
 docker:
@@ -33,7 +40,8 @@ fmt:
 	goimports -w $(SOURCES)
 
 test:
-	go test -race -v $(PACKAGES)
+	$(TESTCMD) -race $(PACKAGES)
+
 
 # coverage runs the tests to collect coverage but does not attempt to look
 # for race conditions.
@@ -44,4 +52,4 @@ coverage: $(patsubst %,%.coverage,$(PACKAGES))
 
 %.coverage:
 	@[ -d .gocoverage ] || mkdir .gocoverage
-	go test -covermode=count -coverprofile=.gocoverage/$(subst /,-,$*).out $* -v
+	$(TESTCMD) -covermode=count -coverprofile=.gocoverage/$(subst /,-,$*).out $*

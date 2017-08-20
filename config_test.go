@@ -2,34 +2,46 @@ package gerrittest
 
 import (
 	"os"
-	"testing"
 
 	"github.com/opalmer/dockertest"
+	. "gopkg.in/check.v1"
 )
 
-func TestNewConfig(t *testing.T) {
-	cfg := NewConfig()
-	if cfg.Image != DefaultImage {
-		t.Fatal()
-	}
-	if cfg.PortSSH != dockertest.RandomPort {
-		t.Fatal()
-	}
-	if cfg.PortHTTP != dockertest.RandomPort {
-		t.Fatal()
-	}
-	if cfg.CleanupOnFailure != true {
-		t.Fatal()
-	}
+type ConfigTest struct {
+	value string
+	set   bool
+}
 
-	if value, set := os.LookupEnv("GERRITTEST_DOCKER_IMAGE"); set {
-		defer os.Setenv("GERRITTEST_DOCKER_IMAGE", value)
-	} else {
-		defer os.Unsetenv("GERRITTEST_DOCKER_IMAGE")
+var _ = Suite(&ConfigTest{})
+
+func (s *ConfigTest) SetUpTest(c *C) {
+	value, set := os.LookupEnv(DefaultImageEnvironmentVar)
+	s.value = value
+	s.set = set
+	os.Unsetenv(DefaultImageEnvironmentVar)
+}
+
+func (s *ConfigTest) TearDownTest(c *C) {
+	if s.set {
+		os.Setenv(DefaultImageEnvironmentVar, s.value)
+		return
 	}
-	os.Setenv("GERRITTEST_DOCKER_IMAGE", "foo")
-	cfgB := NewConfig()
-	if cfgB.Image != "foo" {
-		t.Fatal()
-	}
+	os.Unsetenv(DefaultImageEnvironmentVar)
+}
+
+func (s *ConfigTest) TestNewConfigDefaults(c *C) {
+	os.Unsetenv(DefaultImageEnvironmentVar)
+	cfg := NewConfig()
+	c.Assert(cfg, DeepEquals, &Config{
+		Image:            DefaultImage,
+		PortSSH:          dockertest.RandomPort,
+		PortHTTP:         dockertest.RandomPort,
+		CleanupOnFailure: true,
+	})
+}
+
+func (s *ConfigTest) TestNewConfigOverride(c *C) {
+	os.Setenv(DefaultImageEnvironmentVar, "override")
+	cfg := NewConfig()
+	c.Assert(cfg.Image, Equals, "override")
 }

@@ -1,4 +1,4 @@
-package gerrittest
+package cmd
 
 import (
 	"flag"

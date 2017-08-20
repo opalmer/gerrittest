@@ -30,6 +30,10 @@ var (
 	// WaitDelay is used as a delay to prevent us from hammering ports while
 	// waiting for Gerrit to be listening or responding.
 	WaitDelay = time.Millisecond * 200
+
+	// DefaultStartTimeout is the amount of time we'll wait for the service
+	// to come up in the container.
+	DefaultStartTimeout = time.Minute * 5
 )
 
 // User represents a single user for connecting to Gerrit.
@@ -181,7 +185,7 @@ func GetService(cfg *Config) (*dockertest.Service, error) {
 	})
 	svc := dockerService.Service(input)
 	svc.Name = "gerrittest"
-	svc.Timeout = time.Minute * 10 // handled externally
+	svc.Timeout = DefaultStartTimeout
 
 	svc.Input.AddEnvironmentVar(
 		"GERRIT_CANONICAL_URL",

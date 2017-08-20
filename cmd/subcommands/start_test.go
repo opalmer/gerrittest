@@ -9,44 +9,28 @@ import (
 
 	"github.com/opalmer/dockertest"
 	"github.com/opalmer/gerrittest"
+	. "gopkg.in/check.v1"
 )
 
-func TestStart(t *testing.T) {
+type StartTest struct{}
+
+var _ = Suite(&StartTest{})
+
+func (s *StartTest) TestStart(c *C) {
 	if testing.Short() {
-		t.Skip()
+		c.Skip("-skip set")
 	}
-
 	file, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	file.Close()
-	os.Remove(file.Name())
-	defer os.Remove(file.Name())
-
-	if err := Start.Flags().Parse([]string{"--json", file.Name()}); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := Start.RunE(Start, []string{}); err != nil {
-		t.Fatal(err)
-	}
-
+	c.Assert(err, IsNil)
+	c.Assert(file.Close(), IsNil)
+	c.Assert(os.Remove(file.Name()), IsNil)
+	c.Assert(Start.Flags().Parse([]string{"--json", file.Name()}), IsNil)
+	c.Assert(Start.RunE(Start, []string{}), IsNil)
 	output, err := ioutil.ReadFile(file.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	c.Assert(err, IsNil)
 	spec := &gerrittest.ServiceSpec{}
-	if err := json.Unmarshal(output, spec); err != nil {
-		t.Fatal(err)
-	}
-
+	c.Assert(json.Unmarshal(output, spec), IsNil)
 	client, err := dockertest.NewClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := client.RemoveContainer(context.Background(), spec.Container); err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(err, IsNil)
+	c.Assert(client.RemoveContainer(context.Background(), spec.Container), IsNil)
 }

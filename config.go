@@ -11,6 +11,10 @@ var (
 	// NewConfig(). This may be overridden with the $GERRITTEST_DOCKER_IMAGE
 	// environment variable.
 	DefaultImage = "opalmer/gerrittest:2.14.2"
+
+	// DefaultImageEnvironmentVar defines the environment variable NewConfig()
+	// and the tests should be using to locate the default image override.
+	DefaultImageEnvironmentVar = "GERRITTEST_DOCKER_IMAGE"
 )
 
 // Config is used to tell the *runner struct what setup steps
@@ -33,7 +37,7 @@ type Config struct {
 // NewConfig produces a *Config struct with reasonable defaults.
 func NewConfig() *Config {
 	image := DefaultImage
-	if value, set := os.LookupEnv("GERRITTEST_DOCKER_IMAGE"); set {
+	if value, set := os.LookupEnv(DefaultImageEnvironmentVar); set {
 		image = value
 	}
 	return &Config{

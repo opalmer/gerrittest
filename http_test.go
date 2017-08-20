@@ -9,11 +9,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
-	"testing"
 
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
+	. "gopkg.in/check.v1"
 )
+
+type HTTPTest struct{}
+
+var _ = Suite(&HTTPTest{})
 
 type testHandler struct {
 	response    *httptest.ResponseRecorder
@@ -63,62 +67,47 @@ func newClient(response *httptest.ResponseRecorder) (*HTTPClient, *testHandler, 
 	return client, handler, server
 }
 
-func TestGetResponseBody(t *testing.T) {
+func (s *HTTPTest) TestGetResponseBody(c *C) {
 	body := ioutil.NopCloser(bytes.NewBufferString(")]}'\nfoobar"))
 	response := &http.Response{Body: body}
 	data, err := GetResponseBody(response)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(data) != string([]byte("foobar")) {
-		t.Fatal()
-	}
+	c.Assert(err, IsNil)
+	c.Assert(data, DeepEquals, []byte("foobar"))
 }
 
-func TestHTTPClient_URL(t *testing.T) {
+func (s *HTTPTest) TestHTTPClient_URL(c *C) {
 	client := HTTPClient{Prefix: "http://localhost"}
-	if client.URL("/foo") != "http://localhost/foo" {
-		t.Fatal()
-	}
+	c.Assert(client.URL("/foo"), Equals, "http://localhost/foo")
 }
 
-func TestHTTPClient_NewRequest(t *testing.T) {
+func (s *HTTPTest) TestHTTPClient_NewRequest(c *C) {
 	client, _, server := newClient(nil)
 	server.Close()
 	request, err := client.NewRequest(
 		http.MethodGet, "/a/accounts/foo", []byte("foo"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if request.Method != http.MethodGet {
-		t.Fatal()
-	}
-	var body bytes.Buffer
-	io.Copy(&body, request.Body)
-	if body.String() != "foo" {
-		t.Fatal()
-	}
-	if request.Header.Get("Content-Type") != "application/json" {
-		t.Fatal()
-	}
+	c.Assert(err, IsNil)
+	c.Assert(request.Method, Equals, http.MethodGet)
+
+	body := &bytes.Buffer{}
+	_, err = io.Copy(body, request.Body)
+	c.Assert(err, IsNil)
+	c.Assert(body.String(), Equals, "foo")
+	c.Assert(request.Header.Get("Content-Type"), Equals, "application/json")
 }
 
-func TestHTTPClient_Do_BadCode(t *testing.T) {
+func (s *HTTPTest) TestHTTPClient_Do_BadCode(c *C) {
 	expected := httptest.NewRecorder()
 	expected.Code = http.StatusCreated
 	client, _, server := newClient(expected)
 	defer server.Close()
 	request, err := client.NewRequest(
 		http.MethodPost, "/a/foo", []byte("foo"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err := client.Do(request, http.StatusOK); err == nil {
-		t.Fatal()
-	}
+	c.Assert(err, IsNil)
+	_, _, err = client.Do(request, http.StatusOK)
+	c.Assert(err, NotNil)
 }
 
-func TestHTTPClient_Do(t *testing.T) {
+func (s *HTTPTest) TestHTTPClient_Do(c *C) {
 	expected := httptest.NewRecorder()
 	expected.Code = http.StatusCreated
 	expected.Body.Write([]byte("hello"))
@@ -126,142 +115,92 @@ func TestHTTPClient_Do(t *testing.T) {
 	defer server.Close()
 	request, err := client.NewRequest(
 		http.MethodPost, "/a/foo", []byte("foo"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(err, IsNil)
 	_, body, err := client.Do(request, http.StatusCreated)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(body) != "hello" {
-		t.Fatal()
-	}
+	c.Assert(err, IsNil)
+	c.Assert(body, DeepEquals, []byte("hello"))
 }
 
-func TestHTTPClient_Login(t *testing.T) {
+func (s *HTTPTest) TestHTTPClient_Login(c *C) {
 	expected := httptest.NewRecorder()
 	expected.Code = http.StatusOK
 	client, handler, server := newClient(expected)
 	defer server.Close()
-	if err := client.Login(); err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(client.Login(), IsNil)
 	request := handler.Request()
-	if request.URL.Path != "/login/" {
-		t.Fatal()
-	}
+	c.Assert(request.URL.Path, Equals, "/login/")
 }
 
-func TestHTTPClient_GetAccount(t *testing.T) {
+func (s *HTTPTest) TestHTTPClient_GetAccount(c *C) {
 	expected := httptest.NewRecorder()
 	expected.Code = http.StatusOK
 	body, err := json.Marshal(&AccountInfo{
 		Name: "foobar",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(err, IsNil)
 	expected.Body.Write(body)
 	client, handler, server := newClient(expected)
 	defer server.Close()
 	info, err := client.GetAccount()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(info.Name, Equals, "foobar")
+	c.Assert(err, IsNil)
 	request := handler.Request()
-	if request.URL.Path != "/a/accounts/self" {
-		t.Fatal()
-	}
-	if info.Name != "foobar" {
-		t.Fatal()
-	}
+	c.Assert(request.URL.Path, Equals, "/a/accounts/self")
 }
 
-func TestHTTPClient_GeneratePassword(t *testing.T) {
+func (s *HTTPTest) TestHTTPClient_GeneratePassword(c *C) {
 	expected := httptest.NewRecorder()
 	expected.Code = http.StatusOK
 	body, err := json.Marshal(&AccountInfo{
 		Name: "foobar",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(err, IsNil)
+
 	expected.Body.Write(body)
 	client, handler, server := newClient(expected)
 	defer server.Close()
-	if _, err := client.GeneratePassword(); err != nil {
-		t.Fatal(err)
-	}
+	_, err = client.GeneratePassword()
+	c.Assert(err, IsNil)
 
 	request := handler.Request()
-	if request.URL.Path != "/a/accounts/self/password.http" {
-		t.Fatal()
-	}
-	if request.Method != http.MethodPut {
-		t.Fatal()
-	}
+	c.Assert(request.URL.Path, Equals, "/a/accounts/self/password.http")
+	c.Assert(request.Method, Equals, http.MethodPut)
 }
 
-func TestHTTPClient_SetPassword(t *testing.T) {
+func (s *HTTPTest) TestHTTPClient_SetPassword(c *C) {
 	expected := httptest.NewRecorder()
 	expected.Code = http.StatusOK
 	client, handler, server := newClient(expected)
 	defer server.Close()
-	if err := client.SetPassword("foobar"); err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(client.SetPassword("foobar"), IsNil)
 
 	request := handler.Request()
-	if request.URL.Path != "/a/accounts/self/password.http" {
-		t.Fatal()
-	}
-	if request.Method != http.MethodPut {
-		t.Fatal()
-	}
-
-	body := handler.RequestBody()
-	if body != `{"http_password":"foobar"}` {
-		t.Fatal(body)
-	}
+	c.Assert(request.URL.Path, Equals, "/a/accounts/self/password.http")
+	c.Assert(request.Method, Equals, http.MethodPut)
+	c.Assert(handler.RequestBody(), Equals, `{"http_password":"foobar"}`)
 }
 
-func TestHTTPClient_InsertPublicKey(t *testing.T) {
+func (s *HTTPTest) TestHTTPClient_InsertPublicKey(c *C) {
 	expected := httptest.NewRecorder()
 	expected.Code = http.StatusCreated
 	client, handler, server := newClient(expected)
 	defer server.Close()
 
 	private, err := GenerateRSAKey()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(err, IsNil)
 	signer, err := ssh.NewSignerFromKey(private)
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(err, IsNil)
 	public := signer.PublicKey()
-	if err := client.InsertPublicKey(public); err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(client.InsertPublicKey(public), IsNil)
 
 	request := handler.Request()
-	if request.URL.Path != "/a/accounts/self/sshkeys" {
-		t.Fatal()
-	}
-	if request.Method != http.MethodPost {
-		t.Fatal()
-	}
-	if request.Header.Get("Content-Type") != "plain/text" {
-		t.Fatal()
-	}
-
-	body := handler.RequestBody()
-	if body != string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(public))) {
-		t.Fatal(body)
-	}
+	c.Assert(request.URL.Path, Equals, "/a/accounts/self/sshkeys")
+	c.Assert(request.Method, Equals, http.MethodPost)
+	c.Assert(request.Header.Get("Content-Type"), Equals, "plain/text")
+	c.Assert(handler.RequestBody(), Equals, string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(public))))
 }
 
-func TestNewHTTPClient(t *testing.T) {
+func (s *HTTPTest) TestNewHTTPClient(c *C) {
 	service := &Service{
 		HTTPPort: &dockertest.Port{
 			Address: "foobar",
@@ -269,8 +208,6 @@ func TestNewHTTPClient(t *testing.T) {
 		},
 	}
 	client := NewHTTPClient(service, "admin")
-	if client.Prefix != fmt.Sprintf(
-		"http://%s:%d", service.HTTPPort.Address, service.HTTPPort.Public) {
-		t.Fatal(client.Prefix)
-	}
+	c.Assert(client.Prefix, Equals, fmt.Sprintf(
+		"http://%s:%d", service.HTTPPort.Address, service.HTTPPort.Public))
 }

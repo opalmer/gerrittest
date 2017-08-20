@@ -5,109 +5,78 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"testing"
+
+	. "gopkg.in/check.v1"
 )
 
-func newRepo(t *testing.T, path string) *Repository {
+type RepoTest struct {
+	repos []*Repository
+}
+
+var _ = Suite(&RepoTest{})
+
+func (s *RepoTest) newRepo(c *C, path string) *Repository {
 	repo, err := NewRepository(path)
-	if err != nil {
-		t.Fatal(err)
+	c.Assert(err, IsNil)
+	_, err = os.Stat(filepath.Join(repo.Root, ".git"))
+	c.Assert(err, IsNil)
+	s.repos = append(s.repos, repo)
+	return repo
+}
+
+func (s *RepoTest) TearDownTest(c *C) {
+	for _, repo := range s.repos {
+		c.Assert(repo.Destroy(), IsNil)
+		_, err := os.Stat(repo.Root)
+		c.Assert(os.IsNotExist(err), Equals, true)
 	}
-	if _, err := os.Stat(filepath.Join(repo.Root, ".git")); err != nil {
-		t.Fatal(err)
+}
+
+func (s *RepoTest) TestRepository_Init_rootPathNotProvided(c *C) {
+	s.newRepo(c, "")
+}
+
+func (s *RepoTest) TestRepository_Init_rootDoesNotExist(c *C) {
+	path, err := ioutil.TempDir("", "gerrittest-")
+	c.Assert(err, IsNil)
+	c.Assert(os.RemoveAll(path), IsNil)
+	s.newRepo(c, path)
+}
+
+func (s *RepoTest) TestRepository_Init_rootExists(c *C) {
+	path, err := ioutil.TempDir("", "gerrittest-")
+	c.Assert(err, IsNil)
+	s.newRepo(c, path)
+}
+
+func (s *RepoTest) addFile(c *C, commit bool) *Repository {
+	repo := s.newRepo(c, "")
+	input := &FileInput{Path: "foo/bar", Content: []byte("Hello world")}
+	c.Assert(repo.AddFile(input), IsNil)
+	path := filepath.Join(repo.Root, "foo", "bar")
+	_, err := os.Stat(path)
+	c.Assert(err, IsNil)
+	data, err := ioutil.ReadFile(path)
+	c.Assert(err, IsNil)
+	c.Assert(data, DeepEquals, []byte("Hello world"))
+	if commit {
+		c.Assert(repo.Commit("some commit"), IsNil)
+		stdout, _, err := repo.Run([]string{"show"})
+		c.Assert(err, IsNil)
+		c.Assert(strings.Contains(stdout, "some commit"), Equals, true)
 	}
 	return repo
 }
 
-func TestRepository_Init_rootPathProvided(t *testing.T) {
-	repo := newRepo(t, "")
-	defer repo.Destroy()
+func (s *RepoTest) TestRepository_AddFile(c *C) {
+	s.addFile(c, false)
 }
 
-func TestRepository_Init_rootDoesNotExist(t *testing.T) {
-	path, err := ioutil.TempDir("", "gerrittest-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.RemoveAll(path); err != nil {
-		t.Fatal(err)
-	}
-	repo := newRepo(t, path)
-	defer repo.Destroy()
+func (s *RepoTest) TestRepository_Commit(c *C) {
+	s.addFile(c, true)
 }
 
-func TestRepository_Init_rootExists(t *testing.T) {
-	path, err := ioutil.TempDir("", "gerrittest-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	repo := newRepo(t, path)
-	defer repo.Destroy()
-}
-
-func TestRepository_Destroy(t *testing.T) {
-	repo := newRepo(t, "")
-	if err := repo.Destroy(); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(repo.Root); err == nil {
-		t.Fatal()
-	}
-}
-
-func TestRepository_AddFile(t *testing.T) {
-	repo := newRepo(t, "")
-	defer repo.Destroy()
-	input := &FileInput{Path: "foo/bar", Content: []byte("Hello world")}
-
-	if err := repo.AddFile(input); err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(repo.Root, "foo", "bar")
-	if _, err := os.Stat(path); err != nil {
-		t.Fatal(err)
-	}
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(data) != "Hello world" {
-		t.Fatal()
-	}
-}
-
-func TestRepository_Commit(t *testing.T) {
-	repo := newRepo(t, "")
-	defer repo.Destroy()
-	input := &FileInput{Path: "foo/bar", Content: []byte("Hello world")}
-	if err := repo.AddFile(input); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.Commit("some commit"); err != nil {
-		t.Fatal(err)
-	}
-	stdout, _, err := repo.Run([]string{"show"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(stdout, "some commit") {
-		t.Fatal()
-	}
-}
-
-func TestRepository_Amend(t *testing.T) {
-	repo := newRepo(t, "")
-	defer repo.Destroy()
-	if err := repo.AddFile(&FileInput{Path: "foo/bar", Content: []byte("Hello world")}); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.Commit("some commit"); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.AddFile(&FileInput{Path: "foo/bar2", Content: []byte("Hello world")}); err != nil {
-		t.Fatal()
-	}
-	if err := repo.Amend(); err != nil {
-		t.Fatal(err)
-	}
+func (s *RepoTest) TestRepository_Amend(c *C) {
+	repo := s.addFile(c, true)
+	c.Assert(repo.Amend(), IsNil)
 }

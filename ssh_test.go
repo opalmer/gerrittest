@@ -1,6 +1,7 @@
 package gerrittest
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -8,101 +9,72 @@ import (
 	"os"
 	"testing"
 
-	"context"
-
 	"golang.org/x/crypto/ssh"
+	. "gopkg.in/check.v1"
 )
 
-func generateKey(t *testing.T) *rsa.PrivateKey {
+type SSHTest struct{}
+
+var _ = Suite(&SSHTest{})
+
+func (s *SSHTest) generateKey(c *C) *rsa.PrivateKey {
 	private, err := GenerateRSAKey()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(err, IsNil)
 	return private
 }
 
-func writeKey(t *testing.T, key *rsa.PrivateKey) string {
+func (s *SSHTest) writeKey(c *C, key *rsa.PrivateKey) string {
 	file, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := pem.Encode(file, &pem.Block{
+	c.Assert(err, IsNil)
+	c.Assert(pem.Encode(file, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := file.Close(); err != nil {
-		t.Fatal(err)
-	}
+	}), IsNil)
+	c.Assert(file.Close(), IsNil)
 	return file.Name()
 }
-
-func TestGenerateRSAKey(t *testing.T) {
-	generateKey(t)
+func (s *SSHTest) TestGenerateRSAKey(c *C) {
+	s.generateKey(c)
 }
 
-func TestReadSSHKeys(t *testing.T) {
-	key := generateKey(t)
-	path := writeKey(t, key)
-	defer os.Remove(path)
-
+func (s *SSHTest) TestReadSSHKeys(c *C) {
+	key := s.generateKey(c)
+	path := s.writeKey(c, key)
 	_, private, err := ReadSSHKeys(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	c.Assert(err, IsNil)
 	signer, err := ssh.NewSignerFromKey(key)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if string(signer.PublicKey().Marshal()) != string(private.PublicKey().Marshal()) {
-		t.Fatal()
-	}
+	c.Assert(err, IsNil)
+	c.Assert(signer.PublicKey().Marshal(), DeepEquals, private.PublicKey().Marshal())
+	c.Assert(os.Remove(path), IsNil)
 }
 
-func TestWriteRSAKey(t *testing.T) {
-	key := generateKey(t)
-	fileA := writeKey(t, key)
-	defer os.Remove(fileA)
+func (s *SSHTest) TestWriteRSAKey(c *C) {
+	key := s.generateKey(c)
+	fileA := s.writeKey(c, key)
 	fileB, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(fileB.Name())
+	c.Assert(err, IsNil)
 
-	if err := WriteRSAKey(key, fileB); err != nil {
-		t.Fatal(err)
-	}
-	fileB.Close()
+	c.Assert(WriteRSAKey(key, fileB), IsNil)
+	c.Assert(fileB.Close(), NotNil) // Shouldn't be nil because WriteRSAKey closes the handle.
 
 	a, err := ioutil.ReadFile(fileA)
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(err, IsNil)
 	b, err := ioutil.ReadFile(fileB.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(a) != string(b) {
-		t.Fatal()
-	}
+	c.Assert(err, IsNil)
+	c.Assert(a, DeepEquals, b)
+	c.Assert(os.Remove(fileA), IsNil)
+	c.Assert(os.Remove(fileB.Name()), IsNil)
 }
 
-func TestNewSSHClientFromService(t *testing.T) {
+func (s *SSHTest) TestNewSSHClientFromService(c *C) {
 	if testing.Short() {
-		t.Skip()
+		c.Skip("-shot set")
 	}
 
 	svc, err := Start(context.Background(), NewConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer svc.Service.Terminate()
-
+	c.Assert(err, IsNil)
 	setup := &Setup{Service: svc}
-	if _, _, _, err := setup.Init(); err != nil {
-		t.Fatal(err)
-	}
+	_, _, _, err = setup.Init()
+	c.Assert(err, IsNil)
+	c.Assert(svc.Service.Terminate(), IsNil)
 }

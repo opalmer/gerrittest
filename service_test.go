@@ -15,106 +15,92 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
+	. "gopkg.in/check.v1"
 )
 
-func TestGetService(t *testing.T) {
+type ServiceTest struct{}
+
+var _ = Suite(&ServiceTest{})
+
+func (s *ServiceTest) TestGetService(c *C) {
 	cfg := &Config{
 		PortHTTP: dockertest.RandomPort,
 	}
 
 	svc, err := GetService(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if svc.Name != "gerrittest" {
-		t.Fatal()
-	}
-	if svc.Timeout != time.Minute*10 {
-		t.Fatal()
-	}
-	if cfg.PortHTTP == dockertest.RandomPort {
-		t.Fatal()
-	}
-	if len(svc.Input.Environment) != 1 {
-		t.Fatal()
-	}
+	c.Assert(err, IsNil)
+	c.Assert(svc.Name, Equals, "gerrittest")
+	c.Assert(svc.Timeout, Equals, DefaultStartTimeout)
+	c.Assert(cfg.PortHTTP, Not(Equals), dockertest.RandomPort)
+	c.Assert(
+		svc.Input.Environment, DeepEquals,
+		[]string{fmt.Sprintf("GERRIT_CANONICAL_URL=http://127.0.0.1:%d/", cfg.PortHTTP)})
 }
 
-func TestGetRandomPort(t *testing.T) {
+func (s *ServiceTest) TestGetRandomPort(c *C) {
 	port, err := GetRandomPort()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(err, IsNil)
 
 	// We expect nothing to be listening on the port GetRandomPort()
 	// returned. If something is listening then we didn't close the port
 	// before leaving GetRandomPort().
 	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-	if err == nil {
-		t.Fatal()
-	}
-	if conn != nil {
-		t.Fatal()
-	}
+	c.Assert(err, NotNil)
+	c.Assert(conn, IsNil)
 }
 
-func TestStart(t *testing.T) {
+func (s *ServiceTest) TestStart(c *C) {
 	if testing.Short() {
-		t.Skip()
+		c.Skip("-short set")
 	}
 
 	svc, err := Start(context.Background(), NewConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer svc.Service.Terminate()
+	c.Assert(err, IsNil)
+	c.Assert(svc.Service.Terminate(), IsNil)
 }
 
-func TestRunner_waitPortOpen_cancelled(t *testing.T) {
+func (s *ServiceTest) TestRunner_WaitPortOpen_Cancelled(c *C) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	run := runner{
-		ctx: ctx,
-	}
-
-	err := run.waitPortOpen(&dockertest.Port{Address: "127.0.0.1", Public: 0})
-	if err != context.Canceled {
-		t.Fatal(err)
-	}
+	run := runner{ctx: ctx}
+	c.Assert(
+		run.waitPortOpen(&dockertest.Port{Address: "127.0.0.1", Public: 0}),
+		ErrorMatches, context.Canceled.Error())
 }
 
-func TestRunner_waitPortOpen_dialError(t *testing.T) {
+func (s *ServiceTest) TestRunner_WaitPortOpen_DialError(c *C) {
 	ctx, cancel := context.WithCancel(context.Background())
-	run := runner{
-		ctx: ctx,
-	}
+	run := runner{ctx: ctx}
+
 	go func() {
 		time.Sleep(time.Second * 1)
 		cancel()
 	}()
 
-	if err := run.waitPortOpen(&dockertest.Port{Address: "127.0.0.1", Public: 65535}); err != context.Canceled {
-		t.Fatal(err)
-	}
+	c.Assert(
+		run.waitPortOpen(&dockertest.Port{Address: "127.0.0.1", Public: 65535}),
+		ErrorMatches, context.Canceled.Error())
 }
 
-func TestRunner_waitListenHTTP_cancelled(t *testing.T) {
+func (s *ServiceTest) TestRunner_WaitListenHTTP_Cancelled(c *C) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	run := runner{
-		ctx: ctx,
-	}
-	if err := run.waitListenHTTP(&dockertest.Port{Address: "127.0.0.1", Public: 65535}); err != context.Canceled {
-		t.Fatal(err)
-	}
+	run := runner{ctx: ctx}
+
+	go func() {
+		time.Sleep(time.Second * 1)
+		cancel()
+	}()
+
+	c.Assert(
+		run.waitListenHTTP(&dockertest.Port{Address: "127.0.0.1", Public: 65535}),
+		ErrorMatches, context.Canceled.Error())
 }
 
-func TestRunner_waitListenHTTP_badCode(t *testing.T) {
+func (s *ServiceTest) TestRunner_WaitListenHTTP_BadCode(c *C) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	run := runner{
-		ctx: ctx,
-	}
+	run := runner{ctx: ctx}
 	count := make(chan int, 1)
 	count <- 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -127,56 +113,38 @@ func TestRunner_waitListenHTTP_badCode(t *testing.T) {
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
-
 	defer server.Close()
-
-	if err := run.waitListenHTTP(&dockertest.Port{Address: "127.0.0.1", Public: 65535}); err != context.Canceled {
-		t.Fatal(err)
-	}
+	c.Assert(
+		run.waitListenHTTP(&dockertest.Port{Address: "127.0.0.1", Public: 65535}),
+		ErrorMatches, context.Canceled.Error())
 }
 
-func TestSetup_err(t *testing.T) {
+func (s *ServiceTest) TestSetup_Err(c *C) {
 	setup := Setup{}
 	expected := errors.New("testing")
-	a, b, c, err := setup.err(log.WithField("phase", "test"), expected)
-	if a != nil {
-		t.Fatal()
-	}
-	if b != nil {
-		t.Fatal()
-	}
-	if c != nil {
-		t.Fatal()
-	}
-	if err != expected {
-		t.Fatal(err)
-	}
+	spec, httpClient, sshClient, err := setup.err(
+		log.WithField("phase", "test"), expected)
+	c.Assert(spec, IsNil)
+	c.Assert(httpClient, IsNil)
+	c.Assert(sshClient, IsNil)
+	c.Assert(err, ErrorMatches, expected.Error())
 }
 
-func TestSetup_getKeyPath(t *testing.T) {
+func (s *ServiceTest) TestSetup_GetKeyPath(c *C) {
 	key, err := GenerateRSAKey()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(err, IsNil)
 	file, err := ioutil.TempFile("", "")
-	defer os.Remove(file.Name())
-	generatedSigner, err := ssh.NewSignerFromKey(key)
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.Assert(err, IsNil)
 
-	if err := WriteRSAKey(key, file); err != nil {
-		t.Fatal(err)
-	}
+	generatedSigner, err := ssh.NewSignerFromKey(key)
+	c.Assert(err, IsNil)
+	c.Assert(WriteRSAKey(key, file), IsNil)
 
 	setup := &Setup{PrivateKeyPath: file.Name()}
 	_, signer, err := setup.getKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(signer.PublicKey().Marshal()) != string(generatedSigner.PublicKey().Marshal()) {
-		t.Fatal()
-	}
+	c.Assert(err, IsNil)
+	c.Assert(signer.PublicKey().Marshal(), DeepEquals, generatedSigner.PublicKey().Marshal())
+	c.Assert(os.Remove(file.Name()), IsNil)
 }
 
 // You can start the Gerrit service using the Start() function. This only
@@ -201,11 +169,11 @@ func ExampleSetup() {
 	defer svc.Service.Terminate() // Terminate the container when you're done.
 
 	setup := &Setup{Service: svc}
-	spec, http, ssh, err := setup.Init()
+	spec, httpClient, sshClient, err := setup.Init()
 	if err != nil {
 		log.Fatal(err)
 	}
 	_ = spec
-	_ = http
-	_ = ssh
+	_ = httpClient
+	_ = sshClient
 }
