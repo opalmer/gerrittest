@@ -53,10 +53,8 @@ func (s *SSHTest) TestWriteRSAKey(c *C) {
 	fileA := s.writeKey(c, key)
 	fileB, err := ioutil.TempFile("", "")
 	c.Assert(err, IsNil)
-
 	c.Assert(WriteRSAKey(key, fileB), IsNil)
 	c.Assert(fileB.Close(), NotNil) // Shouldn't be nil because WriteRSAKey closes the handle.
-
 	a, err := ioutil.ReadFile(fileA)
 	c.Assert(err, IsNil)
 	b, err := ioutil.ReadFile(fileB.Name())

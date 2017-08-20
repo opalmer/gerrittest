@@ -15,51 +15,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewConfigFromCommand converts a command to a config struct.
-func NewConfigFromCommand(cmd *cobra.Command) (*gerrittest.Config, error) {
-	image, err := cmd.Flags().GetString("image")
-	if err != nil {
-		return nil, err
-	}
-
-	portHTTP, err := cmd.Flags().GetUint16("port-http")
-	if err != nil {
-		return nil, err
-	}
-
-	portSSH, err := cmd.Flags().GetUint16("port-ssh")
-	if err != nil {
-		return nil, err
-	}
-
-	noCleanup, err := cmd.Flags().GetBool("no-cleanup")
-	if err != nil {
-		return nil, nil
-	}
-
-	return &gerrittest.Config{
-		Image:            image,
-		PortSSH:          portSSH,
-		PortHTTP:         portHTTP,
-		CleanupOnFailure: noCleanup == false,
-	}, nil
-}
-
 func jsonOutput(cmd *cobra.Command, spec *gerrittest.ServiceSpec) error {
 	data, err := json.MarshalIndent(spec, "", " ")
 	if err != nil {
 		return err
 	}
 
-	jsonPath, err := cmd.Flags().GetString("json")
-	if err != nil {
-		return err
-	}
-	if jsonPath != "" {
-		if err := os.MkdirAll(filepath.Dir(jsonPath), 0700); err != nil {
+	if path := getString(cmd, "json"); path != "" {
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 			return err
 		}
-		return ioutil.WriteFile(jsonPath, data, 0600)
+		return ioutil.WriteFile(path, data, 0600)
 	}
 	fmt.Println(string(data))
 	return nil
@@ -70,12 +36,15 @@ var Start = &cobra.Command{
 	Use:   "start",
 	Short: "Responsible for starting an instance of Gerrit.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := NewConfigFromCommand(cmd)
-		if err != nil {
-			return err
+		cfg := &gerrittest.Config{
+			Image:            getString(cmd, "image"),
+			PortHTTP:         getUInt16(cmd, "port-http"),
+			PortSSH:          getUInt16(cmd, "port-ssh"),
+			CleanupOnFailure: getBool(cmd, "no-cleanup"),
 		}
+
 		// Setup timeout and Ctrl+C handling.
-		timeout, err := cmd.Flags().GetDuration("timeout")
+		timeout := getDuration(cmd, "timeout")
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		interrupts := make(chan os.Signal, 1)
 		signal.Notify(interrupts, os.Interrupt)
@@ -90,20 +59,12 @@ var Start = &cobra.Command{
 			return err
 		}
 
-		startonly, err := cmd.Flags().GetBool("start-only")
-		if startonly {
+		if getBool(cmd, "start-only") {
 			return nil
 		}
 
-		password, err := cmd.Flags().GetString("password")
-		if err != nil {
-			return err
-		}
-
-		privateKeyPath, err := cmd.Flags().GetString("private-key")
-		if err != nil {
-			return err
-		}
+		password := getString(cmd, "password")
+		privateKeyPath := getString(cmd, "private-key")
 
 		setup := &gerrittest.Setup{
 			Service:        service,
