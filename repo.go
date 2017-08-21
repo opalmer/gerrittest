@@ -213,7 +213,10 @@ func (r *Repository) Push(branch string) error {
 // Configure will configure the git repository to point at
 func (r *Repository) Configure(service *ServiceSpec, project string, branch string) error {
 	r.mtx.Lock()
-	defer r.mtx.Unlock()
+	logger := r.log.WithFields(log.Fields{
+		"action": "config",
+	})
+	logger.Debug()
 	r.sshCommand = fmt.Sprintf(
 		"ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i %s",
 		service.Admin.PrivateKey)
@@ -226,15 +229,23 @@ func (r *Repository) Configure(service *ServiceSpec, project string, branch stri
 		fmt.Sprintf("branch.%s.merge", branch):  fmt.Sprintf("refs/heads/%s", branch),
 		"core.sshCommand": r.sshCommand,
 	}
-	// TODO Pull down the commit hook
+	r.mtx.Unlock()
 
 	// gitdir=$(git rev-parse --git-dir); scp -p -P 29418 admin@127.0.0.1:hooks/commit-msg ${gitdir}/hooks/
 	for key, value := range config {
+		logger.WithFields(log.Fields{
+			"action": "config",
+			"key": key,
+			"value": value,
+		}).Debug()
 		if _, _, err := r.Run(
 			[]string{"config", key, value}); err != nil {
+			logger.WithError(err).Error()
 			return err
 		}
 	}
+
+	logger.WithField("status", "done").Debug()
 	return nil
 }
 
