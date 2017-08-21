@@ -53,3 +53,7 @@ coverage: $(patsubst %,%.coverage,$(PACKAGES))
 %.coverage:
 	@[ -d .gocoverage ] || mkdir .gocoverage
 	$(TESTCMD) -covermode=count -coverprofile=.gocoverage/$(subst /,-,$*).out $*
+
+bindata:
+	go-bindata -pkg internal -o internal/internal.go internal/commit-msg
+	$(MAKE) fmt
