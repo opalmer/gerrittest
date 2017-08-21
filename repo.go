@@ -52,9 +52,9 @@ func (f *FileInput) GetMode() os.FileMode {
 // fully implement all git commands, just enough to work with
 // a repository on disk for the purposes of gerrittest.
 type Repository struct {
-	mtx        *sync.Mutex
 	Root       string
 	Git        string
+	mtx        *sync.Mutex
 	log        *log.Entry
 	sshCommand string
 }
