@@ -1,13 +1,14 @@
 package gerrittest
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	. "gopkg.in/check.v1"
 	"testing"
-	"context"
+
+	. "gopkg.in/check.v1"
 )
 
 type RepoTest struct {

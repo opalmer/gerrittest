@@ -2,6 +2,7 @@ package gerrittest
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,12 +10,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"testing"
 
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
 	. "gopkg.in/check.v1"
-	"context"
-	"testing"
 )
 
 type HTTPTest struct{}

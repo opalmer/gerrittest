@@ -11,8 +11,9 @@ import (
 
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
 	"sync"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 var (
@@ -50,10 +51,10 @@ func (f *FileInput) GetMode() os.FileMode {
 // fully implement all git commands, just enough to work with
 // a repository on disk for the purposes of gerrittest.
 type Repository struct {
-	mtx *sync.Mutex
-	Root string
-	Git  string
-	log  *log.Entry
+	mtx        *sync.Mutex
+	Root       string
+	Git        string
+	log        *log.Entry
 	sshCommand string
 }
 
@@ -227,7 +228,7 @@ func (r *Repository) Configure(service *ServiceSpec, project string, branch stri
 		"remote.origin.fetch":                   "+refs/heads/*:refs/remotes/origin/*",
 		fmt.Sprintf("branch.%s.remote", branch): "origin",
 		fmt.Sprintf("branch.%s.merge", branch):  fmt.Sprintf("refs/heads/%s", branch),
-		"core.sshCommand": r.sshCommand,
+		"core.sshCommand":                       r.sshCommand,
 	}
 	r.mtx.Unlock()
 
@@ -235,8 +236,8 @@ func (r *Repository) Configure(service *ServiceSpec, project string, branch stri
 	for key, value := range config {
 		logger.WithFields(log.Fields{
 			"action": "config",
-			"key": key,
-			"value": value,
+			"key":    key,
+			"value":  value,
 		}).Debug()
 		if _, _, err := r.Run(
 			[]string{"config", key, value}); err != nil {
@@ -267,7 +268,7 @@ func NewRepository(root string) (*Repository, error) {
 	repo := &Repository{
 		Root: root,
 		Git:  git,
-		mtx: &sync.Mutex{},
+		mtx:  &sync.Mutex{},
 		log:  log.WithField("cmp", "repo"),
 	}
 	return repo, repo.Init()
