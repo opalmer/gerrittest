@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/opalmer/gerrittest/internal"
 )
 
 var (
@@ -246,8 +247,13 @@ func (r *Repository) Configure(service *ServiceSpec, project string, branch stri
 		}
 	}
 
-	logger.WithField("status", "done").Debug()
-	return nil
+	logger.WithField("status", "write-hook").Debug()
+	hook, err := internal.Asset("internal/commit-msg")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(
+		filepath.Join(r.Root, ".git", "hooks", "commit-msg"), hook, 0700)
 }
 
 // NewRepository creates and returns a *Repository struct. If root is defined
