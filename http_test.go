@@ -13,6 +13,8 @@ import (
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
 	. "gopkg.in/check.v1"
+	"context"
+	"testing"
 )
 
 type HTTPTest struct{}
@@ -200,6 +202,19 @@ func (s *HTTPTest) TestHTTPClient_InsertPublicKey(c *C) {
 	c.Assert(handler.RequestBody(), Equals, string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(public))))
 }
 
+func (s *HTTPTest) TestHTTPClient_CreateProject(c *C) {
+	expected := httptest.NewRecorder()
+	expected.Code = http.StatusCreated
+	client, handler, server := newClient(expected)
+	defer server.Close()
+	c.Assert(client.CreateProject("foobar"), IsNil)
+
+	request := handler.Request()
+	c.Assert(request.URL.Path, Equals, "/projects/foobar")
+	c.Assert(request.Method, Equals, http.MethodPut)
+	c.Assert(handler.RequestBody(), Equals, "{}")
+}
+
 func (s *HTTPTest) TestNewHTTPClient(c *C) {
 	service := &Service{
 		HTTPPort: &dockertest.Port{
@@ -210,4 +225,19 @@ func (s *HTTPTest) TestNewHTTPClient(c *C) {
 	client := NewHTTPClient(service, "admin")
 	c.Assert(client.Prefix, Equals, fmt.Sprintf(
 		"http://%s:%d", service.HTTPPort.Address, service.HTTPPort.Public))
+}
+
+// Tests additional functions that may not be covered by any of the above
+// tests
+func (s *HTTPTest) TestHTTPClient_Integration(c *C) {
+	if testing.Short() {
+		c.Skip("-short set")
+	}
+	svc, err := Start(context.Background(), NewConfig())
+	c.Assert(err, IsNil)
+	defer svc.Service.Terminate() // Terminate the container when you're done.
+	setup := &Setup{Service: svc}
+	_, httpClient, _, err := setup.Init()
+	c.Assert(err, IsNil)
+	c.Assert(httpClient.CreateProject("foobar"), IsNil)
 }

@@ -82,8 +82,15 @@ the gerrittest command run:
 $ make check
 ```
 
-You can also skip some of the slower tests and control the log level too:
+You can also skip some of the slower tests:
 
 ```
-$ go test -v -gerrittest.loglevel=debug -short github.com/opalmer/gerrittest
+$ go test -v -short github.com/opalmer/gerrittest
+```
+
+If you're having trouble with a specific test you can enable debug 
+logging and run that test specifically:
+
+```
+$ go test -gerrittest.loglevel=debug -check.vv -check.f RepoTest.TestRepository_Integration github.com/opalmer/gerrittest
 ```

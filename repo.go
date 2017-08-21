@@ -9,7 +9,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"fmt"
+
 	log "github.com/Sirupsen/logrus"
+	"sync"
 )
 
 var (
@@ -47,15 +50,19 @@ func (f *FileInput) GetMode() os.FileMode {
 // fully implement all git commands, just enough to work with
 // a repository on disk for the purposes of gerrittest.
 type Repository struct {
+	mtx *sync.Mutex
 	Root string
 	Git  string
 	log  *log.Entry
+	sshCommand string
 }
 
 // Run will run git with the provided args to completion then return the
 // results. The working directory will be changed to the root of the repository
 // prior to running and be reset on exit.
 func (r *Repository) Run(args []string) (string, string, error) {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
 	logger := r.log.WithFields(log.Fields{
 		"action": "run",
 		"args":   args,
@@ -76,6 +83,14 @@ func (r *Repository) Run(args []string) (string, string, error) {
 	cmd := exec.CommandContext(ctx, r.Git, args...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
+
+	// Depending on the version of Git either the config command in
+	// Configure() will work or one of the below will.
+	cmd.Env = append(
+		cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=%s", r.sshCommand))
+	cmd.Env = append(
+		cmd.Env, fmt.Sprintf("GIT_SSH=%s", r.sshCommand))
+
 	start := time.Now()
 	err = cmd.Run()
 	duration := time.Since(start)
@@ -180,6 +195,49 @@ func (r *Repository) Amend() error {
 	return err
 }
 
+// Push will call 'git push HEAD:refs/for/<branch>'. Note, this will
+// return an error if you have not already configured the repository. If no
+// branch is provided 'master' will be used.
+func (r *Repository) Push(branch string) error {
+	if branch == "" {
+		branch = "master"
+	}
+	r.log.WithFields(log.Fields{
+		"action": "amend",
+	}).Debug()
+	_, _, err := r.Run(
+		[]string{"push", "origin", fmt.Sprintf("HEAD:refs/for/%s", branch)})
+	return err
+}
+
+// Configure will configure the git repository to point at
+func (r *Repository) Configure(service *ServiceSpec, project string, branch string) error {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	r.sshCommand = fmt.Sprintf(
+		"ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i %s",
+		service.Admin.PrivateKey)
+	config := map[string]string{
+		"remote.origin.url": fmt.Sprintf(
+			"ssh://%s@%s:%d/%s", service.Admin.Login,
+			service.SSH.Address, service.SSH.Public, project),
+		"remote.origin.fetch":                   "+refs/heads/*:refs/remotes/origin/*",
+		fmt.Sprintf("branch.%s.remote", branch): "origin",
+		fmt.Sprintf("branch.%s.merge", branch):  fmt.Sprintf("refs/heads/%s", branch),
+		"core.sshCommand": r.sshCommand,
+	}
+	// TODO Pull down the commit hook
+
+	// gitdir=$(git rev-parse --git-dir); scp -p -P 29418 admin@127.0.0.1:hooks/commit-msg ${gitdir}/hooks/
+	for key, value := range config {
+		if _, _, err := r.Run(
+			[]string{"config", key, value}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // NewRepository creates and returns a *Repository struct. If root is defined
 // as "" then a temporary will be created.
 func NewRepository(root string) (*Repository, error) {
@@ -198,6 +256,7 @@ func NewRepository(root string) (*Repository, error) {
 	repo := &Repository{
 		Root: root,
 		Git:  git,
+		mtx: &sync.Mutex{},
 		log:  log.WithField("cmp", "repo"),
 	}
 	return repo, repo.Init()

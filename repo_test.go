@@ -5,8 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 	. "gopkg.in/check.v1"
+	"testing"
+	"context"
 )
 
 type RepoTest struct {
@@ -79,4 +80,21 @@ func (s *RepoTest) TestRepository_Commit(c *C) {
 func (s *RepoTest) TestRepository_Amend(c *C) {
 	repo := s.addFile(c, true)
 	c.Assert(repo.Amend(), IsNil)
+}
+
+func (s *RepoTest) TestRepository_Integration(c *C) {
+	if testing.Short() {
+		c.Skip("-short set")
+	}
+	svc, err := Start(context.Background(), NewConfig())
+	c.Assert(err, IsNil)
+	defer svc.Service.Terminate() // Terminate the container when you're done.
+
+	repo := s.addFile(c, true)
+	setup := &Setup{Service: svc}
+	spec, httpClient, _, err := setup.Init()
+	c.Assert(err, IsNil)
+	c.Assert(httpClient.CreateProject("foobar"), IsNil)
+	c.Assert(repo.Configure(spec, "foobar", "master"), IsNil)
+	c.Assert(repo.Push("master"), IsNil)
 }
