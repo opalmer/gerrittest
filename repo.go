@@ -142,7 +142,6 @@ func (r *Repository) Init() error {
 	}
 	return ioutil.WriteFile(
 		filepath.Join(r.Root, ".git", "hooks", "commit-msg"), hook, 0700)
-	return err
 }
 
 // Destroy removes the repository from the local disk.
