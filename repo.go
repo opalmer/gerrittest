@@ -87,7 +87,7 @@ func (r *Repository) Run(args []string) (string, string, error) {
 	cmd.Stderr = stderr
 
 	// Depending on the version of Git either the config command in
-	// Configure() will work or one of the below will.
+	// ConfigureFromSpec() will work or one of the below will.
 	cmd.Env = append(
 		cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=%s", r.sshCommand))
 	cmd.Env = append(
@@ -128,6 +128,20 @@ func (r *Repository) Init() error {
 		"path":   r.Root,
 	}).Debug()
 	_, _, err := r.Run([]string{"init", "--quiet", r.Root})
+	config := map[string]string{
+		"user.name":  "admin",
+		"user.email": "admin@localhost",
+	}
+	if err := r.ConfigureValues(config); err != nil {
+		return err
+	}
+
+	hook, err := internal.Asset("internal/commit-msg")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(
+		filepath.Join(r.Root, ".git", "hooks", "commit-msg"), hook, 0700)
 	return err
 }
 
@@ -194,6 +208,7 @@ func (r *Repository) Amend() error {
 	}).Debug()
 	_, _, err := r.Run(
 		[]string{"commit", "--quiet", "--amend", "--no-edit", "--allow-empty"})
+
 	return err
 }
 
@@ -212,31 +227,12 @@ func (r *Repository) Push(branch string) error {
 	return err
 }
 
-// Configure will configure the git repository to point at
-func (r *Repository) Configure(service *ServiceSpec, project string, branch string) error {
-	r.mtx.Lock()
+// ConfigureValues runs 'git config' using the given map.
+func (r *Repository) ConfigureValues(values map[string]string) error {
 	logger := r.log.WithFields(log.Fields{
 		"action": "config",
 	})
-	logger.Debug()
-	r.sshCommand = fmt.Sprintf(
-		"ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i %s",
-		service.Admin.PrivateKey)
-	config := map[string]string{
-		"remote.origin.url": fmt.Sprintf(
-			"ssh://%s@%s:%d/%s", service.Admin.Login,
-			service.SSH.Address, service.SSH.Public, project),
-		"remote.origin.fetch":                   "+refs/heads/*:refs/remotes/origin/*",
-		fmt.Sprintf("branch.%s.remote", branch): "origin",
-		fmt.Sprintf("branch.%s.merge", branch):  fmt.Sprintf("refs/heads/%s", branch),
-		"core.sshCommand":                       r.sshCommand,
-		"user.name":                             "admin",
-		"user.email":                            "admin@localhost",
-	}
-	r.mtx.Unlock()
-
-	// gitdir=$(git rev-parse --git-dir); scp -p -P 29418 admin@127.0.0.1:hooks/commit-msg ${gitdir}/hooks/
-	for key, value := range config {
+	for key, value := range values {
 		logger.WithFields(log.Fields{
 			"action": "config",
 			"key":    key,
@@ -248,14 +244,26 @@ func (r *Repository) Configure(service *ServiceSpec, project string, branch stri
 			return err
 		}
 	}
+	return nil
+}
 
-	logger.WithField("status", "write-hook").Debug()
-	hook, err := internal.Asset("internal/commit-msg")
-	if err != nil {
-		return err
+// ConfigureFromSpec will configure the git repository to point at
+func (r *Repository) ConfigureFromSpec(service *ServiceSpec, project string, branch string) error {
+	r.mtx.Lock()
+	r.sshCommand = fmt.Sprintf(
+		"ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i %s",
+		service.Admin.PrivateKey)
+	config := map[string]string{
+		"remote.origin.url": fmt.Sprintf(
+			"ssh://%s@%s:%d/%s", service.Admin.Login,
+			service.SSH.Address, service.SSH.Public, project),
+		"remote.origin.fetch":                   "+refs/heads/*:refs/remotes/origin/*",
+		fmt.Sprintf("branch.%s.remote", branch): "origin",
+		fmt.Sprintf("branch.%s.merge", branch):  fmt.Sprintf("refs/heads/%s", branch),
+		"core.sshCommand":                       r.sshCommand,
 	}
-	return ioutil.WriteFile(
-		filepath.Join(r.Root, ".git", "hooks", "commit-msg"), hook, 0700)
+	r.mtx.Unlock()
+	return r.ConfigureValues(config)
 }
 
 // NewRepository creates and returns a *Repository struct. If root is defined

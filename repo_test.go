@@ -96,7 +96,7 @@ func (s *RepoTest) TestRepository_Integration(c *C) {
 	spec, httpClient, _, err := setup.Init()
 	c.Assert(err, IsNil)
 	c.Assert(httpClient.CreateProject("foobar"), IsNil)
-	c.Assert(repo.Configure(spec, "foobar", "master"), IsNil)
+	c.Assert(repo.ConfigureFromSpec(spec, "foobar", "master"), IsNil)
 	c.Assert(repo.Amend(), IsNil)
 	c.Assert(repo.Push("master"), IsNil)
 }
