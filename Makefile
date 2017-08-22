@@ -9,10 +9,9 @@ EXTRA_DEPENDENCIES = \
     github.com/golang/lint/golint \
     github.com/golang/dep/cmd/dep \
     github.com/wadey/gocovmerge
-
 TEST_CMD_PREFIX ?= go test -v
-
 TESTCMD = $(TEST_CMD_PREFIX)
+
 ifdef TEST_SHORT
 TESTCMD := $(TESTCMD) -short
 endif
