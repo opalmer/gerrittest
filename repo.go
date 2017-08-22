@@ -230,6 +230,8 @@ func (r *Repository) Configure(service *ServiceSpec, project string, branch stri
 		fmt.Sprintf("branch.%s.remote", branch): "origin",
 		fmt.Sprintf("branch.%s.merge", branch):  fmt.Sprintf("refs/heads/%s", branch),
 		"core.sshCommand":                       r.sshCommand,
+		"user.name":                             "admin",
+		"user.email":                            "admin@localhost",
 	}
 	r.mtx.Unlock()
 
@@ -241,7 +243,7 @@ func (r *Repository) Configure(service *ServiceSpec, project string, branch stri
 			"value":  value,
 		}).Debug()
 		if _, _, err := r.Run(
-			[]string{"config", key, value}); err != nil {
+			[]string{"config", "--local", key, value}); err != nil {
 			logger.WithError(err).Error()
 			return err
 		}
