@@ -40,7 +40,8 @@ fmt:
 	goimports -w $(SOURCES)
 
 test:
-	$(TESTCMD) -race $(PACKAGES)
+#	$(TESTCMD) -race $(PACKAGES)
+	$(TESTCMD) -check.v -gerrittest.loglevel=debug -race github.com/opalmer/gerrittest
 
 
 # coverage runs the tests to collect coverage but does not attempt to look
