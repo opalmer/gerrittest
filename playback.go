@@ -79,7 +79,9 @@ func (r *RemoteRepositorySource) Read(ctx context.Context) (<-chan *Diff, error)
 			}).Debug()
 		}()
 
-		for _, commit := range commits {
+		// Play the commits back in reverse.
+		for i := len(commits) - 1; i >= 0; i-- {
+			commit := commits[i]
 			entry.WithField("commit", commit).Debug()
 			cmd := exec.CommandContext(
 				ctx, "git", "-C", r.repo, "format-patch", "-1", commit,
@@ -95,7 +97,10 @@ func (r *RemoteRepositorySource) Read(ctx context.Context) (<-chan *Diff, error)
 				diffs <- &Diff{Error: err}
 				continue
 			}
-			diffs <- &Diff{Content: data}
+			diffs <- &Diff{
+				Commit:  commit,
+				Content: data,
+			}
 			count++
 		}
 	}()
