@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 )
 
 // DefaultUpstream is the upstream used for pulling in repo repositories.
@@ -31,14 +31,6 @@ type PlaybackSource interface {
 	Cleanup() error
 }
 
-// Diff is a struct which represents a single commit to the
-// repository.
-type Diff struct {
-	// Error should be set whenever
-	Error   error
-	Content []byte
-}
-
 // RemoteRepositorySource reads changes from a remote repository.
 type RemoteRepositorySource struct {
 	log    *log.Entry
@@ -54,8 +46,8 @@ func (r *RemoteRepositorySource) Read(ctx context.Context) (<-chan *Diff, error)
 	diffs := make(chan *Diff, 1)
 
 	// First, get a list of all commits in the remote.
-	cmd := exec.Command(
-		"git", "-C", r.repo, "log", "FETCH_HEAD", "--oneline")
+	cmd := exec.CommandContext(
+		ctx, "git", "-C", r.repo, "log", "FETCH_HEAD", "--oneline")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -89,8 +81,8 @@ func (r *RemoteRepositorySource) Read(ctx context.Context) (<-chan *Diff, error)
 
 		for _, commit := range commits {
 			entry.WithField("commit", commit).Debug()
-			cmd := exec.Command(
-				"git", "-C", r.repo, "format-patch", "-1", commit,
+			cmd := exec.CommandContext(
+				ctx, "git", "-C", r.repo, "format-patch", "-1", commit,
 				"--stdout")
 			select {
 			case <-ctx.Done():
