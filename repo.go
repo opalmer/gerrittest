@@ -3,15 +3,13 @@ package gerrittest
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
-
-	"fmt"
-
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/gerrittest/internal"

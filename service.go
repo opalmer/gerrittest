@@ -3,13 +3,12 @@ package gerrittest
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	"io/ioutil"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/dockertest"
