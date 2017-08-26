@@ -207,7 +207,6 @@ func (r *Repository) Amend() error {
 	}).Debug()
 	_, _, err := r.Run(
 		[]string{"commit", "--quiet", "--amend", "--no-edit", "--allow-empty"})
-
 	return err
 }
 
