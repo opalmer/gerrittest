@@ -21,10 +21,6 @@ var DefaultUpstream = "upstream-gerrittest"
 // to playback changes from some kind of source. This intended to
 // be used in conjunction with *Repository.
 type PlaybackSource interface {
-	// Setup is used to prepare the destination repository and/or
-	// setup the playback.
-	Setup(*Repository) error
-
 	// Read should read the history from a source source and produce
 	// a channel containing diffs as well as an error channel. The diff
 	// channel should be closed when when there are no further diffs to
@@ -49,49 +45,6 @@ type RemoteRepositorySource struct {
 	repo   string
 	remote string
 	branch string
-}
-
-// Setup will prepare to pull commits from the remote repository.
-func (r *RemoteRepositorySource) Setup(*Repository) error {
-	logger := r.log.WithField("phase", "setup")
-	logger.WithFields(log.Fields{
-		"status": "init",
-		"path":   r.repo,
-	})
-	logger.Debug()
-	cmd := exec.Command("git", "init", r.repo, "--quiet")
-	if data, err := cmd.CombinedOutput(); err != nil {
-		logger.WithError(err).WithField("output", string(data)).Error()
-		return err
-	}
-
-	logger = logger.WithFields(log.Fields{
-		"status":   "add-remote",
-		"path":     r.repo,
-		"branch":   r.branch,
-		"upstream": r.remote,
-	})
-	logger.Debug()
-
-	cmd = exec.Command(
-		"git", "-C", r.repo, "remote", "add", DefaultUpstream,
-		"--track", fmt.Sprintf("refs/heads/%s", r.branch),
-		"--mirror=fetch", r.remote)
-	if data, err := cmd.CombinedOutput(); err != nil {
-		logger.WithError(err).WithField("output", string(data)).Error()
-		return err
-	}
-
-	logger = logger.WithField("status", "fetch")
-	logger.Debug()
-	cmd = exec.Command(
-		"git", "-C", r.repo, "fetch", DefaultUpstream, r.branch)
-	if data, err := cmd.CombinedOutput(); err != nil {
-		logger.WithError(err).WithField("output", string(data)).Error()
-		return err
-	}
-
-	return nil
 }
 
 // Read will read read revisions from the remote repository and play
@@ -163,11 +116,50 @@ func (r *RemoteRepositorySource) Cleanup() error {
 	return os.RemoveAll(r.repo)
 }
 
-// NewRemoteRepositorySource
+// NewRemoteRepositorySource constructs and returns a *RemoteRepositorySource
+// which is an implementation of PlaybackSource.
 func NewRemoteRepositorySource(remote string, branch string) (PlaybackSource, error) {
 	logger := log.WithField("cmp", "repo-source")
 	tempdir, err := ioutil.TempDir("", "gerrittest-")
 	if err != nil {
+		return nil, err
+	}
+
+	entry := logger.WithField("phase", "setup")
+	entry.WithFields(log.Fields{
+		"status": "init",
+		"path":   tempdir,
+	})
+	entry.Debug()
+	cmd := exec.Command("git", "init", tempdir, "--quiet")
+	if data, err := cmd.CombinedOutput(); err != nil {
+		entry.WithError(err).WithField("output", string(data)).Error()
+		return nil, err
+	}
+
+	entry = entry.WithFields(log.Fields{
+		"status":   "add-remote",
+		"path":     tempdir,
+		"branch":   branch,
+		"upstream": remote,
+	})
+	entry.Debug()
+
+	cmd = exec.Command(
+		"git", "-C", tempdir, "remote", "add", DefaultUpstream,
+		"--track", fmt.Sprintf("refs/heads/%s", branch),
+		"--mirror=fetch", remote)
+	if data, err := cmd.CombinedOutput(); err != nil {
+		entry.WithError(err).WithField("output", string(data)).Error()
+		return nil, err
+	}
+
+	entry = logger.WithField("status", "fetch")
+	entry.Debug()
+	cmd = exec.Command(
+		"git", "-C", tempdir, "fetch", DefaultUpstream, branch)
+	if data, err := cmd.CombinedOutput(); err != nil {
+		entry.WithError(err).WithField("output", string(data)).Error()
 		return nil, err
 	}
 	repo := &RemoteRepositorySource{
