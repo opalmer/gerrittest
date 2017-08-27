@@ -151,7 +151,6 @@ func (r *Repository) Destroy() error {
 	return os.RemoveAll(r.Root)
 }
 
-
 // AddFile performs multiple steps in a single command:
 //  - Write a file to disk using the given path. The path itself should
 //    be relative to the repository root. Any parent paths will be automatically
