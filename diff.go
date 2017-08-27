@@ -55,17 +55,5 @@ func (d *Diff) ApplyToRoot(root string) error {
 // repository using ApplyToRoot() after which this function will amend
 // the current commit. It's up to the caller to push the change.
 func (d *Diff) ApplyToRepository(repo *Repository) error {
-	if err := d.ApplyToRoot(repo.Root); err != nil {
-		return err
-	}
-	logger := log.WithFields(log.Fields{
-		"phase":  "apply-diff",
-		"action": "add-all",
-	})
-	if _, _, err := repo.Run([]string{"add", "--all"}); err != nil {
-		logger.WithError(err).Error()
-		return err
-	}
-	logger.Debug()
-	return repo.Amend()
+	return nil
 }
