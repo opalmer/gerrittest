@@ -15,6 +15,11 @@ type Diff struct {
 	Commit  string
 }
 
+func (d *Diff) errLog(entry *log.Entry, err error) error {
+	entry.WithError(err).Error()
+	return err
+}
+
 // ApplyToRoot will apply the given diff to the provided repository root.
 func (d *Diff) ApplyToRoot(root string) error {
 	if d.Error != nil {
@@ -29,22 +34,19 @@ func (d *Diff) ApplyToRoot(root string) error {
 		"git", "-C", root, "apply", "-v")
 	writer, err := cmd.StdinPipe()
 	if err != nil {
-		logger.WithError(err).Error()
-		return err
+		return d.errLog(logger, err)
 	}
 	if _, err := writer.Write(d.Content); err != nil {
-		logger.WithError(err).Error()
-		return err
+		return d.errLog(logger, err)
 	}
 	if err := writer.Close(); err != nil {
-		logger.WithError(err).Error()
-		return err
+		return d.errLog(logger, err)
 	}
+
 	out, err := cmd.CombinedOutput()
-	logger = logger.WithField("output", string(out))
 	if err != nil {
-		logger.WithError(err).Error()
-		return err
+		logger = logger.WithField("output", string(out))
+		return d.errLog(logger, err)
 	}
 	return nil
 }

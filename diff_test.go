@@ -54,3 +54,29 @@ func (s *DiffTest) TestApplyToRoot(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(content, DeepEquals, []byte("Hello, world.\n"))
 }
+
+func (s *DiffTest) TestApplyToRepository_ApplyToRoot_error(c *C) {
+	path, err := ioutil.TempDir("", "")
+	c.Assert(err, IsNil)
+	c.Assert(os.RemoveAll(path), IsNil)
+	diff := &Diff{Content: []byte(patch)}
+	c.Assert(
+		diff.ApplyToRepository(&Repository{Root: path}),
+		ErrorMatches, "exit status 128")
+}
+
+func (s *DiffTest) TestApplyToRepository(c *C) {
+	path, err := ioutil.TempDir("", "")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(path)
+	repo, err := NewRepository(path)
+	c.Assert(err, IsNil)
+	c.Assert(repo.AddFile(&FileInput{
+		Path:    "testing.py",
+		Content: []byte("TESTING = True"),
+		Mode:    0600,
+	}), IsNil)
+	c.Assert(repo.Commit("test"), IsNil)
+	diff := &Diff{Content: []byte(patch)}
+	c.Assert(diff.ApplyToRepository(repo), IsNil)
+}
