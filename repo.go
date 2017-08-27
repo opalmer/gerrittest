@@ -151,15 +151,6 @@ func (r *Repository) Destroy() error {
 	return os.RemoveAll(r.Root)
 }
 
-// Add adds a single file to the repository.
-func (r *Repository) Add(input *FileInput) error {
-	r.log.WithFields(log.Fields{
-		"action": "add",
-		"path":   input.Path,
-	}).Debug()
-	_, _, err := r.Run([]string{"add", input.Path})
-	return err
-}
 
 // AddFile performs multiple steps in a single command:
 //  - Write a file to disk using the given path. The path itself should
@@ -185,7 +176,12 @@ func (r *Repository) AddFile(input *FileInput) error {
 		logger.WithError(err).Warn()
 		return err
 	}
-	return r.Add(input)
+	r.log.WithFields(log.Fields{
+		"action": "add",
+		"path":   input.Path,
+	}).Debug()
+	_, _, err := r.Run([]string{"add", input.Path})
+	return err
 }
 
 // Commit will commit any pending changes with the provided message.
