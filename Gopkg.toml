@@ -34,6 +34,10 @@ required = ["github.com/docker/distribution/reference"]
   version = "0.4.5"
 
 [[constraint]]
+  name = "gopkg.in/src-d/go-git.v4"
+  version = "v4"
+
+[[constraint]]
   name = "github.com/Sirupsen/logrus"
   version = "1.0.2"
 
