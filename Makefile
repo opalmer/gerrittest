@@ -32,7 +32,10 @@ build:
 	go build cmd/gerrittest.go
 
 lint:
-	gometalinter $(PACKAGES)
+	gometalinter --vendor --disable-all --enable=deadcode --enable=errcheck --enable=goimports \
+	--enable=gocyclo --enable=golint --enable=gosimple --enable=misspell \
+	--enable=unconvert --enable=unused --enable=varcheck --enable=interfacer \
+	./...
 
 vet:
 	go vet $(PACKAGES)
