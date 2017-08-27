@@ -8,7 +8,9 @@ SOURCES = $(shell for f in $(PACKAGES); do ls $$GOPATH/src/$$f/*.go; done)
 EXTRA_DEPENDENCIES = \
     github.com/golang/lint/golint \
     github.com/golang/dep/cmd/dep \
-    github.com/wadey/gocovmerge
+    github.com/wadey/gocovmerge \
+    github.com/alecthomas/gometalinter
+
 TEST_CMD_PREFIX ?= go test -v
 TESTCMD = $(TEST_CMD_PREFIX)
 
@@ -18,6 +20,11 @@ endif
 
 check: deps vet docker lint build test coverage
 
+deps:
+	go get $(EXTRA_DEPENDENCIES)
+	gometalinter --install > /dev/null
+	dep ensure
+
 docker:
 	$(MAKE) -C docker build
 
@@ -25,11 +32,7 @@ build:
 	go build cmd/gerrittest.go
 
 lint:
-	golint -set_exit_status $(PACKAGES)
-
-deps:
-	go get $(EXTRA_DEPENDENCIES)
-	dep ensure
+	gometalinter $(PACKAGES)
 
 vet:
 	go vet $(PACKAGES)
