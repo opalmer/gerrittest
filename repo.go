@@ -123,6 +123,21 @@ func (r *Repository) Init() error {
 	return r.writeConfig()
 }
 
+// Add adds a path to the repository. The path must be relative to the root of
+// the repository
+func (r *Repository) Add(path string) error {
+	if r.Repo == nil {
+		return ErrRepositoryNotInitialized
+	}
+
+	tree, err := r.Repo.Worktree()
+	if err != nil {
+		return err
+	}
+	_, err = tree.Add(path)
+	return err
+}
+
 // Remove will remove the entire repository from disk, useful for temporary
 // repositories. This cannot be reversed.
 func (r *Repository) Remove() error {
