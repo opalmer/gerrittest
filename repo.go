@@ -25,10 +25,10 @@ var (
 // Repository is used to store information about an interact
 // with a git repository.
 type Repository struct {
-	Path  string
-	Repo  *git.Repository
-	User  string // Defaults to 'admin' in Init()
-	Email string // Defaults to '<User>@localhost' in Init()
+	Path   string
+	Repo   *git.Repository
+	User   string // Defaults to 'admin' in Init()
+	Email  string // Defaults to '<User>@localhost' in Init()
 	Branch string // Defaults to 'master' in Init()
 }
 
@@ -56,7 +56,7 @@ func (r *Repository) CreateRemoteFromSpec(service *ServiceSpec, remoteName strin
 			service.SSH.Address, service.SSH.Public, project),
 		Fetch: []config.RefSpec{"+refs/heads/*:refs/remotes/origin/*"},
 	})
-	if err !=  nil {
+	if err != nil {
 		return err
 	}
 	return r.writeConfig()
@@ -96,7 +96,7 @@ func (r *Repository) Init() error {
 		}
 		r.Repo = repo
 
-	// Open an existing repository.
+		// Open an existing repository.
 	} else {
 		repo, err := git.PlainOpen(r.Path)
 		if err != nil {
