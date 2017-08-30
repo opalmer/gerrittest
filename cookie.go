@@ -46,9 +46,8 @@ func (c *CookieJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	host := hostname(u)
-	hostCookies, _ := c.cookies[host]
 	names := []string{}
-	for _, cookie := range hostCookies {
+	for _, cookie := range c.cookies[host] {
 		names = append(names, cookie.Name)
 		cookies = append(cookies, cookie)
 	}

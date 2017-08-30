@@ -40,8 +40,6 @@ func (s *JSONTest) TestReadServiceSpec(c *C) {
 
 func (s *JSONTest) TestReadServiceSpecFromArg(c *C) {
 	spec, path := newSpec(c)
-	defer os.Remove(path)
-
 	cmd := &cobra.Command{}
 	cmd.Flags().String("json", "", "")
 	c.Assert(cmd.Flags().Set("json", path), IsNil)

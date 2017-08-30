@@ -154,7 +154,11 @@ func ExampleStart() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer svc.Service.Terminate() // Terminate the container when you're done.
+
+	// Terminate the container when you're done.
+	if err := svc.Service.Terminate(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // Once you've started the service you'll want to setup Gerrit inside
@@ -166,7 +170,6 @@ func ExampleSetup() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer svc.Service.Terminate() // Terminate the container when you're done.
 
 	setup := &Setup{Service: svc}
 	spec, httpClient, sshClient, err := setup.Init()
@@ -176,4 +179,9 @@ func ExampleSetup() {
 	_ = spec
 	_ = httpClient
 	_ = sshClient
+
+	// Terminate the container when you're done.
+	if err := svc.Service.Terminate(); err != nil {
+		log.Fatal(err)
+	}
 }

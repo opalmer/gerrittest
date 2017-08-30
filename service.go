@@ -146,10 +146,9 @@ func GetRandomPort() (uint16, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer listener.Close()
 	port, err := strconv.ParseUint(
 		strings.Split(listener.Addr().String(), ":")[1], 10, 16)
-	return uint16(port), err
+	return uint16(port), listener.Close()
 }
 
 // GetService takes a given configuration and returns the resulting
@@ -262,10 +261,7 @@ func (s *Setup) setPassword(client *HTTPClient) error {
 
 	logger = logger.WithField("status", "set-password")
 	logger.Debug()
-	if err := client.SetPassword(s.Password); err != nil {
-		return err
-	}
-	return nil
+	return client.SetPassword(s.Password)
 }
 
 func (s *Setup) getKey() (ssh.PublicKey, ssh.Signer, error) {
@@ -283,7 +279,6 @@ func (s *Setup) getKey() (ssh.PublicKey, ssh.Signer, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		defer file.Close()
 		if err := WriteRSAKey(private, file); err != nil {
 			return nil, nil, err
 		}
@@ -292,7 +287,7 @@ func (s *Setup) getKey() (ssh.PublicKey, ssh.Signer, error) {
 			return nil, nil, err
 		}
 		s.PrivateKeyPath = file.Name()
-		return signer.PublicKey(), signer, nil
+		return signer.PublicKey(), signer, file.Close()
 	}
 
 	// Load public/private key

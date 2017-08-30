@@ -44,6 +44,6 @@ func (s *StopTest) TestStopBadSpec(c *C) {
 
 func (s *StopTest) TestStopJSONFlagNotProvided(c *C) {
 	c.Assert(Stop.Flags().Parse([]string{}), IsNil)
-	Stop.Flags().Set("json", "")
+	c.Assert(Stop.Flags().Set("json", ""), IsNil)
 	c.Assert(Stop.RunE(Stop, []string{}), ErrorMatches, "--json not provided")
 }

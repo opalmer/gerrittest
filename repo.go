@@ -65,12 +65,13 @@ func (r *Repository) CreateRemoteFromSpec(service *ServiceSpec, remoteName strin
 	return r.writeConfig()
 }
 
-// Init initializes the git repository. If the repository was setup without
-// a path then a temp path will be used. Note, this may make modifications to
-// an existing repository.
-func (r *Repository) Init() error {
-	if r.Repo != nil {
-		return nil
+func (r Repository) setDefaults() error {
+	if r.Path == "" {
+		path, err := ioutil.TempDir("", DefaultTempName)
+		if err != nil {
+			return err
+		}
+		r.Path = path
 	}
 
 	// Configure defaults.
@@ -83,12 +84,19 @@ func (r *Repository) Init() error {
 	if r.Branch == "" {
 		r.Branch = "master"
 	}
-	if r.Path == "" {
-		path, err := ioutil.TempDir("", DefaultTempName)
-		if err != nil {
-			return err
-		}
-		r.Path = path
+	return nil
+}
+
+// Init initializes the git repository. If the repository was setup without
+// a path then a temp path will be used. Note, this may make modifications to
+// an existing repository.
+func (r *Repository) Init() error {
+	if r.Repo != nil {
+		return nil
+	}
+
+	if err := r.setDefaults(); err != nil {
+		return err
 	}
 
 	// Create the repository.
@@ -109,7 +117,9 @@ func (r *Repository) Init() error {
 	}
 
 	// Drop the commit hook on disk.
-	os.MkdirAll(filepath.Join(r.Path, ".git", "hooks"), 0700)
+	if err := os.MkdirAll(filepath.Join(r.Path, ".git", "hooks"), 0700); err != nil {
+		return err
+	}
 	if err := ioutil.WriteFile(
 		filepath.Join(r.Path, ".git", "hooks", "commit-msg"),
 		internal.MustAsset("internal/commit-msg"), 0700); err != nil {

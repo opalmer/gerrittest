@@ -42,19 +42,19 @@ func (s *RepoTest) TestRepository_Remove_Success(c *C) {
 
 func (s *RepoTest) TestRepository_Init_TempPath(c *C) {
 	r := &Repository{}
-	defer r.Remove()
 	c.Assert(r.Init(), IsNil)
 	_, err := os.Stat(filepath.Join(r.Path, ".git"))
 	c.Assert(err, IsNil)
+	c.Assert(r.Remove(), IsNil)
 }
 
 func (s *RepoTest) TestRepository_Init_AlreadyCalled(c *C) {
 	r := &Repository{}
-	defer r.Remove()
 	c.Assert(r.Init(), IsNil)
 	r.User = ""
 	c.Assert(r.Init(), IsNil)
 	c.Assert(r.User, Equals, "")
+	c.Assert(r.Remove(), IsNil)
 }
 
 func (s *RepoTest) TestRepository_Init_ExistingPath(c *C) {
@@ -64,7 +64,6 @@ func (s *RepoTest) TestRepository_Init_ExistingPath(c *C) {
 
 func (s *RepoTest) TestRepository_CreateRemoteFromSpec(c *C) {
 	r := s.newRepo(c)
-	defer r.Remove()
 	spec := &ServiceSpec{
 		Admin: &User{
 			Login: "test",
@@ -77,6 +76,7 @@ func (s *RepoTest) TestRepository_CreateRemoteFromSpec(c *C) {
 	c.Assert(r.CreateRemoteFromSpec(spec, "testing", "foobar"), IsNil)
 	_, err := r.Repo.Remote("testing")
 	c.Assert(err, IsNil)
+	c.Assert(r.Remove(), IsNil)
 }
 
 func (s *RepoTest) TestRepository_Add_RepositoryNotInitialized(c *C) {
@@ -93,7 +93,7 @@ func (s *RepoTest) add(c *C, relative string, data []byte) *Repository {
 
 func (s *RepoTest) TestRepository_Add(c *C) {
 	r := s.add(c, "test.txt", []byte("hello"))
-	defer r.Remove()
+	c.Assert(r.Remove(), IsNil)
 }
 
 func (s *RepoTest) TestRepository_Commit_RepositoryNotInitialized(c *C) {
@@ -103,6 +103,6 @@ func (s *RepoTest) TestRepository_Commit_RepositoryNotInitialized(c *C) {
 
 func (s *RepoTest) TestRepository_Commit(c *C) {
 	r := s.add(c, "test.txt", []byte("hello"))
-	defer r.Remove()
 	c.Assert(r.Commit("hello"), IsNil)
+	c.Assert(r.Remove(), IsNil)
 }

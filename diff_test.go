@@ -46,11 +46,11 @@ func (s *DiffTest) TestApplyToRoot(c *C) {
 	diff := &Diff{Content: []byte(patch)}
 	path, err := ioutil.TempDir("", "")
 	c.Assert(err, IsNil)
-	defer os.RemoveAll(path)
 	cmd := exec.Command("git", "init", path)
 	c.Assert(cmd.Run(), IsNil)
 	c.Assert(diff.ApplyToRoot(path), IsNil)
 	content, err := ioutil.ReadFile(filepath.Join(path, "hello_world.txt"))
 	c.Assert(err, IsNil)
 	c.Assert(content, DeepEquals, []byte("Hello, world.\n"))
+	c.Assert(os.RemoveAll(path), IsNil)
 }

@@ -32,8 +32,12 @@ func (h *testHandler) ServeHTTP(response http.ResponseWriter, request *http.Requ
 	h.mtx.Lock()
 	defer h.mtx.Unlock()
 	response.WriteHeader(h.response.Code)
-	io.Copy(h.requestBody, request.Body)
-	io.Copy(response, h.response.Body)
+	if _, err := io.Copy(h.requestBody, request.Body); err != nil {
+		panic(err)
+	}
+	if _, err := io.Copy(response, h.response.Body); err != nil {
+		panic(err)
+	}
 	outHeaders := response.Header()
 	for key := range h.response.HeaderMap {
 		outHeaders.Set(key, h.response.HeaderMap.Get(key))
@@ -235,9 +239,9 @@ func (s *HTTPTest) TestHTTPClient_Integration(c *C) {
 	}
 	svc, err := Start(context.Background(), NewConfig())
 	c.Assert(err, IsNil)
-	defer svc.Service.Terminate() // Terminate the container when you're done.
 	setup := &Setup{Service: svc}
 	_, httpClient, _, err := setup.Init()
 	c.Assert(err, IsNil)
 	c.Assert(httpClient.CreateProject("foobar"), IsNil)
+	c.Assert(svc.Service.Terminate(), IsNil)
 }

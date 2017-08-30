@@ -18,19 +18,19 @@ func (s *ConfigTest) SetUpTest(c *C) {
 	value, set := os.LookupEnv(DefaultImageEnvironmentVar)
 	s.value = value
 	s.set = set
-	os.Unsetenv(DefaultImageEnvironmentVar)
+	c.Assert(os.Unsetenv(DefaultImageEnvironmentVar), IsNil)
 }
 
 func (s *ConfigTest) TearDownTest(c *C) {
 	if s.set {
-		os.Setenv(DefaultImageEnvironmentVar, s.value)
+		c.Assert(os.Setenv(DefaultImageEnvironmentVar, s.value), IsNil)
 		return
 	}
-	os.Unsetenv(DefaultImageEnvironmentVar)
+	c.Assert(os.Unsetenv(DefaultImageEnvironmentVar), IsNil)
 }
 
 func (s *ConfigTest) TestNewConfigDefaults(c *C) {
-	os.Unsetenv(DefaultImageEnvironmentVar)
+	c.Assert(os.Unsetenv(DefaultImageEnvironmentVar), IsNil)
 	cfg := NewConfig()
 	c.Assert(cfg, DeepEquals, &Config{
 		Image:            DefaultImage,
@@ -41,7 +41,7 @@ func (s *ConfigTest) TestNewConfigDefaults(c *C) {
 }
 
 func (s *ConfigTest) TestNewConfigOverride(c *C) {
-	os.Setenv(DefaultImageEnvironmentVar, "override")
+	c.Assert(os.Setenv(DefaultImageEnvironmentVar, "override"), IsNil)
 	cfg := NewConfig()
 	c.Assert(cfg.Image, Equals, "override")
 }

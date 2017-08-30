@@ -27,28 +27,28 @@ func (s *UtilTest) TestExitIf(c *C) {
 
 func (s *UtilTest) TestGetBool(c *C) {
 	command := &cobra.Command{}
-	command.Flags().Bool("test", false, "")
-	command.ParseFlags([]string{"--test"})
+	c.Assert(command.Flags().Bool("test", false, ""), IsNil)
+	c.Assert(command.ParseFlags([]string{"--test"}), IsNil)
 	c.Assert(getBool(command, "test"), Equals, true)
 }
 
 func (s *UtilTest) TestGetString(c *C) {
 	command := &cobra.Command{}
-	command.Flags().String("test", "", "")
-	command.ParseFlags([]string{"--test=bar"})
+	c.Assert(command.Flags().String("test", "", ""), IsNil)
+	c.Assert(command.ParseFlags([]string{"--test=bar"}), IsNil)
 	c.Assert(getString(command, "test"), Equals, "bar")
 }
 
 func (s *UtilTest) TestGetDuration(c *C) {
 	command := &cobra.Command{}
-	command.Flags().Duration("test", time.Second*0, "")
-	command.ParseFlags([]string{"--test=15m"})
+	c.Assert(command.Flags().Duration("test", time.Second*0, ""), IsNil)
+	c.Assert(command.ParseFlags([]string{"--test=15m"}), IsNil)
 	c.Assert(getDuration(command, "test"), Equals, time.Minute*15)
 }
 
 func (s *UtilTest) TestGetUInt16(c *C) {
 	command := &cobra.Command{}
-	command.Flags().Uint16("test", 0, "")
-	command.ParseFlags([]string{"--test=65535"})
+	c.Assert(command.Flags().Uint16("test", 0, ""), IsNil)
+	c.Assert(command.ParseFlags([]string{"--test=65535"}), IsNil)
 	c.Assert(getUInt16(command, "test"), Equals, uint16(65535))
 }

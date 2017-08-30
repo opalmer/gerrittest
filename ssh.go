@@ -36,7 +36,6 @@ func (s *SSHClient) Run(command string) ([]byte, []byte, error) {
 		logger.WithError(err).Error()
 		return nil, nil, err
 	}
-	defer session.Close()
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	session.Stdout = &stdout
@@ -47,7 +46,7 @@ func (s *SSHClient) Run(command string) ([]byte, []byte, error) {
 	} else {
 		logger.Debug()
 	}
-	return stdout.Bytes(), stderr.Bytes(), err
+	return stdout.Bytes(), stderr.Bytes(), session.Close()
 }
 
 // Version returns the current version of Gerrit.
@@ -119,13 +118,16 @@ func ReadSSHKeys(path string) (ssh.PublicKey, ssh.Signer, error) {
 
 // WriteRSAKey will take a private key and write out the public
 // and private portions to disk.
+// nolint: interfacer
 func WriteRSAKey(key *rsa.PrivateKey, file *os.File) error {
 	if err := key.Validate(); err != nil {
 		return err
 	}
-	defer file.Close()
-	return pem.Encode(file, &pem.Block{
+	if err := pem.Encode(file, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
-	})
+	}); err != nil {
+		return err
+	}
+	return file.Close()
 }
