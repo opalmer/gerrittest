@@ -11,10 +11,11 @@ RUN set -x \
     && apk add --update --no-cache git openssh openssl bash curl \
     && adduser -D -h "${GERRIT_HOME}" -g "Gerrit User" "gerrit"
 
-ARG GERRIT_MAJOR_VERSION=2
-ARG GERRIT_MINOR_VERSION=14
-ARG GERRIT_MICRO_VERSION=2
-ARG GERRIT_WAR_SHA1=e57c23f17457e14ecfd8da6b2750a94fe65f8970
+# The below are set the by the Makefile
+ARG GERRIT_MAJOR_VERSION=""
+ARG GERRIT_MINOR_VERSION=""
+ARG GERRIT_MICRO_VERSION=""
+ARG GERRIT_WAR_SHA1=""
 ARG GERRIT_WAR_URL=https://gerrit-releases.storage.googleapis.com/gerrit-${GERRIT_MAJOR_VERSION}.${GERRIT_MINOR_VERSION}.${GERRIT_MICRO_VERSION}.war
 
 # Drop in the Gerrit war file and setup the site.

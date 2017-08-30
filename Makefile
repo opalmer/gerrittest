@@ -18,6 +18,8 @@ ifdef TEST_SHORT
 TESTCMD := $(TESTCMD) -short
 endif
 
+.PHONY: docker
+
 check: deps vet docker lint build test coverage
 
 deps:
