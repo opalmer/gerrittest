@@ -6,10 +6,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"time"
+
 	"github.com/opalmer/gerrittest/internal"
 	"github.com/pkg/errors"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
 var (
@@ -135,6 +138,30 @@ func (r *Repository) Add(path string) error {
 		return err
 	}
 	_, err = tree.Add(path)
+	return err
+}
+
+// Commit will add a new commit to the repository with the
+// given message.
+func (r *Repository) Commit(message string) error {
+	if r.Repo == nil {
+		return ErrRepositoryNotInitialized
+	}
+
+	tree, err := r.Repo.Worktree()
+	if err != nil {
+		return err
+	}
+	author := &object.Signature{
+		Name:  r.User,
+		Email: r.Email,
+		When:  time.Now(),
+	}
+	_, err = tree.Commit(message, &git.CommitOptions{
+		All:       false,
+		Author:    author,
+		Committer: author,
+	})
 	return err
 }
 

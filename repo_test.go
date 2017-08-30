@@ -84,9 +84,25 @@ func (s *RepoTest) TestRepository_Add_RepositoryNotInitialized(c *C) {
 	c.Assert(r.Add(""), ErrorMatches, ErrRepositoryNotInitialized.Error())
 }
 
-func (s *RepoTest) TestRepository_Add(c *C) {
+func (s *RepoTest) add(c *C, relative string, data []byte) *Repository {
 	r := s.newRepo(c)
+	c.Assert(ioutil.WriteFile(filepath.Join(r.Path, relative), data, 0600), IsNil)
+	c.Assert(r.Add(relative), IsNil)
+	return r
+}
+
+func (s *RepoTest) TestRepository_Add(c *C) {
+	r := s.add(c, "test.txt", []byte("hello"))
 	defer r.Remove()
-	c.Assert(ioutil.WriteFile(filepath.Join(r.Path, "test.txt"), []byte("hello"), 0600), IsNil)
-	c.Assert(r.Add("test.txt"), IsNil)
+}
+
+func (s *RepoTest) TestRepository_Commit_RepositoryNotInitialized(c *C) {
+	r := &Repository{}
+	c.Assert(r.Commit(""), ErrorMatches, ErrRepositoryNotInitialized.Error())
+}
+
+func (s *RepoTest) TestRepository_Commit(c *C) {
+	r := s.add(c, "test.txt", []byte("hello"))
+	defer r.Remove()
+	c.Assert(r.Commit("hello"), IsNil)
 }
