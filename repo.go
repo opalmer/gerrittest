@@ -178,7 +178,7 @@ func (r *Repository) Commit(message string) error {
 // repositories. This cannot be reversed.
 func (r *Repository) Remove() error {
 	if r.Path == "" {
-		return ErrRepositoryNotInitialized
+		return nil
 	}
 	return os.RemoveAll(r.Path)
 }

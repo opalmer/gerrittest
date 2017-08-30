@@ -287,7 +287,8 @@ func (s *Setup) getKey() (ssh.PublicKey, ssh.Signer, error) {
 			return nil, nil, err
 		}
 		s.PrivateKeyPath = file.Name()
-		return signer.PublicKey(), signer, file.Close()
+		defer file.Close() // nolint: errcheck
+		return signer.PublicKey(), signer, nil
 	}
 
 	// Load public/private key

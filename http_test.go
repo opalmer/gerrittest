@@ -239,9 +239,9 @@ func (s *HTTPTest) TestHTTPClient_Integration(c *C) {
 	}
 	svc, err := Start(context.Background(), NewConfig())
 	c.Assert(err, IsNil)
+	defer svc.Service.Terminate() // nolint: errcheck
 	setup := &Setup{Service: svc}
 	_, httpClient, _, err := setup.Init()
 	c.Assert(err, IsNil)
 	c.Assert(httpClient.CreateProject("foobar"), IsNil)
-	c.Assert(svc.Service.Terminate(), IsNil)
 }

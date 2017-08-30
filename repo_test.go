@@ -26,9 +26,9 @@ func (s *RepoTest) newRepo(c *C) *Repository {
 	return r
 }
 
-func (s *RepoTest) TestRepository_Remove_Error(c *C) {
+func (s *RepoTest) TestRepository_Remove_NoPath(c *C) {
 	r := &Repository{}
-	c.Assert(r.Remove(), ErrorMatches, ErrRepositoryNotInitialized.Error())
+	c.Assert(r.Remove(), IsNil)
 }
 
 func (s *RepoTest) TestRepository_Remove_Success(c *C) {
