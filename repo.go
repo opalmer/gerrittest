@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
 	"time"
 
 	"github.com/opalmer/gerrittest/internal"
@@ -55,9 +54,10 @@ func (r *Repository) writeConfig() error {
 func (r *Repository) CreateRemoteFromSpec(service *ServiceSpec, remoteName string, project string) error {
 	_, err := r.Repo.CreateRemote(&config.RemoteConfig{
 		Name: remoteName,
-		URL: fmt.Sprintf(
-			"ssh://%s@%s:%d/%s", service.Admin.Login,
-			service.SSH.Address, service.SSH.Public, project),
+		URLs: []string{
+			fmt.Sprintf(
+				"ssh://%s@%s:%d/%s", service.Admin.Login,
+				service.SSH.Address, service.SSH.Public, project)},
 		Fetch: []config.RefSpec{"+refs/heads/*:refs/remotes/origin/*"},
 	})
 	if err != nil {
@@ -74,8 +74,6 @@ func (r Repository) setDefaults() error {
 		}
 		r.Path = path
 	}
-
-	// Configure defaults.
 	if r.User == "" {
 		r.User = "admin"
 	}
