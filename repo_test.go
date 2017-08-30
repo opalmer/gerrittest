@@ -5,9 +5,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"strings"
+
 	"github.com/opalmer/dockertest"
 	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
 type RepoTest struct{}
@@ -104,5 +107,16 @@ func (s *RepoTest) TestRepository_Commit_RepositoryNotInitialized(c *C) {
 func (s *RepoTest) TestRepository_Commit(c *C) {
 	r := s.add(c, "test.txt", []byte("hello"))
 	c.Assert(r.Commit("hello"), IsNil)
+	commits, err := r.Repo.CommitObjects()
+	c.Assert(err, IsNil)
+	defer commits.Close()
+	found := false
+	c.Assert(commits.ForEach(func(commit *object.Commit) error {
+		if strings.Contains(commit.Message, "hello") {
+			found = true
+		}
+		return nil
+	}), IsNil)
+	c.Assert(found, Equals, true)
 	c.Assert(r.Remove(), IsNil)
 }
