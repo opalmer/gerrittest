@@ -4,9 +4,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
 	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v4"
+	"github.com/opalmer/dockertest"
 )
 
 type RepoTest struct{}
@@ -55,6 +55,16 @@ func (s *RepoTest) TestRepository_Init_ExistingPath(c *C) {
 
 func (s *RepoTest) TestRepository_CreateRemoteFromSpec(c *C) {
 	r := s.newRepo(c)
-	_ = r
-	// TODO - Add test for CreateRemoteFromSpec
+	spec := &ServiceSpec{
+		Admin: &User{
+			Login: "test",
+		},
+		SSH: &dockertest.Port{
+			Public: 55555,
+			Address: "127.0.0.1",
+		},
+	}
+	c.Assert(r.CreateRemoteFromSpec(spec, "testing", "foobar"), IsNil)
+	_, err := r.Repo.Remote("testing")
+	c.Assert(err, IsNil)
 }
