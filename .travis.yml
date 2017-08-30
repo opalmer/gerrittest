@@ -2,8 +2,12 @@ language: go
 sudo: required
 
 go:
-    - 1.8
-    - 1.9
+  - 1.8
+  - 1.9
+
+env:
+  - GERRITTEST_DOCKER_IMAGE=opalmer/gerrittest:2.14.2
+  - GERRITTEST_DOCKER_IMAGE=opalmer/gerrittest:2.14.3
 
 services:
   - docker
