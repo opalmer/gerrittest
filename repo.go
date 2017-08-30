@@ -51,6 +51,7 @@ func (r *Repository) writeConfig() error {
 }
 
 // CreateRemoteFromSpec adds a new remote based on the provided spec.
+// nolint: unused,gosimple,unconvert,varcheck
 func (r *Repository) CreateRemoteFromSpec(service *ServiceSpec, remoteName string, project string) error {
 	_, err := r.Repo.CreateRemote(&config.RemoteConfig{
 		Name: remoteName,
