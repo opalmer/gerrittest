@@ -13,7 +13,7 @@ import (
 
 type JSONTest struct{}
 
-var _ = Suite(&ConfigTest{})
+var _ = Suite(&JSONTest{})
 
 func newSpec(c *C) (*ServiceSpec, string) {
 	spec := &ServiceSpec{Container: "foo"}
