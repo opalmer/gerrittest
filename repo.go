@@ -1,6 +1,7 @@
 package gerrittest
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,7 +9,6 @@ import (
 	"time"
 
 	"github.com/opalmer/gerrittest/internal"
-	"github.com/pkg/errors"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
@@ -66,7 +66,7 @@ func (r *Repository) CreateRemoteFromSpec(service *ServiceSpec, remoteName strin
 	return r.writeConfig()
 }
 
-func (r Repository) setDefaults() error {
+func (r *Repository) setDefaults() error {
 	if r.Path == "" {
 		path, err := ioutil.TempDir("", DefaultTempName)
 		if err != nil {
@@ -130,8 +130,12 @@ func (r *Repository) Init() error {
 	if err != nil {
 		return err
 	}
+
 	cfg.Raw = cfg.Raw.AddOption("core", "", "user", r.User)
 	cfg.Raw = cfg.Raw.AddOption("core", "", "email", r.Email)
+	cfg.Raw = cfg.Raw.AddOption(
+		"core", "", "sshCommand",
+		"ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no")
 	return r.writeConfig()
 }
 
@@ -172,6 +176,27 @@ func (r *Repository) Commit(message string) error {
 		Committer: author,
 	})
 	return err
+}
+
+// Push will push changes to the given remote and reference. `remote` will
+// default to 'origin' if not provided and `ref` will default to
+// 'HEAD:refs/for/master' if not provided.
+func (r *Repository) Push(remote string, ref string) error {
+	if r.Repo == nil {
+		return ErrRepositoryNotInitialized
+	}
+	if remote == "" {
+		remote = "origin"
+	}
+
+	if ref == "" {
+		ref = "HEAD:refs/for/master"
+	}
+
+	return r.Repo.Push(&git.PushOptions{
+		RemoteName: remote,
+		RefSpecs:   []config.RefSpec{config.RefSpec(ref)},
+	})
 }
 
 // Remove will remove the entire repository from disk, useful for temporary

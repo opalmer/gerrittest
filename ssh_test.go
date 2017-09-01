@@ -66,7 +66,7 @@ func (s *SSHTest) TestWriteRSAKey(c *C) {
 
 func (s *SSHTest) TestNewSSHClientFromService(c *C) {
 	if testing.Short() {
-		c.Skip("-shot set")
+		c.Skip("-short set")
 	}
 
 	svc, err := Start(context.Background(), NewConfig())

@@ -4,12 +4,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
 	"strings"
 
 	"github.com/opalmer/dockertest"
 	. "gopkg.in/check.v1"
 	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
@@ -119,4 +119,26 @@ func (s *RepoTest) TestRepository_Commit(c *C) {
 	}), IsNil)
 	c.Assert(found, Equals, true)
 	c.Assert(r.Remove(), IsNil)
+}
+
+func (s *RepoTest) TestRepository_Push_RepositoryNotInitialized(c *C) {
+	r := &Repository{}
+	c.Assert(r.Push("", ""), ErrorMatches, ErrRepositoryNotInitialized.Error())
+}
+
+func (s *RepoTest) TestRepository_Push(c *C) {
+	r := s.add(c, "test.txt", []byte("hello"))
+	defer r.Remove() // nolint: errcheck
+	remoteRepoPath, err := ioutil.TempDir("", "")
+	c.Assert(err, IsNil)
+	defer os.RemoveAll(remoteRepoPath) // nolint: errcheck
+	_, err = git.PlainInit(remoteRepoPath, false)
+	c.Assert(err, IsNil)
+	_, err = r.Repo.CreateRemote(&config.RemoteConfig{
+		Name:  "origin",
+		URLs:  []string{remoteRepoPath},
+		Fetch: []config.RefSpec{"+refs/heads/*:refs/remotes/origin/*"},
+	})
+	c.Assert(r.Commit("testing"), IsNil)
+	c.Assert(r.Push("", ""), ErrorMatches, "already up-to-date")
 }
