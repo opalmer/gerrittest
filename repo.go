@@ -1,17 +1,18 @@
 package gerrittest
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"os/user"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/opalmer/gerrittest/internal"
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/config"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
 var (
@@ -19,191 +20,282 @@ var (
 	// and folders.
 	DefaultTempName = "gerrittest-"
 
-	// ErrRepositoryNotInitialized may be returned by any operation that
-	// requires a fully setup Repository struct.
-	ErrRepositoryNotInitialized = errors.New("The repository is not initialized")
+	// DefaultGitCommands contains a mapping of git commands
+	// to their arguments. This is used by Repository for running
+	// git commands.
+	DefaultGitCommands = map[string][]string{
+		"status": {"status", "--porcelain"},
+		"init":   {"init", "--quiet"},
+		"config": {"config", "--local"},
+	}
+
+	// DefaultCommitHookName is the name of the hook installed by
+	// InstallCommitHook.
+	DefaultCommitHookName = "commit-msg"
+
+	// ErrRepositoryNotInitialized is returned any function that needs an
+	// initialized repository.
+	ErrRepositoryNotInitialized = errors.New("Repository not initialized")
 )
+
+// RepositoryConfig is used to store information about a repository.
+type RepositoryConfig struct {
+	// Path is the path to the repository on disk.
+	Path string
+
+	// Command is the git command to run. Defaults to 'git'
+	Command string
+
+	// Ctx is the context to use when running commands. Defaults to
+	// context.Background()
+	Ctx context.Context
+
+	// CommandTimeout is the amount
+	CommandTimeout time.Duration
+
+	// PrivateKey is the path to the private key to use for communicating
+	// with the git server. Certain functions may return errors if this value
+	// is not set.
+	PrivateKey string
+
+	// GitConfig are key:value parts of git configuration options
+	// to set. Defaults to:
+	// {
+	//   "user.name":       "admin",
+	//   "user.email":      "admin@localhost",
+	//   "core.sshCommand": "ssh -i {PrivateKey} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no",
+	// }
+	GitConfig map[string]string
+}
 
 // Repository is used to store information about an interact
 // with a git repository.
 type Repository struct {
-	Path   string
-	Repo   *git.Repository
-	User   string // Defaults to 'admin' in Init()
-	Email  string // Defaults to '<User>@localhost' in Init()
-	Branch string // Defaults to 'master' in Init()
+	mtx  *sync.Mutex
+	init bool
+	Cfg  *RepositoryConfig
 }
 
-func (r *Repository) writeConfig() error {
-	if r.Repo == nil {
-		return ErrRepositoryNotInitialized
-	}
-	cfg, err := r.Repo.Config()
+// setEnvironment sets up the environment for the given command.
+func (r *Repository) setEnvironment(cmd *exec.Cmd) error {
+	// We'll need the user to set $HOME otherwise some git commands won't work.
+	usr, err := user.Current()
 	if err != nil {
 		return err
 	}
-	data, err := cfg.Marshal()
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(filepath.Join(r.Path, ".git", "config"), data, 0600)
-}
+	cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", usr.HomeDir))
 
-// CreateRemoteFromSpec adds a new remote based on the provided spec.
-// nolint: unused,gosimple,unconvert,varcheck
-func (r *Repository) CreateRemoteFromSpec(service *ServiceSpec, remoteName string, project string) error {
-	_, err := r.Repo.CreateRemote(&config.RemoteConfig{
-		Name: remoteName,
-		URLs: []string{
-			fmt.Sprintf(
-				"ssh://%s@%s:%d/%s", service.Admin.Login,
-				service.SSH.Address, service.SSH.Public, project)},
-		Fetch: []config.RefSpec{"+refs/heads/*:refs/remotes/origin/*"},
-	})
-	if err != nil {
-		return err
-	}
-	return r.writeConfig()
-}
-
-func (r *Repository) setDefaults() error {
-	if r.Path == "" {
-		path, err := ioutil.TempDir("", DefaultTempName)
-		if err != nil {
-			return err
-		}
-		r.Path = path
-	}
-	if r.User == "" {
-		r.User = "admin"
-	}
-	if r.Email == "" {
-		r.Email = fmt.Sprintf("%s@localhost", r.User)
-	}
-	if r.Branch == "" {
-		r.Branch = "master"
+	// Set environment variables to ensure the proper ssh command is run. Not
+	// all versions of git support core.sshCommand from the config.
+	for _, key := range []string{"GIT_SSH_COMMAND", "GIT_SSH"} {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, r.Cfg.GitConfig["core.sshCommand"]))
 	}
 	return nil
 }
 
-// Init initializes the git repository. If the repository was setup without
-// a path then a temp path will be used. Note, this may make modifications to
-// an existing repository.
+func (r *Repository) run(cmd *exec.Cmd) (string, string, error) {
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", "", err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return "", "", err
+	}
+	if err := cmd.Start(); err != nil {
+		return "", "", err
+	}
+	bytesOut, err := ioutil.ReadAll(stdout)
+	if err != nil {
+		return "", "", err
+	}
+	bytesErr, err := ioutil.ReadAll(stderr)
+	if err != nil {
+		return string(bytesOut), "", err
+	}
+	return string(bytesOut), string(bytesErr), cmd.Wait()
+}
+
+// Git runs git with the provided arguments. This also ensures the proper
+// working path and environment are set before calling git.
+func (r *Repository) Git(args []string) (string, string, error) {
+	workdir, err := os.Getwd()
+	if err != nil {
+		return "", "", err
+	}
+
+	// Change directories to the directory of the repository. Technically
+	// there's a -C flag but not all versions of git have this flag and not
+	// all subcommands respect it the same way.
+	defer os.Chdir(workdir) // nolint: errcheck
+	if err := os.Chdir(r.Cfg.Path); err != nil {
+		return "", "", err
+	}
+
+	ctx, cancel := context.WithTimeout(r.Cfg.Ctx, r.Cfg.CommandTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, r.Cfg.Command, args...)
+	if err := r.setEnvironment(cmd); err != nil {
+		return "", "", err
+	}
+	return r.run(cmd)
+}
+
+// Status returns the current status of the repository.
+func (r *Repository) Status() (string, error) {
+	stdout, _, err := r.Git(DefaultGitCommands["status"])
+	return stdout, err
+}
+
+// Init calls 'git init' on the repository but only if it does not appear
+// to already be a repository.
 func (r *Repository) Init() error {
-	if r.Repo != nil {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	if r.init {
 		return nil
 	}
-
-	if err := r.setDefaults(); err != nil {
-		return err
-	}
-
-	// Create the repository.
-	if _, err := os.Stat(filepath.Join(r.Path, ".git")); os.IsNotExist(err) {
-		repo, err := git.PlainInit(r.Path, false)
-		if err != nil {
+	if _, err := r.Status(); err != nil {
+		if _, _, err := r.Git(DefaultGitCommands["init"]); err != nil {
 			return err
 		}
-		r.Repo = repo
+	}
+	r.init = true
+	return nil
+}
 
-		// Open an existing repository.
-	} else {
-		repo, err := git.PlainOpen(r.Path)
-		if err != nil {
+// InstallCommitHook copies the commit hook into the hooks directory of the
+// repository. If the repository has not been initialized yet an error will
+// be returned. Note, this function will overwrite the existing commit-msg hook
+// by default.
+func (r *Repository) InstallCommitHook() error {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	if !r.init {
+		return ErrRepositoryNotInitialized
+	}
+	return ioutil.WriteFile(
+		filepath.Join(r.Cfg.Path, ".git", "hooks", DefaultCommitHookName),
+		internal.MustAsset("internal/commit-msg"), 0700)
+}
+
+// Config will call `git config --local key value`.
+func (r *Repository) Config(key string, value string) error {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	if !r.init {
+		return ErrRepositoryNotInitialized
+	}
+	_, _, err := r.Git(append(DefaultGitCommands["config"], key, value))
+	return err
+}
+
+// Configure will iterate over the configuration keys provided
+// by the RepositoryConfig struct and call Config() on each.
+func (r *Repository) Configure() error {
+	for key, value := range r.Cfg.GitConfig {
+		if err := r.Config(key, value); err != nil {
 			return err
 		}
-		r.Repo = repo
 	}
-
-	// Drop the commit hook on disk.
-	if err := os.MkdirAll(filepath.Join(r.Path, ".git", "hooks"), 0700); err != nil {
-		return err
-	}
-	if err := ioutil.WriteFile(
-		filepath.Join(r.Path, ".git", "hooks", "commit-msg"),
-		internal.MustAsset("internal/commit-msg"), 0700); err != nil {
-		return err
-	}
-
-	// Add user/email to the config and write it to disk.
-	cfg, err := r.Repo.Config()
-	if err != nil {
-		return err
-	}
-
-	cfg.Raw = cfg.Raw.AddOption("core", "", "user", r.User)
-	cfg.Raw = cfg.Raw.AddOption("core", "", "email", r.Email)
-	cfg.Raw = cfg.Raw.AddOption(
-		"core", "", "sshCommand",
-		"ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no")
-	return r.writeConfig()
+	return nil
 }
 
 // Add adds a path to the repository. The path must be relative to the root of
-// the repository
+// the repository.
 func (r *Repository) Add(path string) error {
-	if r.Repo == nil {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	if !r.init {
 		return ErrRepositoryNotInitialized
 	}
-
-	tree, err := r.Repo.Worktree()
-	if err != nil {
-		return err
-	}
-	_, err = tree.Add(path)
-	return err
+	return nil
 }
 
 // Commit will add a new commit to the repository with the
 // given message.
 func (r *Repository) Commit(message string) error {
-	if r.Repo == nil {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	if !r.init {
 		return ErrRepositoryNotInitialized
 	}
-
-	tree, err := r.Repo.Worktree()
-	if err != nil {
-		return err
-	}
-	author := &object.Signature{
-		Name:  r.User,
-		Email: r.Email,
-		When:  time.Now(),
-	}
-	_, err = tree.Commit(message, &git.CommitOptions{
-		All:       false,
-		Author:    author,
-		Committer: author,
-	})
-	return err
+	return nil
 }
 
 // Push will push changes to the given remote and reference. `remote` will
 // default to 'origin' if not provided and `ref` will default to
 // 'HEAD:refs/for/master' if not provided.
 func (r *Repository) Push(remote string, ref string) error {
-	if r.Repo == nil {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	if !r.init {
 		return ErrRepositoryNotInitialized
 	}
-	if remote == "" {
-		remote = "origin"
-	}
+	return nil
+}
 
-	if ref == "" {
-		ref = "HEAD:refs/for/master"
-	}
-
-	return r.Repo.Push(&git.PushOptions{
-		RemoteName: remote,
-		RefSpecs:   []config.RefSpec{config.RefSpec(ref)},
-	})
+// CreateRemoteFromSpec adds a new remote based on the provided spec.
+// nolint: unused,gosimple,unconvert,varcheck
+func (r *Repository) CreateRemoteFromSpec(service *ServiceSpec, remoteName string, project string) error {
+	return nil
 }
 
 // Remove will remove the entire repository from disk, useful for temporary
 // repositories. This cannot be reversed.
 func (r *Repository) Remove() error {
-	if r.Path == "" {
-		return nil
+	return os.RemoveAll(r.Cfg.Path)
+}
+
+// NewRepository constructs and returns a *Repository struct. It will also
+// ensure the repository is properly setup before returning.
+func NewRepository(cfg *RepositoryConfig) (*Repository, error) {
+	repo := &Repository{
+		mtx:  &sync.Mutex{},
+		init: false,
+		Cfg:  cfg}
+	if err := repo.Init(); err != nil {
+		return nil, err
 	}
-	return os.RemoveAll(r.Path)
+	if err := repo.InstallCommitHook(); err != nil {
+		return nil, err
+	}
+	if err := repo.Configure(); err != nil {
+		return nil, err
+	}
+
+	return repo, nil
+}
+
+// NewRepositoryConfig returns a *RepositoryConfig struct. If no path is
+// provided then one will be generated for you.
+func NewRepositoryConfig(path string, privateKey string) (*RepositoryConfig, error) {
+	if privateKey == "" {
+		return nil, errors.New("Missing private key")
+	}
+
+	if path == "" {
+		newPath, err := ioutil.TempDir("", DefaultTempName)
+		if err != nil {
+			return nil, err
+		}
+		path = newPath
+	}
+
+	if err := os.MkdirAll(path, 0700); err != nil {
+		return nil, err
+	}
+
+	return &RepositoryConfig{
+		Path:           path,
+		Ctx:            context.Background(),
+		Command:        "git",
+		CommandTimeout: time.Minute * 10,
+		PrivateKey:     privateKey,
+		GitConfig: map[string]string{
+			"user.name":       "admin",
+			"user.email":      "admin@localhost",
+			"core.sshCommand": fmt.Sprintf("ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", privateKey),
+		},
+	}, nil
 }
