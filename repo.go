@@ -238,6 +238,11 @@ func (r *Repository) Push(remote string, ref string) error {
 // CreateRemoteFromSpec adds a new remote based on the provided spec.
 // nolint: unused,gosimple,unconvert,varcheck
 func (r *Repository) CreateRemoteFromSpec(service *ServiceSpec, remoteName string, project string) error {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+	if !r.init {
+		return ErrRepositoryNotInitialized
+	}
 	return nil
 }
 

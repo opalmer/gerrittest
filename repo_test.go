@@ -137,3 +137,23 @@ func (s *RepoTest) TestRepository_Config(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(strings.Contains(stdout, "foo.bar"), Equals, true)
 }
+
+func (s *RepoTest) TestRepository_Configure(c *C) {
+	repo := s.newRepoPostInit(c)
+	c.Assert(repo.Configure(), IsNil)
+}
+
+func (s *RepoTest) TestRepository_Add_RepoNotInit(c *C) {
+	repo := s.newBareRepo(c)
+	c.Assert(repo.Add(""), ErrorMatches, ErrRepositoryNotInitialized.Error())
+}
+
+func (s *RepoTest) TestRepository_Commit_RepoNotInit(c *C) {
+	repo := s.newBareRepo(c)
+	c.Assert(repo.Commit(""), ErrorMatches, ErrRepositoryNotInitialized.Error())
+}
+
+func (s *RepoTest) TestRepository_CreateRemoteFromSpec_RepoNotInit(c *C) {
+	repo := s.newBareRepo(c)
+	c.Assert(repo.CreateRemoteFromSpec(nil, "", ""), ErrorMatches, ErrRepositoryNotInitialized.Error())
+}
