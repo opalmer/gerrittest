@@ -148,6 +148,16 @@ func (s *RepoTest) TestRepository_Add_RepoNotInit(c *C) {
 	c.Assert(repo.Add(""), ErrorMatches, ErrRepositoryNotInitialized.Error())
 }
 
+func (s *RepoTest) TestRepository_Add(c *C) {
+	repo := s.newRepoPostInit(c)
+	c.Assert(ioutil.WriteFile(filepath.Join(repo.Cfg.Path, "foo.txt"), []byte("foo"), 0600), IsNil)
+	c.Assert(ioutil.WriteFile(filepath.Join(repo.Cfg.Path, "bar.txt"), []byte("bar"), 0600), IsNil)
+	c.Assert(repo.Add("foo.txt", "bar.txt"), IsNil)
+	status, err := repo.Status()
+	c.Assert(err, IsNil)
+	c.Assert(status, Equals, "A  bar.txt\nA  foo.txt\n")
+}
+
 func (s *RepoTest) TestRepository_Commit_RepoNotInit(c *C) {
 	repo := s.newBareRepo(c)
 	c.Assert(repo.Commit(""), ErrorMatches, ErrRepositoryNotInitialized.Error())

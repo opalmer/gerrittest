@@ -27,6 +27,7 @@ var (
 		"status": {"status", "--porcelain"},
 		"init":   {"init", "--quiet"},
 		"config": {"config", "--local"},
+		"add":    {"add", "--force"},
 	}
 
 	// DefaultCommitHookName is the name of the hook installed by
@@ -203,13 +204,14 @@ func (r *Repository) Configure() error {
 
 // Add adds a path to the repository. The path must be relative to the root of
 // the repository.
-func (r *Repository) Add(path string) error {
+func (r *Repository) Add(paths ...string) error {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 	if !r.init {
 		return ErrRepositoryNotInitialized
 	}
-	return nil
+	_, _, err := r.Git(append(DefaultGitCommands["add"], paths...))
+	return err
 }
 
 // Commit will add a new commit to the repository with the
