@@ -18,9 +18,9 @@ import (
 
 var magicPrefix = []byte(")]}'\n")
 
-// GetResponseBody returns the body of the given response as bytes with the
+// getResponseBody returns the body of the given response as bytes with the
 // magic prefix removed.
-func GetResponseBody(response *http.Response) ([]byte, error) {
+func getResponseBody(response *http.Response) ([]byte, error) {
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (h *HTTPClient) Do(request *http.Request, expectedCode int) (*http.Response
 		return response, nil, err
 	}
 
-	body, err := GetResponseBody(response)
+	body, err := getResponseBody(response)
 	if err != nil {
 		return nil, nil, err
 	}

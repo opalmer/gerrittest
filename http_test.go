@@ -73,7 +73,7 @@ func newClient(response *httptest.ResponseRecorder) (*HTTPClient, *testHandler, 
 func (s *HTTPTest) TestGetResponseBody(c *C) {
 	body := ioutil.NopCloser(bytes.NewBufferString(")]}'\nfoobar"))
 	response := &http.Response{Body: body}
-	data, err := GetResponseBody(response)
+	data, err := getResponseBody(response)
 	c.Assert(err, IsNil)
 	c.Assert(data, DeepEquals, []byte("foobar"))
 }
