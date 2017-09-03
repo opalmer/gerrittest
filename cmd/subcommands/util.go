@@ -55,11 +55,8 @@ func jsonOutput(cmd *cobra.Command, gerrit *gerrittest.Gerrit) error {
 	path := getString(cmd, "json")
 	if path == "" {
 		data, err := json.MarshalIndent(gerrit, "", "  ")
-		if err != nil {
-			return err
-		}
 		fmt.Println(string(data))
-		return nil
+		return err
 	}
 
 	return gerrit.WriteJSONFile(path)
