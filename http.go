@@ -220,11 +220,10 @@ func (h *HTTPClient) CreateProject(name string) error {
 
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No
 // validation to ensure the service is actually running is performed.
-func NewHTTPClient(service *Service, username string) *HTTPClient {
+func NewHTTPClient(address string, port uint16, username string) *HTTPClient {
 	return &HTTPClient{
 		Client: &http.Client{Jar: NewCookieJar()},
-		Prefix: fmt.Sprintf(
-			"http://%s:%d", service.HTTPPort.Address, service.HTTPPort.Public),
-		User: username,
+		Prefix: fmt.Sprintf("http://%s:%d", address, port),
+		User:   username,
 	}
 }

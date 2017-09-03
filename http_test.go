@@ -2,7 +2,6 @@ package gerrittest
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,9 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
-	"testing"
 
-	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
 	. "gopkg.in/check.v1"
 )
@@ -220,28 +217,6 @@ func (s *HTTPTest) TestHTTPClient_CreateProject(c *C) {
 }
 
 func (s *HTTPTest) TestNewHTTPClient(c *C) {
-	service := &Service{
-		HTTPPort: &dockertest.Port{
-			Address: "foobar",
-			Public:  8080,
-		},
-	}
-	client := NewHTTPClient(service, "admin")
-	c.Assert(client.Prefix, Equals, fmt.Sprintf(
-		"http://%s:%d", service.HTTPPort.Address, service.HTTPPort.Public))
-}
-
-// Tests additional functions that may not be covered by any of the above
-// tests
-func (s *HTTPTest) TestHTTPClient_Integration(c *C) {
-	if testing.Short() {
-		c.Skip("-short set")
-	}
-	svc, err := Start(context.Background(), NewConfig())
-	c.Assert(err, IsNil)
-	defer svc.Service.Terminate() // nolint: errcheck
-	setup := &Setup{Service: svc}
-	_, httpClient, _, err := setup.Init()
-	c.Assert(err, IsNil)
-	c.Assert(httpClient.CreateProject("foobar"), IsNil)
+	client := NewHTTPClient("foobar", 50000, "admin")
+	c.Assert(client.Prefix, Equals, "http://foobar:50000")
 }

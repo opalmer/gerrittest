@@ -304,7 +304,7 @@ func (s *Setup) Init() (*ServiceSpec, *HTTPClient, *SSHClient, error) {
 		s.Username = "admin"
 	}
 	logger := log.WithField("action", "setup")
-	client := NewHTTPClient(s.Service, s.Username)
+	client := NewHTTPClient(s.Service.HTTPPort.Address, s.Service.HTTPPort.Public, s.Username)
 
 	// Login will create the user.
 	logger = logger.WithField("status", "login")
