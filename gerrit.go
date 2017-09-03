@@ -26,8 +26,8 @@ type Gerrit struct {
 	SSH             *SSHClient       `json:"-"`
 	SSHPort         *dockertest.Port `json:"ssh"`
 	Repo            *Repository      `json:"repo"`
-	PrivateKey      ssh.Signer       `json:"private_key"`
-	PublicKey       ssh.PublicKey    `json:"public_key"`
+	PrivateKey      ssh.Signer       `json:"-"`
+	PublicKey       ssh.PublicKey    `json:"-"`
 	PrivateKeyPath  string           `json:"private_key_path"`
 	Username        string           `json:"username"`
 	Password        string           `json:"password"`
