@@ -71,7 +71,7 @@ type Repository struct {
 	mtx  *sync.Mutex
 	cfg  *RepositoryConfig
 	init bool
-	Path string            `json:"path"`
+	Path string `json:"path"`
 }
 
 // setEnvironment sets up the environment for the given command.
