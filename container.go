@@ -50,7 +50,7 @@ func newPort(public uint16, private uint16) (*dockertest.Port, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer listener.Close()
+		defer listener.Close() // nolint: errcheck
 		port, err := strconv.ParseUint(
 			strings.Split(listener.Addr().String(), ":")[1], 10, 16)
 		if err != nil {
@@ -272,6 +272,6 @@ func NewContainer(parent context.Context, http uint16, ssh uint16, image string)
 		SSH:    portSSH,
 		HTTP:   portHTTP,
 		Image:  image,
-		ID: service.Container.ID(),
+		ID:     service.Container.ID(),
 	}, nil
 }
