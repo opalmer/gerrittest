@@ -66,6 +66,22 @@ $ gerrittest start
 }
 ```
 
+### Combining gerrittest, bash and curl
+
+```bash
+
+$ JSON="/tmp/services.json"
+$ PREFIX=")]}'"
+$ gerrittest start --json "$JSON"
+$ USERNAME="$(jq -r ".username" "$JSON")"
+$ PASSWORD="$(jq -r ".password" "$JSON")"
+$ URL="http://$(jq -r ".http.address" "$JSON"):$(jq -r ".http.port" "$JSON")"
+$ RAW_RESPONSE="$(curl -u $USERNAME:$PASSWORD $URL/a/accounts/self --fail --silent)"
+$ RESPONSE=$(echo "$RAW_RESPONSE" | sed -e "s/^$PREFIX//")
+$ echo "$RESPONSE" | jq ._account_id
+1000000
+```
+
 ## Code Examples
 
 Visit godoc.org to see code examples:
