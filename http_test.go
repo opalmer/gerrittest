@@ -64,9 +64,9 @@ func newClient(response *httptest.ResponseRecorder) (*HTTPClient, *testHandler, 
 	}
 	server := httptest.NewServer(handler)
 	client := &HTTPClient{
-		Client: &http.Client{Jar: NewCookieJar()},
-		Prefix: fmt.Sprintf("http://%s", server.Listener.Addr()),
-		User:   "admin",
+		Client:   &http.Client{Jar: NewCookieJar()},
+		Prefix:   fmt.Sprintf("http://%s", server.Listener.Addr()),
+		Username: "admin",
 	}
 	return client, handler, server
 }

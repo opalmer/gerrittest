@@ -40,7 +40,7 @@ func getResponseBody(response *http.Response) ([]byte, error) {
 type HTTPClient struct {
 	Client   *http.Client
 	Prefix   string
-	User     string
+	Username string
 	Password string
 }
 
@@ -65,11 +65,15 @@ func (h *HTTPClient) NewRequest(method string, tail string, body []byte) (*http.
 	}
 	request.Header.Set("Content-Type", "application/json")
 
+	if h.Username != "" && h.Password != "" {
+		request.SetBasicAuth(h.Username, h.Password)
+	}
+
 	// If the url is not prefixed with /a/ then assume we're relying
 	// on X-User to tell Gerrit to trust our request. In all other cases
 	// the cookie Gerrit gives us back will be relies
 	if !strings.HasPrefix(tail, "/a/") {
-		request.Header.Add("X-User", h.User)
+		request.Header.Add("X-User", h.Username)
 	}
 
 	for _, cookie := range h.Client.Jar.Cookies(&url.URL{Host: "localhost"}) {
@@ -230,7 +234,7 @@ func NewHTTPClient(username string, password string, port *dockertest.Port) (*HT
 	return &HTTPClient{
 		Client:   &http.Client{Jar: NewCookieJar()},
 		Prefix:   fmt.Sprintf("http://%s:%d", port.Address, port.Public),
-		User:     username,
+		Username: username,
 		Password: password,
 	}, nil
 }
