@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"sync"
 
+	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
 	. "gopkg.in/check.v1"
 )
@@ -217,12 +218,12 @@ func (s *HTTPTest) TestHTTPClient_CreateProject(c *C) {
 }
 
 func (s *HTTPTest) TestNewHTTPClient(c *C) {
-	client, err := NewHTTPClient("foobar", 50000, "admin")
+	client, err := NewHTTPClient("admin", "", &dockertest.Port{Public: 50000, Address: "foobar"})
 	c.Assert(err, IsNil)
 	c.Assert(client.Prefix, Equals, "http://foobar:50000")
 }
 
 func (s *HTTPTest) TestNewHTTPClient_Error(c *C) {
-	_, err := NewHTTPClient("foobar", 50000, "")
+	_, err := NewHTTPClient("", "", &dockertest.Port{Public: 50000, Address: "foobar"})
 	c.Assert(err, ErrorMatches, "Username not provided")
 }

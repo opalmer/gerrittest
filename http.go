@@ -13,6 +13,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -37,9 +38,10 @@ func getResponseBody(response *http.Response) ([]byte, error) {
 // correctly and then perform the final steps to get it ready for
 // testing.
 type HTTPClient struct {
-	Client *http.Client
-	Prefix string
-	User   string
+	Client   *http.Client
+	Prefix   string
+	User     string
+	Password string
 }
 
 // URL concatenates the prefix and the given tai.
@@ -221,13 +223,14 @@ func (h *HTTPClient) CreateProject(name string) error {
 
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No
 // validation to ensure the service is actually running is performed.
-func NewHTTPClient(address string, port uint16, username string) (*HTTPClient, error) {
+func NewHTTPClient(username string, password string, port *dockertest.Port) (*HTTPClient, error) {
 	if username == "" {
 		return nil, errors.New("Username not provided")
 	}
 	return &HTTPClient{
-		Client: &http.Client{Jar: NewCookieJar()},
-		Prefix: fmt.Sprintf("http://%s:%d", address, port),
-		User:   username,
+		Client:   &http.Client{Jar: NewCookieJar()},
+		Prefix:   fmt.Sprintf("http://%s:%d", port.Address, port.Public),
+		User:     username,
+		Password: password,
 	}, nil
 }

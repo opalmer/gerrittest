@@ -67,16 +67,10 @@ func (s *ContainerTest) TestGetDockerImage_Environment(c *C) {
 		defer os.Setenv(DefaultImageEnvironmentVar, value) // nolint: errcheck
 		c.Assert(os.Unsetenv(DefaultImageEnvironmentVar), IsNil)
 	}
-	c.Assert(os.Setenv(DefaultImageEnvironmentVar, "foo"), IsNil)
-	c.Assert(GetDockerImage(""), Equals, "foo")
+	c.Assert(GetDockerImage(""), Equals, DefaultImage)
 }
 
 func (s *ContainerTest) TestGetDockerImage_DirectInput(c *C) {
-	if value, set := os.LookupEnv(DefaultImageEnvironmentVar); set {
-		defer os.Setenv(DefaultImageEnvironmentVar, value) // nolint: errcheck
-		c.Assert(os.Unsetenv(DefaultImageEnvironmentVar), IsNil)
-	}
-	c.Assert(os.Setenv(DefaultImageEnvironmentVar, "foo"), IsNil)
 	c.Assert(GetDockerImage("hello"), Equals, "hello")
 }
 

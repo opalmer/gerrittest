@@ -2,11 +2,9 @@ package gerrittest
 
 import (
 	"context"
+	"encoding/json"
 	"io/ioutil"
 	"os"
-
-	"encoding/json"
-
 	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
@@ -19,8 +17,8 @@ import (
 // of the gerrittest project. Use New() to construct this struct.
 type Gerrit struct {
 	log             *log.Entry
-	cleanRepo       bool
-	cleanPrivateKey bool
+	CleanRepo       bool             `json:"clean_repo"`
+	CleanPrivateKey bool             `json:"clean_private_key"`
 	Config          *Config          `json:"config"`
 	Container       *Container       `json:"container"`
 	HTTP            *HTTPClient      `json:"-"`
@@ -125,7 +123,7 @@ func (g *Gerrit) setupHTTPClient() error {
 		"task":  "http-client",
 	})
 
-	client, err := NewHTTPClient(g.HTTPPort.Address, g.HTTPPort.Public, g.Username)
+	client, err := NewHTTPClient(g.Username, "", g.HTTPPort)
 	if err != nil {
 		logger.WithError(err).Error()
 		return err
@@ -156,6 +154,7 @@ func (g *Gerrit) setupHTTPClient() error {
 	}
 
 	g.HTTP = client
+	g.HTTP.Password = g.Password
 	logger.WithField("action", "set-password").Debug()
 	return client.SetPassword(g.Password)
 }
@@ -229,10 +228,10 @@ func (g *Gerrit) Destroy() error {
 	if g.Container != nil {
 		errs = append(errs, g.Container.Terminate())
 	}
-	if g.cleanRepo && g.Repo != nil {
+	if g.CleanRepo && g.Repo != nil {
 		errs = append(errs, g.Repo.Remove())
 	}
-	if g.cleanPrivateKey && g.PrivateKeyPath != "" {
+	if g.CleanPrivateKey && g.PrivateKeyPath != "" {
 		errs = append(errs, os.Remove(g.PrivateKeyPath))
 	}
 	return errs.ReturnValue()
@@ -255,8 +254,8 @@ func New(cfg *Config) (*Gerrit, error) {
 	gerrit := &Gerrit{
 		log:             log.WithField("cmp", "core"),
 		Config:          cfg,
-		cleanRepo:       cfg.RepoRoot == "",
-		cleanPrivateKey: cfg.PrivateKey == "",
+		CleanRepo:       cfg.RepoRoot == "",
+		CleanPrivateKey: cfg.PrivateKey == "",
 		Username:        username,
 	}
 	if err := gerrit.setupSSHKey(); err != nil {
@@ -290,6 +289,32 @@ func NewFromJSON(path string) (*Gerrit, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	ctx := context.Background()
 	gerrit := &Gerrit{}
-	return gerrit, json.Unmarshal(data, gerrit)
+	if err := json.Unmarshal(data, gerrit); err != nil {
+		return nil, err
+	}
+	gerrit.Config.Context = ctx
+	gerrit.Container.ctx = ctx
+
+	docker, err := dockertest.NewClient()
+	if err != nil {
+		return nil, err
+	}
+	gerrit.Container.Docker = docker
+
+	sshClient, err := NewSSHClient(gerrit.Username, gerrit.PrivateKeyPath, gerrit.SSHPort)
+	if err != nil {
+		return nil, err
+	}
+	gerrit.SSH = sshClient
+
+	httpClient, err := NewHTTPClient(gerrit.Username, gerrit.Password, gerrit.HTTPPort)
+	if err != nil {
+		return nil, err
+	}
+	gerrit.HTTP = httpClient
+
+	return gerrit, nil
 }
