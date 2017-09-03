@@ -286,5 +286,10 @@ func New(cfg *Config) (*Gerrit, error) {
 // NewFromJSON reads information from a json file and returns a *Gerrit
 // struct.
 func NewFromJSON(path string) (*Gerrit, error) {
-	return nil, nil
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	gerrit := &Gerrit{}
+	return gerrit, json.Unmarshal(data, gerrit)
 }
