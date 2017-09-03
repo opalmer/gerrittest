@@ -27,7 +27,7 @@ func (s *ServiceTest) TestGetService(c *C) {
 		PortHTTP: dockertest.RandomPort,
 	}
 
-	svc, err := GetService(cfg)
+	svc, err := getService(cfg)
 	c.Assert(err, IsNil)
 	c.Assert(svc.Name, Equals, "gerrittest")
 	c.Assert(svc.Timeout, Equals, DefaultStartTimeout)
@@ -38,12 +38,12 @@ func (s *ServiceTest) TestGetService(c *C) {
 }
 
 func (s *ServiceTest) TestGetRandomPort(c *C) {
-	port, err := GetRandomPort()
+	port, err := getRandomPort()
 	c.Assert(err, IsNil)
 
-	// We expect nothing to be listening on the port GetRandomPort()
+	// We expect nothing to be listening on the port getRandomPort()
 	// returned. If something is listening then we didn't close the port
-	// before leaving GetRandomPort().
+	// before leaving getRandomPort().
 	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	c.Assert(err, NotNil)
 	c.Assert(conn, IsNil)

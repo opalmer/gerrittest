@@ -139,9 +139,9 @@ func (s *runner) ping(input *dockertest.PingInput) error {
 	return err
 }
 
-// GetRandomPort will make its best effort to pick a random port
+// getRandomPort will make its best effort to pick a random port
 // to bind to.
-func GetRandomPort() (uint16, error) {
+func getRandomPort() (uint16, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return 0, err
@@ -151,9 +151,9 @@ func GetRandomPort() (uint16, error) {
 	return uint16(port), listener.Close()
 }
 
-// GetService takes a given configuration and returns the resulting
+// getService takes a given configuration and returns the resulting
 // dockertest.Service struct.
-func GetService(cfg *Config) (*dockertest.Service, error) {
+func getService(cfg *Config) (*dockertest.Service, error) {
 	dockerService, err := dockertest.NewClient()
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func GetService(cfg *Config) (*dockertest.Service, error) {
 	// one instead of letting Docker choose. If we don't, we'll be unable
 	// to properly set $GERRIT_CANONICAL_URL down below.
 	if cfg.PortHTTP == dockertest.RandomPort {
-		port, err := GetRandomPort()
+		port, err := getRandomPort()
 		if err != nil {
 			return nil, err
 		}
@@ -194,7 +194,7 @@ func GetService(cfg *Config) (*dockertest.Service, error) {
 // Start will start Gerrit and return a struct containing information
 // on how to connect.
 func Start(parent context.Context, cfg *Config) (*Service, error) {
-	service, err := GetService(cfg)
+	service, err := getService(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +304,8 @@ func (s *Setup) Init() (*ServiceSpec, *HTTPClient, *SSHClient, error) {
 		s.Username = "admin"
 	}
 	logger := log.WithField("action", "setup")
-	client := NewHTTPClient(s.Service.HTTPPort.Address, s.Service.HTTPPort.Public, s.Username)
+	client, err := NewHTTPClient(s.Service.HTTPPort.Address, s.Service.HTTPPort.Public, s.Username)
+	_ = err
 
 	// Login will create the user.
 	logger = logger.WithField("status", "login")
