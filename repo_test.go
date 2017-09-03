@@ -29,7 +29,7 @@ func (s *RepoTest) addCleanupPath(path string) {
 }
 
 func (s *RepoTest) newBareRepo(c *C) *Repository {
-	cfg, err := NewRepositoryConfig("", "!")
+	cfg, err := newRepositoryConfig("", "!")
 	c.Assert(err, IsNil)
 	s.addCleanupPath(cfg.Path)
 	return &Repository{
@@ -46,14 +46,14 @@ func (s *RepoTest) newRepoPostInit(c *C) *Repository {
 }
 
 func (s *RepoTest) TestNewRepository(c *C) {
-	cfg, err := NewRepositoryConfig("", "!")
+	cfg, err := newRepositoryConfig("", "!")
 	c.Assert(err, IsNil)
 	_, err = NewRepository(cfg)
 	c.Assert(err, IsNil)
 }
 
 func (s *RepoTest) TestNewRepositoryConfig_PathNotProvided(c *C) {
-	cfg, err := NewRepositoryConfig("", "!")
+	cfg, err := newRepositoryConfig("", "!")
 	s.addCleanupPath(cfg.Path)
 	c.Assert(err, IsNil)
 	stat, err := os.Stat(cfg.Path)
@@ -65,7 +65,7 @@ func (s *RepoTest) TestNewRepositoryConfig_PathProvided(c *C) {
 	path, err := ioutil.TempDir("", "")
 	c.Assert(err, IsNil)
 	s.addCleanupPath(path)
-	cfg, err := NewRepositoryConfig(path, "!")
+	cfg, err := newRepositoryConfig(path, "!")
 	c.Assert(err, IsNil)
 	stat, err := os.Stat(cfg.Path)
 	c.Assert(err, IsNil)
@@ -76,12 +76,12 @@ func (s *RepoTest) TestNewRepositoryConfig_MissingPrivateKeyPath(c *C) {
 	path, err := ioutil.TempDir("", "")
 	c.Assert(err, IsNil)
 	s.addCleanupPath(path)
-	_, err = NewRepositoryConfig(path, "")
+	_, err = newRepositoryConfig(path, "")
 	c.Assert(err, ErrorMatches, "Missing private key")
 }
 
 func (s *RepoTest) TestNewRepositoryConfig(c *C) {
-	cfg, err := NewRepositoryConfig("", "!")
+	cfg, err := newRepositoryConfig("", "!")
 	c.Assert(err, IsNil)
 	s.addCleanupPath(cfg.Path)
 	c.Assert(cfg, DeepEquals, &RepositoryConfig{
@@ -140,7 +140,7 @@ func (s *RepoTest) TestRepository_Config(c *C) {
 
 func (s *RepoTest) TestRepository_Configure(c *C) {
 	repo := s.newRepoPostInit(c)
-	c.Assert(repo.Configure(), IsNil)
+	c.Assert(repo.SetConfiguration(), IsNil)
 }
 
 func (s *RepoTest) TestRepository_Add_RepoNotInit(c *C) {

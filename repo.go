@@ -16,10 +16,6 @@ import (
 )
 
 var (
-	// DefaultTempName is used as the prefix or suffix of temporary files
-	// and folders.
-	DefaultTempName = "gerrittest-"
-
 	// DefaultGitCommands contains a mapping of git commands
 	// to their arguments. This is used by Repository for running
 	// git commands.
@@ -74,6 +70,7 @@ type RepositoryConfig struct {
 type Repository struct {
 	mtx  *sync.Mutex
 	init bool
+	Path string
 	Cfg  *RepositoryConfig
 }
 
@@ -191,9 +188,9 @@ func (r *Repository) Config(key string, value string) error {
 	return err
 }
 
-// Configure will iterate over the configuration keys provided
+// SetConfiguration will iterate over the configuration keys provided
 // by the RepositoryConfig struct and call Config() on each.
-func (r *Repository) Configure() error {
+func (r *Repository) SetConfiguration() error {
 	for key, value := range r.Cfg.GitConfig {
 		if err := r.Config(key, value); err != nil {
 			return err
@@ -267,26 +264,18 @@ func NewRepository(cfg *RepositoryConfig) (*Repository, error) {
 	if err := repo.InstallCommitHook(); err != nil {
 		return nil, err
 	}
-	if err := repo.Configure(); err != nil {
+	if err := repo.SetConfiguration(); err != nil {
 		return nil, err
 	}
 
 	return repo, nil
 }
 
-// NewRepositoryConfig returns a *RepositoryConfig struct. If no path is
+// newRepositoryConfig returns a *RepositoryConfig struct. If no path is
 // provided then one will be generated for you.
-func NewRepositoryConfig(path string, privateKey string) (*RepositoryConfig, error) {
+func newRepositoryConfig(path string, privateKey string) (*RepositoryConfig, error) {
 	if privateKey == "" {
 		return nil, errors.New("Missing private key")
-	}
-
-	if path == "" {
-		newPath, err := ioutil.TempDir("", DefaultTempName)
-		if err != nil {
-			return nil, err
-		}
-		path = newPath
 	}
 
 	if err := os.MkdirAll(path, 0700); err != nil {
