@@ -33,10 +33,12 @@ func (s *ConfigTest) TestNewConfigDefaults(c *C) {
 	c.Assert(os.Unsetenv(DefaultImageEnvironmentVar), IsNil)
 	cfg := NewConfig()
 	c.Assert(cfg, DeepEquals, &Config{
-		Image:            DefaultImage,
-		PortSSH:          dockertest.RandomPort,
-		PortHTTP:         dockertest.RandomPort,
-		CleanupOnFailure: true,
+		Image:    DefaultImage,
+		PortSSH:  dockertest.RandomPort,
+		PortHTTP: dockertest.RandomPort,
+		RepoRoot: "",
+		Username: "admin",
+		Password: "",
 	})
 }
 
