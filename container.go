@@ -50,6 +50,7 @@ func newPort(public uint16, private uint16) (*dockertest.Port, error) {
 		if err != nil {
 			return nil, err
 		}
+		defer listener.Close()
 		port, err := strconv.ParseUint(
 			strings.Split(listener.Addr().String(), ":")[1], 10, 16)
 		if err != nil {
@@ -143,7 +144,6 @@ func getDockerClientInput(http uint16, ssh uint16, image string) (*dockertest.Cl
 	image = GetDockerImage(image)
 	input := dockertest.NewClientInput(image)
 	input.Ports.Add(httpPort)
-
 	input.Ports.Add(sshPort)
 	input.AddEnvironmentVar(
 		"GERRIT_CANONICAL_URL",
