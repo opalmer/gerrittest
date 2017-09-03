@@ -33,9 +33,8 @@ func (s *RepoTest) newBareRepo(c *C) *Repository {
 	c.Assert(err, IsNil)
 	s.addCleanupPath(cfg.Path)
 	return &Repository{
-		mtx:  &sync.Mutex{},
-		init: false,
-		Cfg:  cfg,
+		mtx: &sync.Mutex{}, init: false, cfg: cfg,
+		Path: cfg.Path,
 	}
 }
 
@@ -118,7 +117,7 @@ func (s *RepoTest) TestRepository_InstallCommitHook(c *C) {
 	repo := s.newRepoPostInit(c)
 	c.Assert(repo.InstallCommitHook(), IsNil)
 	_, err := os.Stat(
-		filepath.Join(repo.Cfg.Path, ".git", "hooks", DefaultCommitHookName))
+		filepath.Join(repo.Path, ".git", "hooks", DefaultCommitHookName))
 	c.Assert(err, IsNil)
 }
 
@@ -150,8 +149,8 @@ func (s *RepoTest) TestRepository_Add_RepoNotInit(c *C) {
 
 func (s *RepoTest) TestRepository_Add(c *C) {
 	repo := s.newRepoPostInit(c)
-	c.Assert(ioutil.WriteFile(filepath.Join(repo.Cfg.Path, "foo.txt"), []byte("foo"), 0600), IsNil)
-	c.Assert(ioutil.WriteFile(filepath.Join(repo.Cfg.Path, "bar.txt"), []byte("bar"), 0600), IsNil)
+	c.Assert(ioutil.WriteFile(filepath.Join(repo.Path, "foo.txt"), []byte("foo"), 0600), IsNil)
+	c.Assert(ioutil.WriteFile(filepath.Join(repo.Path, "bar.txt"), []byte("bar"), 0600), IsNil)
 	c.Assert(repo.Add("foo.txt", "bar.txt"), IsNil)
 	status, err := repo.Status()
 	c.Assert(err, IsNil)

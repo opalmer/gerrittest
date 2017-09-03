@@ -69,9 +69,9 @@ type RepositoryConfig struct {
 // with a git repository.
 type Repository struct {
 	mtx  *sync.Mutex
+	cfg  *RepositoryConfig
 	init bool
 	Path string
-	Cfg  *RepositoryConfig
 }
 
 // setEnvironment sets up the environment for the given command.
@@ -86,7 +86,7 @@ func (r *Repository) setEnvironment(cmd *exec.Cmd) error {
 	// Set environment variables to ensure the proper ssh command is run. Not
 	// all versions of git support core.sshCommand from the config.
 	for _, key := range []string{"GIT_SSH_COMMAND", "GIT_SSH"} {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, r.Cfg.GitConfig["core.sshCommand"]))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, r.cfg.GitConfig["core.sshCommand"]))
 	}
 	return nil
 }
@@ -126,13 +126,13 @@ func (r *Repository) Git(args []string) (string, string, error) {
 	// there's a -C flag but not all versions of git have this flag and not
 	// all subcommands respect it the same way.
 	defer os.Chdir(workdir) // nolint: errcheck
-	if err := os.Chdir(r.Cfg.Path); err != nil {
+	if err := os.Chdir(r.Path); err != nil {
 		return "", "", err
 	}
 
-	ctx, cancel := context.WithTimeout(r.Cfg.Ctx, r.Cfg.CommandTimeout)
+	ctx, cancel := context.WithTimeout(r.cfg.Ctx, r.cfg.CommandTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, r.Cfg.Command, args...)
+	cmd := exec.CommandContext(ctx, r.cfg.Command, args...)
 	if err := r.setEnvironment(cmd); err != nil {
 		return "", "", err
 	}
@@ -173,7 +173,7 @@ func (r *Repository) InstallCommitHook() error {
 		return ErrRepositoryNotInitialized
 	}
 	return ioutil.WriteFile(
-		filepath.Join(r.Cfg.Path, ".git", "hooks", DefaultCommitHookName),
+		filepath.Join(r.Path, ".git", "hooks", DefaultCommitHookName),
 		internal.MustAsset("internal/commit-msg"), 0700)
 }
 
@@ -191,7 +191,7 @@ func (r *Repository) Config(key string, value string) error {
 // SetConfiguration will iterate over the configuration keys provided
 // by the RepositoryConfig struct and call Config() on each.
 func (r *Repository) SetConfiguration() error {
-	for key, value := range r.Cfg.GitConfig {
+	for key, value := range r.cfg.GitConfig {
 		if err := r.Config(key, value); err != nil {
 			return err
 		}
@@ -248,16 +248,15 @@ func (r *Repository) CreateRemoteFromSpec(service *ServiceSpec, remoteName strin
 // Remove will remove the entire repository from disk, useful for temporary
 // repositories. This cannot be reversed.
 func (r *Repository) Remove() error {
-	return os.RemoveAll(r.Cfg.Path)
+	return os.RemoveAll(r.Path)
 }
 
 // NewRepository constructs and returns a *Repository struct. It will also
 // ensure the repository is properly setup before returning.
 func NewRepository(cfg *RepositoryConfig) (*Repository, error) {
 	repo := &Repository{
-		mtx:  &sync.Mutex{},
-		init: false,
-		Cfg:  cfg}
+		mtx: &sync.Mutex{}, init: false,
+		Path: cfg.Path, cfg: cfg}
 	if err := repo.Init(); err != nil {
 		return nil, err
 	}
@@ -276,6 +275,14 @@ func NewRepository(cfg *RepositoryConfig) (*Repository, error) {
 func newRepositoryConfig(path string, privateKey string) (*RepositoryConfig, error) {
 	if privateKey == "" {
 		return nil, errors.New("Missing private key")
+	}
+
+	if path == "" {
+		tmppath, err := ioutil.TempDir("", "gerritest-")
+		if err != nil {
+			return nil, err
+		}
+		path = tmppath
 	}
 
 	if err := os.MkdirAll(path, 0700); err != nil {
