@@ -12,7 +12,7 @@ import (
 )
 
 // Gerrit is the central struct which combines multiple components
-// of the gerrittest projects. Use New() to construct this struct.
+// of the gerrittest project. Use New() to construct this struct.
 type Gerrit struct {
 	log             *log.Entry
 	cleanRepo       bool

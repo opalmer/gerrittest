@@ -27,7 +27,7 @@ func ExampleStart() {
 // the container. Running Setup.Init will cause the administrative user to
 // be created, generate an http api password and insert a public key for ssh
 // access.
-func ExampleSetup() {
+func ExampleNew() {
 	cfg := NewConfig()
 	gerrit, err := New(cfg)
 	if err != nil {
