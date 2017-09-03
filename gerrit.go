@@ -50,8 +50,8 @@ func (g *Gerrit) startContainer() error {
 	// Cookies are set based on hostname so we need to be
 	// consistent and use 'localhost' if we're working with
 	// 127.0.0.1.
-	if g.Container.HTTP.Address == "127.0.0.1" {
-		g.Container.HTTP.Address = "localhost"
+	if container.HTTP.Address == "127.0.0.1" {
+		container.HTTP.Address = "localhost"
 	}
 
 	g.Container = container
