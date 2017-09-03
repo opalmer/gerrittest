@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"errors"
 
 	log "github.com/Sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
@@ -220,10 +221,13 @@ func (h *HTTPClient) CreateProject(name string) error {
 
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No
 // validation to ensure the service is actually running is performed.
-func NewHTTPClient(address string, port uint16, username string) *HTTPClient {
+func NewHTTPClient(address string, port uint16, username string) (*HTTPClient, error) {
+	if username == "" {
+		return nil, errors.New("Username not provided")
+	}
 	return &HTTPClient{
 		Client: &http.Client{Jar: NewCookieJar()},
 		Prefix: fmt.Sprintf("http://%s:%d", address, port),
 		User:   username,
-	}
+	}, nil
 }

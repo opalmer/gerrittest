@@ -217,6 +217,12 @@ func (s *HTTPTest) TestHTTPClient_CreateProject(c *C) {
 }
 
 func (s *HTTPTest) TestNewHTTPClient(c *C) {
-	client := NewHTTPClient("foobar", 50000, "admin")
+	client, err := NewHTTPClient("foobar", 50000, "admin")
+	c.Assert(err, IsNil)
 	c.Assert(client.Prefix, Equals, "http://foobar:50000")
+}
+
+func (s *HTTPTest) TestNewHTTPClient_Error(c *C) {
+	_, err := NewHTTPClient("foobar", 50000, "")
+	c.Assert(err, ErrorMatches, "Username not provided")
 }
