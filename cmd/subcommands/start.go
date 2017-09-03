@@ -37,10 +37,9 @@ var Start = &cobra.Command{
 	Short: "Responsible for starting an instance of Gerrit.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := &gerrittest.Config{
-			Image:            getString(cmd, "image"),
-			PortHTTP:         getUInt16(cmd, "port-http"),
-			PortSSH:          getUInt16(cmd, "port-ssh"),
-			CleanupOnFailure: getBool(cmd, "no-cleanup"),
+			Image:    getString(cmd, "image"),
+			PortHTTP: getUInt16(cmd, "port-http"),
+			PortSSH:  getUInt16(cmd, "port-ssh"),
 		}
 
 		// Setup timeout and Ctrl+C handling.
