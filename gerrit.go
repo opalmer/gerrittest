@@ -3,8 +3,10 @@ package gerrittest
 import (
 	"context"
 	"io/ioutil"
+	"os"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/crewjam/errset"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
 )
@@ -12,18 +14,21 @@ import (
 // Gerrit is the central struct which combines multiple components
 // of the gerrittest projects. Use New() to construct this struct.
 type Gerrit struct {
-	log            *log.Entry
-	Config         *Config
-	Service        *Service
-	HTTP           *HTTPClient
-	HTTPPort       *dockertest.Port
-	SSH            *SSHClient
-	SSHPort        *dockertest.Port
-	PrivateKey     ssh.Signer
-	PublicKey      ssh.PublicKey
-	PrivateKeyPath string
-	Username       string
-	Password       string
+	log             *log.Entry
+	cleanRepo       bool
+	cleanPrivateKey bool
+	Config          *Config
+	Service         *Service
+	HTTP            *HTTPClient
+	HTTPPort        *dockertest.Port
+	SSH             *SSHClient
+	SSHPort         *dockertest.Port
+	Repo            *Repository
+	PrivateKey      ssh.Signer
+	PublicKey       ssh.PublicKey
+	PrivateKeyPath  string
+	Username        string
+	Password        string
 }
 
 // startContainer starts the docker container containing Gerrit.
@@ -41,6 +46,14 @@ func (g *Gerrit) startContainer() error {
 	g.Service = service
 	g.SSHPort = service.SSHPort
 	g.HTTPPort = service.HTTPPort
+
+	// Cookies are set based on hostname so we need to be
+	// consistent and use 'localhost' if we're working with
+	// 127.0.0.1.
+	if g.Service.HTTPPort.Address == "127.0.0.1" {
+		g.Service.HTTPPort.Address = "localhost"
+	}
+
 	return nil
 }
 
@@ -48,10 +61,9 @@ func (g *Gerrit) startContainer() error {
 func (g *Gerrit) setupSSHKey() error {
 	logger := g.log.WithFields(log.Fields{
 		"phase": "setup",
-		"task":  "ssh",
+		"task":  "ssh-key",
 	})
 	logger.Debug()
-
 	if g.Config.PrivateKey != "" {
 		entry := logger.WithFields(log.Fields{
 			"action": "read",
@@ -107,7 +119,11 @@ func (g *Gerrit) setupHTTPClient() error {
 		"task":  "http-client",
 	})
 
-	client := NewHTTPClient(g.Service, g.Username)
+	client, err := NewHTTPClient(g.HTTPPort.Address, g.HTTPPort.Public, g.Username)
+	if err != nil {
+		logger.WithError(err).Error()
+		return err
+	}
 
 	logger.WithField("action", "login").Debug()
 	if err := client.Login(); err != nil {
@@ -155,9 +171,24 @@ func (g *Gerrit) setupSSHClient() error {
 	return nil
 }
 
-// Destroy will destroy the container and all associated resources.
+// Destroy will destroy the container and all associated resources. Custom
+// private keys or repositories will not be cleaned up.
 func (g *Gerrit) Destroy() error {
-	return nil
+	g.log.WithField("phase", "destroy").Debug()
+	errs := errset.ErrSet{}
+	if g.SSH != nil {
+		errs = append(errs, g.SSH.Close())
+	}
+	if g.Service != nil {
+		errs = append(errs, g.Service.Service.Terminate())
+	}
+	if g.cleanRepo && g.Repo != nil {
+		errs = append(errs, g.Repo.Remove())
+	}
+	if g.cleanPrivateKey && g.PrivateKeyPath != "" {
+		errs = append(errs, os.Remove(g.PrivateKeyPath))
+	}
+	return errs.ReturnValue()
 }
 
 // New constructs and returns a *Gerrit struct after all setup steps have
@@ -165,8 +196,17 @@ func (g *Gerrit) Destroy() error {
 // a container, an admin user will be created and a git repository will
 // be setup pointing at the service in the container.
 func New(cfg *Config) (*Gerrit, error) {
+	cleanRepo := false
+	cleanPrivateKey := cfg.PrivateKey == ""
+
+	username := cfg.Username
+	if username == "" {
+		username = "admin"
+	}
+
 	// Use a temp. directory if no repository root was provided.
 	if cfg.RepoRoot == "" {
+		cleanRepo = true
 		path, err := ioutil.TempDir("", "gerrittest-")
 		if err != nil {
 			return nil, err
@@ -179,20 +219,23 @@ func New(cfg *Config) (*Gerrit, error) {
 	}
 
 	gerrit := &Gerrit{
-		log:    log.WithField("cmp", "core"),
-		Config: cfg,
+		log:             log.WithField("cmp", "core"),
+		Config:          cfg,
+		cleanRepo:       cleanRepo,
+		cleanPrivateKey: cleanPrivateKey,
+		Username:        username,
 	}
 	if err := gerrit.setupSSHKey(); err != nil {
-		return nil, err
+		return gerrit, err
 	}
 	if err := gerrit.startContainer(); err != nil {
-		return nil, err
+		return gerrit, err
 	}
 	if err := gerrit.setupHTTPClient(); err != nil {
-		return nil, err
+		return gerrit, err
 	}
 	if err := gerrit.setupSSHClient(); err != nil {
-		return nil, err
+		return gerrit, err
 	}
 
 	return gerrit, nil
