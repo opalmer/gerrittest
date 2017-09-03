@@ -7,6 +7,8 @@ import (
 
 	"encoding/json"
 
+	"path/filepath"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/crewjam/errset"
 	"github.com/opalmer/dockertest"
@@ -199,11 +201,14 @@ func (g *Gerrit) setupRepo() error {
 	return err
 }
 
-// WriteFile takes the current struct and writes the data to disk
+// WriteJSONFile takes the current struct and writes the data to disk
 // as json.
-func (g *Gerrit) WriteFile(path string) error {
-	data, err := json.MarshalIndent(g, "\t", "")
+func (g *Gerrit) WriteJSONFile(path string) error {
+	data, err := json.MarshalIndent(g, "", "  ")
 	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
 	return ioutil.WriteFile(path, data, 0600)

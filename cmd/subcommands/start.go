@@ -2,34 +2,14 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"time"
 
 	"github.com/opalmer/dockertest"
 	"github.com/opalmer/gerrittest"
 	"github.com/spf13/cobra"
 )
-
-func jsonOutput(cmd *cobra.Command, gerrit *gerrittest.Gerrit) error {
-	data, err := json.MarshalIndent(gerrit, "", " ")
-	if err != nil {
-		return err
-	}
-
-	if path := getString(cmd, "json"); path != "" {
-		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-			return err
-		}
-		return ioutil.WriteFile(path, data, 0600)
-	}
-	fmt.Println(string(data))
-	return nil
-}
 
 // Start implements the `start` subcommand.
 var Start = &cobra.Command{

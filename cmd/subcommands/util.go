@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/opalmer/gerrittest"
 	"github.com/spf13/cobra"
 )
 
@@ -46,4 +49,18 @@ func getUInt16(cmd *cobra.Command, flag string) uint16 {
 	value, err := cmd.Flags().GetUint16(flag)
 	exitIf(flag, err)
 	return value
+}
+
+func jsonOutput(cmd *cobra.Command, gerrit *gerrittest.Gerrit) error {
+	path := getString(cmd, "json")
+	if path == "" {
+		data, err := json.MarshalIndent(gerrit, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(data))
+		return nil
+	}
+
+	return gerrit.WriteJSONFile(path)
 }
