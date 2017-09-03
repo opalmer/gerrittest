@@ -14,64 +14,63 @@ is available via godoc: https://godoc.org/github.com/opalmer/gerrittest
 * Install docker
 * `go install github.com/opalmer/gerrittest/cmd`
 
-## Usage
-
-### Command Line
-#### gerrittest - start
+## Command Line Usage
+### Start
 
 ```
 $ gerrittest start
 {
- "admin": {
-  "login": "admin",
-  "password": "+YzOzJ9xBftJnvyWrSOSHqrviFlPCP2J7IPxUspKNg",
-  "private_key": "/tmp/id_rsa-158272732"
- },
- "container": "b90671cb7d192131102cd599df5cfa4d4b4ca78f6857da0a41272f2063a22530",
- "ssh": {
-  "Private": 29418,
-  "port": 32783,
-  "address": "127.0.0.1",
-  "protocol": "tcp"
- },
- "http": {
-  "Private": 8080,
-  "port": 36965,
-  "address": "127.0.0.1",
-  "protocol": "tcp"
- },
- "url": "http://127.0.0.1:36965",
- "ssh_command": "ssh -p 32783 -i /tmp/id_rsa-158272732 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no admin@127.0.0.1"
+  "config": {
+    "image": "opalmer/gerrittest:2.14.3",
+    "port_ssh": 0,
+    "port_http": 0,
+    "repo_root": "",
+    "private_key": "",
+    "username": "admin",
+    "password": ""
+  },
+  "container": {
+    "http": {
+      "Private": 8080,
+      "port": 37573,
+      "address": "localhost",
+      "protocol": "tcp"
+    },
+    "ssh": {
+      "Private": 29418,
+      "port": 32787,
+      "address": "127.0.0.1",
+      "protocol": "tcp"
+    },
+    "image": "opalmer/gerrittest:2.14.3",
+    "id": "25482db97051b0317a14e8271c36947e610a56c18550b405aa0d441c09e7947a"
+  },
+  "http": {
+    "Private": 8080,
+    "port": 37573,
+    "address": "localhost",
+    "protocol": "tcp"
+  },
+  "ssh": {
+    "Private": 29418,
+    "port": 32787,
+    "address": "127.0.0.1",
+    "protocol": "tcp"
+  },
+  "repo": {
+    "path": "/tmp/gerrittest-093084676"
+  },
+  "private_key_path": "/tmp/gerrittest-id_rsa-186419449",
+  "username": "admin",
+  "password": "l7aJMAr70ThKMTame0ZEZr/cFH4pJnrasEaNEadlTQ"
 }
 ```
 
-### API
-### Basic Usage
+## Code Examples
 
-The produces nearly almost identical results to `gerrittest start` above.
+Visit godoc.org to see code examples:
 
-```go
-import (
-	"context"
-	"github.com/opalmer/gerrittest"
-)
-
-func main()  {
-	service, err := gerrittest.Start(context.Background(), gerrittest.NewConfig())
-	if err != nil {
-		panic(err)
-	}
-	setup := &Setup{Service: service}
-	spec, http, ssh, err := setup.Init()
-	if err != nil {
-		panic(err)
-	}
-	_ = spec
-	_ = http
-	_ = ssh
-}
-```
-
+https://godoc.org/github.com/opalmer/gerrittest#pkg-examples
 
 ## Testing
 
@@ -92,5 +91,5 @@ If you're having trouble with a specific test you can enable debug
 logging and run that test specifically:
 
 ```
-$ go test -gerrittest.loglevel=debug -check.vv -check.f RepoTest.TestRepository_Integration github.com/opalmer/gerrittest
+$ go test -gerrittest.loglevel=debug -check.vv -check.f RepoTest.* github.com/opalmer/gerrittest
 ```
