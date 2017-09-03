@@ -42,6 +42,13 @@ type Config struct {
 	// provided one will be randomly generated for you after the container
 	// starts.
 	Password string `json:"password"`
+
+	// SkipSetup when true will cause the container to be started but
+	// none of the final setup steps will be performed.
+	SkipSetup bool `json:"skip_setup"`
+
+	// SkipCleanup when true allows all cleanup steps to be skipped.
+	SkipCleanup bool `json:"skip_cleanup"`
 }
 
 // NewConfig produces a *Config struct with reasonable defaults.
@@ -51,11 +58,13 @@ func NewConfig() *Config {
 		image = value
 	}
 	return &Config{
-		Image:    image,
-		PortSSH:  dockertest.RandomPort,
-		PortHTTP: dockertest.RandomPort,
-		RepoRoot: "",
-		Username: "admin",
-		Password: "",
+		Image:       image,
+		PortSSH:     dockertest.RandomPort,
+		PortHTTP:    dockertest.RandomPort,
+		RepoRoot:    "",
+		Username:    "admin",
+		Password:    "",
+		SkipSetup:   false,
+		SkipCleanup: false,
 	}
 }

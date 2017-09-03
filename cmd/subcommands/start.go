@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -56,11 +55,9 @@ var Start = &cobra.Command{
 		config.PrivateKey = getString(cmd, "private-key")
 		config.Password = getString(cmd, "password")
 		config.Context = ctx
+		config.SkipSetup = getBool(cmd, "start-only")
+		config.SkipCleanup = getBool(cmd, "no-cleanup")
 
-		// TODO
-		if getBool(cmd, "start-only") {
-			return errors.New("--start-only not implemented")
-		}
 		gerrit, err := gerrittest.New(config)
 		if err != nil {
 			return err

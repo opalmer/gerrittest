@@ -212,6 +212,10 @@ func (g *Gerrit) WriteFile(path string) error {
 // Destroy will destroy the container and all associated resources. Custom
 // private keys or repositories will not be cleaned up.
 func (g *Gerrit) Destroy() error {
+	if g.Config.SkipCleanup {
+		return nil
+	}
+
 	g.log.WithField("phase", "destroy").Debug()
 	errs := errset.ErrSet{}
 	if g.SSH != nil {
@@ -256,6 +260,11 @@ func New(cfg *Config) (*Gerrit, error) {
 	if err := gerrit.startContainer(); err != nil {
 		return gerrit, err
 	}
+
+	if cfg.SkipSetup {
+		return gerrit, nil
+	}
+
 	if err := gerrit.setupHTTPClient(); err != nil {
 		return gerrit, err
 	}
