@@ -171,6 +171,30 @@ func (g *Gerrit) setupSSHClient() error {
 	return nil
 }
 
+func (g *Gerrit) setupRepo() error {
+	logger := g.log.WithFields(log.Fields{
+		"phase": "setup",
+		"task":  "repo",
+	})
+	logger.Debug()
+
+	path := g.Config.RepoRoot
+	if path == "" {
+		tmppath, err := ioutil.TempDir("", "gerrittest-")
+		if err != nil {
+			return err
+		}
+		path = tmppath
+	}
+	cfg, err := newRepositoryConfig(path, g.PrivateKeyPath)
+	if err != nil {
+		return err
+	}
+	repo, err := NewRepository(cfg)
+	g.Repo = repo
+	return err
+}
+
 // Destroy will destroy the container and all associated resources. Custom
 // private keys or repositories will not be cleaned up.
 func (g *Gerrit) Destroy() error {
@@ -196,22 +220,9 @@ func (g *Gerrit) Destroy() error {
 // a container, an admin user will be created and a git repository will
 // be setup pointing at the service in the container.
 func New(cfg *Config) (*Gerrit, error) {
-	cleanRepo := false
-	cleanPrivateKey := cfg.PrivateKey == ""
-
 	username := cfg.Username
 	if username == "" {
 		username = "admin"
-	}
-
-	// Use a temp. directory if no repository root was provided.
-	if cfg.RepoRoot == "" {
-		cleanRepo = true
-		path, err := ioutil.TempDir("", "gerrittest-")
-		if err != nil {
-			return nil, err
-		}
-		cfg.RepoRoot = path
 	}
 
 	if cfg.Context == nil {
@@ -221,8 +232,8 @@ func New(cfg *Config) (*Gerrit, error) {
 	gerrit := &Gerrit{
 		log:             log.WithField("cmp", "core"),
 		Config:          cfg,
-		cleanRepo:       cleanRepo,
-		cleanPrivateKey: cleanPrivateKey,
+		cleanRepo:       cfg.RepoRoot == "",
+		cleanPrivateKey: cfg.PrivateKey == "",
 		Username:        username,
 	}
 	if err := gerrit.setupSSHKey(); err != nil {
@@ -235,6 +246,9 @@ func New(cfg *Config) (*Gerrit, error) {
 		return gerrit, err
 	}
 	if err := gerrit.setupSSHClient(); err != nil {
+		return gerrit, err
+	}
+	if err := gerrit.setupRepo(); err != nil {
 		return gerrit, err
 	}
 
