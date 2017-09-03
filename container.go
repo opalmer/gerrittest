@@ -272,5 +272,6 @@ func NewContainer(parent context.Context, http uint16, ssh uint16, image string)
 		SSH:    portSSH,
 		HTTP:   portHTTP,
 		Image:  image,
+		ID: service.Container.ID(),
 	}, nil
 }
