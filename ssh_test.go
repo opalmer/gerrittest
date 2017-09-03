@@ -1,13 +1,11 @@
 package gerrittest
 
 import (
-	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"io/ioutil"
 	"os"
-	"testing"
 
 	"golang.org/x/crypto/ssh"
 	. "gopkg.in/check.v1"
@@ -62,17 +60,4 @@ func (s *SSHTest) TestWriteRSAKey(c *C) {
 	c.Assert(a, DeepEquals, b)
 	c.Assert(os.Remove(fileA), IsNil)
 	c.Assert(os.Remove(fileB.Name()), IsNil)
-}
-
-func (s *SSHTest) TestNewSSHClientFromService(c *C) {
-	if testing.Short() {
-		c.Skip("-short set")
-	}
-
-	svc, err := Start(context.Background(), NewConfig())
-	c.Assert(err, IsNil)
-	setup := &Setup{Service: svc}
-	_, _, _, err = setup.Init()
-	c.Assert(err, IsNil)
-	c.Assert(svc.Service.Terminate(), IsNil)
 }
