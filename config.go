@@ -7,19 +7,6 @@ import (
 	"github.com/opalmer/dockertest"
 )
 
-const (
-	// DefaultImageEnvironmentVar defines the environment variable NewConfig()
-	// and the tests should be using to locate the default image override.
-	DefaultImageEnvironmentVar = "GERRITTEST_DOCKER_IMAGE"
-)
-
-var (
-	// DefaultImage defines the default docker image to use in
-	// NewConfig(). This may be overridden with the $GERRITTEST_DOCKER_IMAGE
-	// environment variable.
-	DefaultImage = "opalmer/gerrittest:2.14.3"
-)
-
 // Config is used to tell the *runner struct what setup steps
 // to perform, where to listen for services, etc.
 type Config struct {

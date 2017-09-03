@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,8 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func jsonOutput(cmd *cobra.Command, spec *gerrittest.ServiceSpec) error {
-	data, err := json.MarshalIndent(spec, "", " ")
+func jsonOutput(cmd *cobra.Command, gerrit *gerrittest.Gerrit) error {
+	data, err := json.MarshalIndent(gerrit, "", " ")
 	if err != nil {
 		return err
 	}
@@ -36,46 +37,36 @@ var Start = &cobra.Command{
 	Use:   "start",
 	Short: "Responsible for starting an instance of Gerrit.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := &gerrittest.Config{
-			Image:    getString(cmd, "image"),
-			PortHTTP: getUInt16(cmd, "port-http"),
-			PortSSH:  getUInt16(cmd, "port-ssh"),
-		}
-
 		// Setup timeout and Ctrl+C handling.
 		timeout := getDuration(cmd, "timeout")
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		interrupts := make(chan os.Signal, 1)
 		signal.Notify(interrupts, os.Interrupt)
 		go func() {
+			defer cancel()
 			for range interrupts {
-				cancel()
+				return
 			}
 		}()
 
-		service, err := gerrittest.Start(ctx, cfg)
-		if err != nil {
-			return err
-		}
+		config := gerrittest.NewConfig()
+		config.Image = getString(cmd, "image")
+		config.PortSSH = getUInt16(cmd, "port-http")
+		config.PortHTTP = getUInt16(cmd, "port-http")
+		config.PrivateKey = getString(cmd, "private-key")
+		config.Password = getString(cmd, "password")
+		config.Context = ctx
 
+		// TODO
 		if getBool(cmd, "start-only") {
-			return nil
+			return errors.New("--start-only not implemented")
 		}
-
-		password := getString(cmd, "password")
-		privateKeyPath := getString(cmd, "private-key")
-
-		setup := &gerrittest.Setup{
-			Service:        service,
-			Password:       password,
-			PrivateKeyPath: privateKeyPath,
-		}
-
-		spec, _, _, err := setup.Init()
+		gerrit, err := gerrittest.New(config)
 		if err != nil {
 			return err
 		}
-		return jsonOutput(cmd, spec)
+
+		return jsonOutput(cmd, gerrit)
 	},
 }
 

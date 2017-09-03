@@ -5,20 +5,23 @@ import (
 	"io/ioutil"
 	"log"
 	"path/filepath"
+
+	"github.com/opalmer/dockertest"
 )
 
-// You can start the Gerrit service using the Start() function. This only
-// starts the container and returns information about the service. Useful if
-// you only need the service and don't need or want a repository, http client,
-// initial admin user, etc.
-func ExampleStart() {
-	svc, err := Start(context.Background(), NewConfig())
+// You can start the Gerrit container using the NewContainer() function. In
+// this example an random port will be used for both http and the default
+// image will be used. This kind of setup is useful if you don't want to
+// gerrittest to perform any setup steps for you.
+func ExampleNewContainer() {
+	container, err := NewContainer(
+		context.Background(), dockertest.RandomPort, dockertest.RandomPort, "")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Terminate the container when you're done.
-	if err := svc.Service.Terminate(); err != nil {
+	if err := container.Terminate(); err != nil {
 		log.Fatal(err)
 	}
 }

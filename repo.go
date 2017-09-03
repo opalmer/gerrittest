@@ -68,10 +68,10 @@ type RepositoryConfig struct {
 // Repository is used to store information about an interact
 // with a git repository.
 type Repository struct {
-	mtx  *sync.Mutex
-	cfg  *RepositoryConfig
-	init bool
-	Path string
+	mtx  *sync.Mutex       `json:"-"`
+	cfg  *RepositoryConfig `json:"-"`
+	init bool              `json:"-"`
+	Path string            `json:"path"`
 }
 
 // setEnvironment sets up the environment for the given command.
@@ -234,9 +234,9 @@ func (r *Repository) Push(remote string, ref string) error {
 	return nil
 }
 
-// CreateRemoteFromSpec adds a new remote based on the provided spec.
+// CreateFromContainer adds a new remote based on the provided spec.
 // nolint: unused,gosimple,unconvert,varcheck
-func (r *Repository) CreateRemoteFromSpec(service *ServiceSpec, remoteName string, project string) error {
+func (r *Repository) CreateFromContainer(container *Container, remoteName string, project string) error {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 	if !r.init {

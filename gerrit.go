@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"encoding/json"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/crewjam/errset"
 	"github.com/opalmer/dockertest"
@@ -14,21 +16,21 @@ import (
 // Gerrit is the central struct which combines multiple components
 // of the gerrittest project. Use New() to construct this struct.
 type Gerrit struct {
-	log             *log.Entry
-	cleanRepo       bool
-	cleanPrivateKey bool
-	Config          *Config
-	Service         *Service
-	HTTP            *HTTPClient
-	HTTPPort        *dockertest.Port
-	SSH             *SSHClient
-	SSHPort         *dockertest.Port
-	Repo            *Repository
-	PrivateKey      ssh.Signer
-	PublicKey       ssh.PublicKey
-	PrivateKeyPath  string
-	Username        string
-	Password        string
+	log             *log.Entry       `json:"-"`
+	cleanRepo       bool             `json:"-"`
+	cleanPrivateKey bool             `json:"-"`
+	Config          *Config          `json:"config"`
+	Container       *Container       `json:"container"`
+	HTTP            *HTTPClient      `json:"-"`
+	HTTPPort        *dockertest.Port `json:"http"`
+	SSH             *SSHClient       `json:"-"`
+	SSHPort         *dockertest.Port `json:"ssh"`
+	Repo            *Repository      `json:"repo"`
+	PrivateKey      ssh.Signer       `json:"private_key"`
+	PublicKey       ssh.PublicKey    `json:"public_key"`
+	PrivateKeyPath  string           `json:"private_key_path"`
+	Username        string           `json:"username"`
+	Password        string           `json:"password"`
 }
 
 // startContainer starts the docker container containing Gerrit.
@@ -38,21 +40,23 @@ func (g *Gerrit) startContainer() error {
 		"task":  "start-container",
 	})
 	logger.Debug()
-	service, err := Start(g.Config.Context, g.Config)
+	container, err := NewContainer(
+		g.Config.Context, g.Config.PortHTTP, g.Config.PortSSH, g.Config.Image)
 	if err != nil {
 		logger.WithError(err).Error()
 		return err
 	}
-	g.Service = service
-	g.SSHPort = service.SSHPort
-	g.HTTPPort = service.HTTPPort
 
 	// Cookies are set based on hostname so we need to be
 	// consistent and use 'localhost' if we're working with
 	// 127.0.0.1.
-	if g.Service.HTTPPort.Address == "127.0.0.1" {
-		g.Service.HTTPPort.Address = "localhost"
+	if g.Container.HTTP.Address == "127.0.0.1" {
+		g.Container.HTTP.Address = "localhost"
 	}
+
+	g.Container = container
+	g.SSHPort = container.SSH
+	g.HTTPPort = container.HTTP
 
 	return nil
 }
@@ -195,6 +199,16 @@ func (g *Gerrit) setupRepo() error {
 	return err
 }
 
+// WriteFile takes the current struct and writes the data to disk
+// as json.
+func (g *Gerrit) WriteFile(path string) error {
+	data, err := json.MarshalIndent(g, "\t", "")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(path, data, 0600)
+}
+
 // Destroy will destroy the container and all associated resources. Custom
 // private keys or repositories will not be cleaned up.
 func (g *Gerrit) Destroy() error {
@@ -203,8 +217,8 @@ func (g *Gerrit) Destroy() error {
 	if g.SSH != nil {
 		errs = append(errs, g.SSH.Close())
 	}
-	if g.Service != nil {
-		errs = append(errs, g.Service.Service.Terminate())
+	if g.Container != nil {
+		errs = append(errs, g.Container.Terminate())
 	}
 	if g.cleanRepo && g.Repo != nil {
 		errs = append(errs, g.Repo.Remove())
@@ -253,4 +267,10 @@ func New(cfg *Config) (*Gerrit, error) {
 	}
 
 	return gerrit, nil
+}
+
+// NewFromJSON reads information from a json file and returns a *Gerrit
+// struct.
+func NewFromJSON(path string) (*Gerrit, error) {
+	return nil, nil
 }

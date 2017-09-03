@@ -162,7 +162,7 @@ func (s *RepoTest) TestRepository_Commit_RepoNotInit(c *C) {
 	c.Assert(repo.Commit(""), ErrorMatches, ErrRepositoryNotInitialized.Error())
 }
 
-func (s *RepoTest) TestRepository_CreateRemoteFromSpec_RepoNotInit(c *C) {
+func (s *RepoTest) TestRepository_CreateFromContainer_RepoNotInit(c *C) {
 	repo := s.newBareRepo(c)
-	c.Assert(repo.CreateRemoteFromSpec(nil, "", ""), ErrorMatches, ErrRepositoryNotInitialized.Error())
+	c.Assert(repo.CreateFromContainer(nil, "", ""), ErrorMatches, ErrRepositoryNotInitialized.Error())
 }

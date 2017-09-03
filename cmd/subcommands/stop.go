@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 
-	"github.com/opalmer/dockertest"
 	"github.com/opalmer/gerrittest"
 	"github.com/spf13/cobra"
 )
@@ -19,17 +17,11 @@ var Stop = &cobra.Command{
 			return errors.New("--json not provided")
 		}
 
-		spec, err := gerrittest.ReadServiceSpecFromArg(cmd)
+		gerrit, err := gerrittest.NewFromJSON(getString(cmd, "json"))
 		if err != nil {
 			return err
 		}
-
-		// Terminate the container.
-		docker, err := dockertest.NewClient()
-		if err != nil {
-			return err
-		}
-		return docker.RemoveContainer(context.Background(), spec.Container)
+		return gerrit.Container.Terminate()
 	},
 }
 
