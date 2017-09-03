@@ -16,9 +16,9 @@ import (
 // Gerrit is the central struct which combines multiple components
 // of the gerrittest project. Use New() to construct this struct.
 type Gerrit struct {
-	log             *log.Entry       `json:"-"`
-	cleanRepo       bool             `json:"-"`
-	cleanPrivateKey bool             `json:"-"`
+	log             *log.Entry
+	cleanRepo       bool
+	cleanPrivateKey bool
 	Config          *Config          `json:"config"`
 	Container       *Container       `json:"container"`
 	HTTP            *HTTPClient      `json:"-"`

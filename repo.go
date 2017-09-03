@@ -68,9 +68,9 @@ type RepositoryConfig struct {
 // Repository is used to store information about an interact
 // with a git repository.
 type Repository struct {
-	mtx  *sync.Mutex       `json:"-"`
-	cfg  *RepositoryConfig `json:"-"`
-	init bool              `json:"-"`
+	mtx  *sync.Mutex
+	cfg  *RepositoryConfig
+	init bool
 	Path string            `json:"path"`
 }
 
