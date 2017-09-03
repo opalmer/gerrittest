@@ -11,37 +11,37 @@ import (
 // to perform, where to listen for services, etc.
 type Config struct {
 	// Image is the name of docker image to run.
-	Image string
+	Image string `json:"image"`
 
 	// PortSSH is the port to expose the SSH service on.
-	PortSSH uint16
+	PortSSH uint16 `json:"port_ssh"`
 
 	// PortHTTP is the port to expose the HTTP service on.
-	PortHTTP uint16
+	PortHTTP uint16 `json:"port_http"`
 
 	// RepoRoot is the root of the git repository. If this field
 	// is blank then a temporary path will be used by the Gerrit
 	// struct.
-	RepoRoot string
+	RepoRoot string `json:"repo_root"`
 
 	// Context is used internally when starting or managing
 	// containers and processes. If no context is provided then
 	// context.Background() will be used.
-	Context context.Context
+	Context context.Context `json:"-"`
 
 	// PrivateKey is the path to the private key to insert into
 	// Gerrit. If a path is not provided then a private key will
 	// be generated automatically.
-	PrivateKey string
+	PrivateKey string `json:"private_key"`
 
 	// Username is the name of the Gerrit admin account to create. By default
 	// this will be 'admin' unless otherwise specified.
-	Username string
+	Username string `json:"username"`
 
 	// Password is the password to create for the Gerrit admin user. If not
 	// provided one will be randomly generated for you after the container
 	// starts.
-	Password string
+	Password string `json:"password"`
 }
 
 // NewConfig produces a *Config struct with reasonable defaults.
