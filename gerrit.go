@@ -96,7 +96,7 @@ func (g *Gerrit) setupSSHKey() error {
 		return err
 	}
 
-	defer file.Close()
+	defer file.Close() // nolint: errcheck
 	if err := WriteRSAKey(private, file); err != nil {
 		entry.WithError(err).Error()
 		return err
