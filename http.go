@@ -3,6 +3,7 @@ package gerrittest
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,7 +11,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-	"errors"
 
 	log "github.com/Sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
