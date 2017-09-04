@@ -251,6 +251,8 @@ func New(cfg *Config) (*Gerrit, error) {
 		CleanRepo:       cfg.RepoRoot == "",
 		CleanPrivateKey: cfg.PrivateKeyPath == "",
 		Username:        username,
+		Password:        cfg.Password,
+		PrivateKeyPath:  cfg.PrivateKeyPath,
 	}
 	if err := gerrit.setupSSHKey(); err != nil {
 		return gerrit, err
