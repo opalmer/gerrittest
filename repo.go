@@ -315,14 +315,10 @@ func (r *Repository) ChangeID() (string, error) {
 	}
 
 	matches := RegexChangeID.FindAllStringSubmatch(stdout, -1)
-	if len(matches) < 1 {
-		return "", ErrFailedToLocateChange
+	if len(matches) > 0 && len(matches[0]) > 1 {
+		return matches[0][1], nil
 	}
-	if len(matches[0]) < 2 {
-		return "", ErrFailedToLocateChange
-	}
-
-	return matches[0][1], nil
+	return "", ErrFailedToLocateChange
 }
 
 // Remove will remove the entire repository from disk, useful for temporary
