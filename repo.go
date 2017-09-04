@@ -65,6 +65,39 @@ type RepositoryConfig struct {
 	GitConfig map[string]string
 }
 
+// newRepositoryConfig returns a *RepositoryConfig struct. If no path is
+// provided then one will be generated for you.
+func newRepositoryConfig(path string, privateKey string) (*RepositoryConfig, error) {
+	if privateKey == "" {
+		return nil, errors.New("Missing private key")
+	}
+
+	if path == "" {
+		tmppath, err := ioutil.TempDir("", "gerritest-")
+		if err != nil {
+			return nil, err
+		}
+		path = tmppath
+	}
+
+	if err := os.MkdirAll(path, 0700); err != nil {
+		return nil, err
+	}
+
+	return &RepositoryConfig{
+		Path:           path,
+		Ctx:            context.Background(),
+		Command:        "git",
+		CommandTimeout: time.Minute * 10,
+		PrivateKey:     privateKey,
+		GitConfig: map[string]string{
+			"user.name":       "admin",
+			"user.email":      "admin@localhost",
+			"core.sshCommand": fmt.Sprintf("ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", privateKey),
+		},
+	}, nil
+}
+
 // Repository is used to store information about an interact
 // with a git repository.
 type Repository struct {
@@ -268,37 +301,4 @@ func NewRepository(cfg *RepositoryConfig) (*Repository, error) {
 	}
 
 	return repo, nil
-}
-
-// newRepositoryConfig returns a *RepositoryConfig struct. If no path is
-// provided then one will be generated for you.
-func newRepositoryConfig(path string, privateKey string) (*RepositoryConfig, error) {
-	if privateKey == "" {
-		return nil, errors.New("Missing private key")
-	}
-
-	if path == "" {
-		tmppath, err := ioutil.TempDir("", "gerritest-")
-		if err != nil {
-			return nil, err
-		}
-		path = tmppath
-	}
-
-	if err := os.MkdirAll(path, 0700); err != nil {
-		return nil, err
-	}
-
-	return &RepositoryConfig{
-		Path:           path,
-		Ctx:            context.Background(),
-		Command:        "git",
-		CommandTimeout: time.Minute * 10,
-		PrivateKey:     privateKey,
-		GitConfig: map[string]string{
-			"user.name":       "admin",
-			"user.email":      "admin@localhost",
-			"core.sshCommand": fmt.Sprintf("ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", privateKey),
-		},
-	}, nil
 }
