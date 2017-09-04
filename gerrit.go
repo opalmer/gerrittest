@@ -287,7 +287,9 @@ func NewFromJSON(path string) (*Gerrit, error) {
 	}
 
 	ctx := context.Background()
-	gerrit := &Gerrit{}
+	gerrit := &Gerrit{
+		log: log.WithField("cmp", "core"),
+	}
 	if err := json.Unmarshal(data, gerrit); err != nil {
 		return nil, err
 	}
@@ -299,6 +301,18 @@ func NewFromJSON(path string) (*Gerrit, error) {
 		return nil, err
 	}
 	gerrit.Container.Docker = docker
+
+	repoConfig, err := newRepositoryConfig(gerrit.Repo.Path, gerrit.PrivateKeyPath)
+	repoConfig.Ctx = ctx
+	if err != nil {
+		return nil, err
+	}
+
+	repo, err := NewRepository(repoConfig)
+	if err != nil {
+		return nil, err
+	}
+	gerrit.Repo = repo
 
 	sshClient, err := NewSSHClient(gerrit.Username, gerrit.PrivateKeyPath, gerrit.SSHPort)
 	if err != nil {
