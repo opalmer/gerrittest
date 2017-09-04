@@ -47,7 +47,12 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	defer gerrit.Container.Terminate()   // nolint: errcheck
 	defer os.RemoveAll(gerrit.Repo.Path) // nolint: errcheck
 
-	c.Assert(gerrit.HTTP.CreateProject("testing"), IsNil)
+	client, err := gerrit.HTTP.Gerrit()
+	c.Assert(err, IsNil)
+
+	_, _, err = client.Projects.CreateProject("testing", nil)
+	c.Assert(err, IsNil)
+
 	c.Assert(gerrit.Repo.AddRemoteFromContainer(gerrit.Container, "", "testing"), IsNil)
 	c.Assert(gerrit.Repo.AddContent("foo/bar.txt", 0600, []byte("Hello")), IsNil)
 	c.Assert(gerrit.Repo.Commit("42: hello"), IsNil) // Note, the number is an attempt to mess up Push()

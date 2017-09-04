@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"sync"
 
+	"github.com/andygrunwald/go-gerrit"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
 	. "gopkg.in/check.v1"
@@ -135,27 +136,10 @@ func (s *HTTPTest) TestHTTPClient_Login(c *C) {
 	c.Assert(request.URL.Path, Equals, "/login/")
 }
 
-func (s *HTTPTest) TestHTTPClient_GetAccount(c *C) {
-	expected := httptest.NewRecorder()
-	expected.Code = http.StatusOK
-	body, err := json.Marshal(&AccountInfo{
-		Name: "foobar",
-	})
-	c.Assert(err, IsNil)
-	expected.Body.Write(body)
-	client, handler, server := newClient(expected)
-	defer server.Close()
-	info, err := client.GetAccount()
-	c.Assert(info.Name, Equals, "foobar")
-	c.Assert(err, IsNil)
-	request := handler.Request()
-	c.Assert(request.URL.Path, Equals, "/a/accounts/self")
-}
-
 func (s *HTTPTest) TestHTTPClient_GeneratePassword(c *C) {
 	expected := httptest.NewRecorder()
 	expected.Code = http.StatusOK
-	body, err := json.Marshal(&AccountInfo{
+	body, err := json.Marshal(&gerrit.AccountInfo{
 		Name: "foobar",
 	})
 	c.Assert(err, IsNil)

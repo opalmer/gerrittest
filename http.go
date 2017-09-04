@@ -13,11 +13,10 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/andygrunwald/go-gerrit"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
 )
-
-var magicPrefix = []byte(")]}'\n")
 
 // getResponseBody returns the body of the given response as bytes with the
 // magic prefix removed.
@@ -26,10 +25,7 @@ func getResponseBody(response *http.Response) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if bytes.HasPrefix(body, magicPrefix) {
-		body = body[5:]
-	}
-	return body, response.Body.Close()
+	return gerrit.RemoveMagicPrefixLine(body), response.Body.Close()
 }
 
 // HTTPClient is a simple client for talking to Gerrit within a
@@ -143,27 +139,35 @@ func (h *HTTPClient) Login() error {
 	return err
 }
 
-// GetAccount will return information about the
-func (h *HTTPClient) GetAccount() (*AccountInfo, error) {
-	request, err := h.NewRequest(http.MethodGet, "/a/accounts/self", nil)
+// Gerrit will return a *gerrit.Gerrit client. Note, the username
+// and password must already be set and basic validation to ensure
+// the client is setup properly is performed.
+func (h *HTTPClient) Gerrit() (*gerrit.Client, error) {
+	if h.Username == "" || h.Password == "" {
+		return nil, errors.New("Username and password required")
+	}
+	parsed, err := url.Parse(h.Prefix)
+	if err != nil {
+		return nil, err
+	}
+	client, err := gerrit.NewClient(fmt.Sprintf(
+		"%s://%s:%s@%s", parsed.Scheme, h.Username, h.Password,
+		parsed.Host), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	_, body, err := h.Do(request, http.StatusOK)
-	if err != nil {
+	if _, _, err := client.Accounts.GetAccount("self"); err != nil {
 		return nil, err
 	}
-
-	account := &AccountInfo{}
-	return account, json.Unmarshal(body, account)
+	return client, nil
 }
 
 // GeneratePassword generates and returns the account password. Note, this
 // only works for the current account (the one which set the cookie
 // in GetAccount())
 func (h *HTTPClient) GeneratePassword() (string, error) {
-	body, err := json.Marshal(&HTTPPasswordInput{Generate: true})
+	body, err := json.Marshal(&gerrit.HTTPPasswordInput{Generate: true})
 	if err != nil {
 		return "", err
 	}
@@ -186,7 +190,7 @@ func (h *HTTPClient) GeneratePassword() (string, error) {
 
 // SetPassword sets the http password to the given value.
 func (h *HTTPClient) SetPassword(password string) error {
-	body, err := json.Marshal(&HTTPPasswordInput{HTTPPassword: password})
+	body, err := json.Marshal(&gerrit.HTTPPasswordInput{HTTPPassword: password})
 	if err != nil {
 		return err
 	}
@@ -223,6 +227,11 @@ func (h *HTTPClient) CreateProject(name string) error {
 	}
 	_, _, err = h.Do(request, http.StatusCreated)
 	return err
+}
+
+// GetChangeDetail will return detailed information about the given change.
+func (h *HTTPClient) GetChangeDetail(project string, change string) {
+
 }
 
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No
