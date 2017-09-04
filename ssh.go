@@ -60,18 +60,13 @@ func (s *SSHClient) Version() (string, error) {
 // Gerrrit.
 func NewSSHClient(user string, privateKeyPath string, port *dockertest.Port) (*SSHClient, error) {
 	logger := log.WithFields(log.Fields{
-		"svc": "gerrittest",
-		"cmp": "SSHPort",
+		"svc":  "gerrittest",
+		"cmp":  "SSHPort",
+		"path": privateKeyPath,
 	})
-	data, err := ioutil.ReadFile(privateKeyPath)
-	if err != nil {
-		logger.WithError(err).Error()
-		return nil, err
-	}
 
-	key, err := ssh.ParsePrivateKey(data)
+	_, private, err := ReadSSHKeys(privateKeyPath)
 	if err != nil {
-		logger.WithError(err).Error()
 		return nil, err
 	}
 
@@ -79,7 +74,7 @@ func NewSSHClient(user string, privateKeyPath string, port *dockertest.Port) (*S
 		"tcp", fmt.Sprintf("%s:%d", port.Address, port.Public),
 		&ssh.ClientConfig{
 			User:            user,
-			Auth:            []ssh.AuthMethod{ssh.PublicKeys(key)},
+			Auth:            []ssh.AuthMethod{ssh.PublicKeys(private)},
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		},
 	)
@@ -109,11 +104,19 @@ func GenerateRSAKey() (*rsa.PrivateKey, error) {
 // ReadSSHKeys will read the provided private key and return the public and
 // private portions.
 func ReadSSHKeys(path string) (ssh.PublicKey, ssh.Signer, error) {
+	logger := log.WithFields(log.Fields{
+		"cmp":   "ssh",
+		"phase": "read-ssh-key",
+		"path":  path,
+	})
+
+	logger.WithField("action", "read-file").Debug()
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	logger.WithField("action", "parse-key").Debug()
 	signer, err := ssh.ParsePrivateKey(data)
 	return signer.PublicKey(), signer, err
 }
@@ -122,9 +125,17 @@ func ReadSSHKeys(path string) (ssh.PublicKey, ssh.Signer, error) {
 // and private portions to disk.
 // nolint: interfacer
 func WriteRSAKey(key *rsa.PrivateKey, file *os.File) error {
+	logger := log.WithFields(log.Fields{
+		"cmp":   "ssh",
+		"phase": "write-ssh-key",
+	})
+
+	logger.WithField("action", "validate").Debug()
 	if err := key.Validate(); err != nil {
 		return err
 	}
+
+	logger.WithField("action", "encode").Debug()
 	defer file.Close() // nolint: errcheck
 	return pem.Encode(file, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
