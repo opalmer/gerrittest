@@ -33,6 +33,11 @@ type Gerrit struct {
 	Password        string           `json:"password"`
 }
 
+func (g *Gerrit) errLog(logger *log.Entry, err error) error {
+	logger.WithError(err).Error()
+	return err
+}
+
 // startContainer starts the docker container containing Gerrit.
 func (g *Gerrit) startContainer() error {
 	logger := g.log.WithFields(log.Fields{
@@ -89,27 +94,23 @@ func (g *Gerrit) setupSSHKey() error {
 
 	private, err := GenerateRSAKey()
 	if err != nil {
-		entry.WithError(err).Error()
-		return err
+		return g.errLog(entry, err)
 	}
 
 	file, err := ioutil.TempFile("", "gerrittest-id_rsa-")
 	entry = entry.WithField("path", file.Name())
 	if err != nil {
-		entry.WithError(err).Error()
-		return err
+		return g.errLog(entry, err)
 	}
 
 	defer file.Close() // nolint: errcheck
 	if err := WriteRSAKey(private, file); err != nil {
-		entry.WithError(err).Error()
-		return err
+		return g.errLog(entry, err)
 	}
 
 	signer, err := ssh.NewSignerFromKey(private)
 	if err != nil {
-		entry.WithError(err).Error()
-		return err
+		return g.errLog(entry, err)
 	}
 	g.PrivateKey = signer
 	g.PublicKey = signer.PublicKey()
@@ -125,38 +126,31 @@ func (g *Gerrit) setupHTTPClient() error {
 
 	client, err := NewHTTPClient(g.Username, "", g.HTTPPort)
 	if err != nil {
-		logger.WithError(err).Error()
-		return err
-	}
-
-	logger.WithField("action", "login").Debug()
-	if err := client.Login(); err != nil {
-		logger.WithError(err).Error()
-		return err
-	}
-
-	logger.WithField("action", "insert-key").Debug()
-	if err := client.InsertPublicKey(g.PublicKey); err != nil {
-		logger.WithError(err).Error()
-		return err
-	}
-
-	if g.Password == "" {
-		logger.WithField("action", "generate-password").Debug()
-		generated, err := client.GeneratePassword()
-		if err != nil {
-			logger.WithError(err).Error()
-			return err
-		}
-
-		g.Password = generated
-		return nil
+		return g.errLog(logger, err)
 	}
 
 	g.HTTP = client
-	g.HTTP.Password = g.Password
-	logger.WithField("action", "set-password").Debug()
-	return client.SetPassword(g.Password)
+
+	logger.WithField("action", "login").Debug()
+	if err := g.HTTP.Login(); err != nil {
+		return g.errLog(logger, err)
+	}
+
+	logger.WithField("action", "insert-key").Debug()
+	if err := g.HTTP.InsertPublicKey(g.PublicKey); err != nil {
+		return g.errLog(logger, err)
+	}
+
+	if g.Password != "" {
+		g.HTTP.Password = g.Password
+		logger.WithField("action", "set-password").Debug()
+		return g.HTTP.SetPassword(g.Password)
+	}
+
+	logger.WithField("action", "generate-password").Debug()
+	generated, err := g.HTTP.GeneratePassword()
+	g.Password = generated
+	return err
 }
 
 func (g *Gerrit) setupSSHClient() error {
