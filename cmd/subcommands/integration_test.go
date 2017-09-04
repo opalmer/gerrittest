@@ -60,7 +60,8 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	change, err := gerrit.Repo.ChangeID()
 	c.Assert(err, IsNil)
 
-	_ = change
+	_, _, err = client.Changes.GetChangeDetail(change, nil)
+	c.Assert(err, IsNil)
 
 	// Read the struct from disk and use it to stop the container. This should
 	// also cleanup the repository.
