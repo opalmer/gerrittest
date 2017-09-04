@@ -29,10 +29,10 @@ type Config struct {
 	// context.Background() will be used.
 	Context context.Context `json:"-"`
 
-	// PrivateKey is the path to the private key to insert into
+	// PrivateKeyPath is the path to the private key to insert into
 	// Gerrit. If a path is not provided then a private key will
 	// be generated automatically.
-	PrivateKey string `json:"private_key"`
+	PrivateKeyPath string `json:"private_key_path"`
 
 	// Username is the name of the Gerrit admin account to create. By default
 	// this will be 'admin' unless otherwise specified.

@@ -28,40 +28,36 @@ var (
 	// DefaultCommitHookName is the name of the hook installed by
 	// installCommitHook.
 	DefaultCommitHookName = "commit-msg"
-
-	// ErrRepositoryNotInitialized is returned any function that needs an
-	// initialized repository.
-	ErrRepositoryNotInitialized = errors.New("Repository not initialized")
 )
 
 // RepositoryConfig is used to store information about a repository.
 type RepositoryConfig struct {
 	// Path is the path to the repository on disk.
-	Path string
+	Path string `json:"path"`
 
 	// Command is the git command to run. Defaults to 'git'
-	Command string
+	Command string `json:"command"`
 
 	// Ctx is the context to use when running commands. Defaults to
 	// context.Background()
-	Ctx context.Context
+	Ctx context.Context `json:"-"`
 
 	// CommandTimeout is the amount
-	CommandTimeout time.Duration
+	CommandTimeout time.Duration `json:"command_timeout"`
 
-	// PrivateKey is the path to the private key to use for communicating
+	// PrivateKeyPath is the path to the private key to use for communicating
 	// with the git server. Certain functions may return errors if this value
 	// is not set.
-	PrivateKey string
+	PrivateKeyPath string `json:"private_key_path"`
 
 	// GitConfig are key:value parts of git configuration options
 	// to set. Defaults to:
 	// {
 	//   "user.name":       "admin",
 	//   "user.email":      "admin@localhost",
-	//   "core.sshCommand": "ssh -i {PrivateKey} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no",
+	//   "core.sshCommand": "ssh -i {PrivateKeyPath} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no",
 	// }
-	GitConfig map[string]string
+	GitConfig map[string]string `json:"git_config"`
 }
 
 // newRepositoryConfig returns a *RepositoryConfig struct. If no path is
@@ -88,7 +84,7 @@ func newRepositoryConfig(path string, privateKey string) (*RepositoryConfig, err
 		Ctx:            context.Background(),
 		Command:        "git",
 		CommandTimeout: time.Minute * 10,
-		PrivateKey:     privateKey,
+		PrivateKeyPath: privateKey,
 		GitConfig: map[string]string{
 			"user.name":       "admin",
 			"user.email":      "admin@localhost",

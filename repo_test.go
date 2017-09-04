@@ -85,7 +85,7 @@ func (s *RepoTest) TestNewRepositoryConfig(c *C) {
 		Ctx:            context.Background(),
 		Command:        "git",
 		CommandTimeout: time.Minute * 10,
-		PrivateKey:     "!",
+		PrivateKeyPath: "!",
 		GitConfig: map[string]string{
 			"user.name":       "admin",
 			"user.email":      "admin@localhost",

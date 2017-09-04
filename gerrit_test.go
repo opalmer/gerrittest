@@ -46,7 +46,7 @@ func (s *GerritTest) addSSHKey(c *C, g *Gerrit) string {
 	key, err := GenerateRSAKey()
 	c.Assert(err, IsNil)
 	c.Assert(WriteRSAKey(key, file), IsNil)
-	g.Config.PrivateKey = file.Name()
+	g.Config.PrivateKeyPath = file.Name()
 	signer, err := ssh.NewSignerFromKey(key)
 	c.Assert(err, IsNil)
 	g.PublicKey = signer.PublicKey()

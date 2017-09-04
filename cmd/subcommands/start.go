@@ -61,7 +61,7 @@ func newStartConfig(cmd *cobra.Command) *gerrittest.Config {
 	config.Image = getString(cmd, "image")
 	config.PortSSH = getUInt16(cmd, "port-ssh")
 	config.PortHTTP = getUInt16(cmd, "port-http")
-	config.PrivateKey = getString(cmd, "private-key")
+	config.PrivateKeyPath = getString(cmd, "private-key")
 	config.Password = getString(cmd, "password")
 	config.Context = ctx
 	config.SkipSetup = getBool(cmd, "start-only")

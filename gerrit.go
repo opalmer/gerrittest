@@ -73,13 +73,13 @@ func (g *Gerrit) setupSSHKey() error {
 		"task":  "ssh-key",
 	})
 	logger.Debug()
-	if g.Config.PrivateKey != "" {
+	if g.Config.PrivateKeyPath != "" {
 		entry := logger.WithFields(log.Fields{
 			"action": "read",
-			"path":   g.Config.PrivateKey,
+			"path":   g.Config.PrivateKeyPath,
 		})
 		entry.Debug()
-		public, private, err := ReadSSHKeys(g.Config.PrivateKey)
+		public, private, err := ReadSSHKeys(g.Config.PrivateKeyPath)
 		if err != nil {
 			entry.WithError(err).Error()
 			return err
@@ -249,7 +249,7 @@ func New(cfg *Config) (*Gerrit, error) {
 		log:             log.WithField("cmp", "core"),
 		Config:          cfg,
 		CleanRepo:       cfg.RepoRoot == "",
-		CleanPrivateKey: cfg.PrivateKey == "",
+		CleanPrivateKey: cfg.PrivateKeyPath == "",
 		Username:        username,
 	}
 	if err := gerrit.setupSSHKey(); err != nil {
