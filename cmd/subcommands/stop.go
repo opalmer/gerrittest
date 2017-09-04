@@ -21,7 +21,7 @@ var Stop = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return gerrit.Container.Terminate()
+		return gerrit.Destroy()
 	},
 }
 
