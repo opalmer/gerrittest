@@ -188,19 +188,6 @@ func (s *HTTPTest) TestHTTPClient_InsertPublicKey(c *C) {
 	c.Assert(handler.RequestBody(), Equals, string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(public))))
 }
 
-func (s *HTTPTest) TestHTTPClient_CreateProject(c *C) {
-	expected := httptest.NewRecorder()
-	expected.Code = http.StatusCreated
-	client, handler, server := newClient(expected)
-	defer server.Close()
-	c.Assert(client.CreateProject("foobar"), IsNil)
-
-	request := handler.Request()
-	c.Assert(request.URL.Path, Equals, "/a/projects/foobar")
-	c.Assert(request.Method, Equals, http.MethodPut)
-	c.Assert(handler.RequestBody(), Equals, "{}")
-}
-
 func (s *HTTPTest) TestNewHTTPClient(c *C) {
 	client, err := NewHTTPClient("admin", "", &dockertest.Port{Public: 50000, Address: "foobar"})
 	c.Assert(err, IsNil)

@@ -218,22 +218,6 @@ func (h *HTTPClient) InsertPublicKey(key ssh.PublicKey) error {
 	return err
 }
 
-// CreateProject creates a project with the specified name.
-func (h *HTTPClient) CreateProject(name string) error {
-	request, err := h.NewRequest(
-		http.MethodPut, fmt.Sprintf("/a/projects/%s", name), []byte("{}"))
-	if err != nil {
-		return err
-	}
-	_, _, err = h.Do(request, http.StatusCreated)
-	return err
-}
-
-// GetChangeDetail will return detailed information about the given change.
-func (h *HTTPClient) GetChangeDetail(project string, change string) {
-
-}
-
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No
 // validation to ensure the service is actually running is performed.
 func NewHTTPClient(username string, password string, port *dockertest.Port) (*HTTPClient, error) {
