@@ -48,10 +48,10 @@ var (
 
 	//ErrFailedToLocateChange is returned by functions, such as Push(), that
 	// expect to find a change number in the output from git.
-	ErrFailedToLocateChange = errors.New("Failed to locate ChangeId")
+	ErrFailedToLocateChange = errors.New("Failed to locate ChangeID")
 
-	// RegexChangeId is used to match the Change-Id for a commit.
-	RegexChangeId = regexp.MustCompile(`(?m)^\s+Change-Id: (I[a-f0-9]{40}).*$`)
+	// RegexChangeID is used to match the Change-Id for a commit.
+	RegexChangeID = regexp.MustCompile(`(?m)^\s+Change-Id: (I[a-f0-9]{40}).*$`)
 )
 
 // RepositoryConfig is used to store information about a repository.
@@ -306,15 +306,15 @@ func (r *Repository) AddRemoteFromContainer(container *Container, remote string,
 		container.SSH.Address, container.SSH.Public, project))
 }
 
-// ChangeId returns a string representing the change id of the last
+// ChangeID returns a string representing the change id of the last
 // commit.
-func (r *Repository) ChangeId() (string, error) {
+func (r *Repository) ChangeID() (string, error) {
 	stdout, _, err := r.Git(DefaultGitCommands["last-commit-message"])
 	if err != nil {
 		return "", err
 	}
 
-	matches := RegexChangeId.FindAllStringSubmatch(stdout, -1)
+	matches := RegexChangeID.FindAllStringSubmatch(stdout, -1)
 	if len(matches) < 1 {
 		return "", ErrFailedToLocateChange
 	}

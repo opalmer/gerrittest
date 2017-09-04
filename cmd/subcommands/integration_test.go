@@ -52,7 +52,7 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	c.Assert(gerrit.Repo.AddContent("foo/bar.txt", 0600, []byte("Hello")), IsNil)
 	c.Assert(gerrit.Repo.Commit("42: hello"), IsNil) // Note, the number is an attempt to mess up Push()
 	c.Assert(gerrit.Repo.Push("", ""), IsNil)
-	change, err := gerrit.Repo.ChangeId()
+	change, err := gerrit.Repo.ChangeID()
 	c.Assert(err, IsNil)
 
 	_ = change
