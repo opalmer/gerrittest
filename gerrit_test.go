@@ -50,6 +50,7 @@ func (s *GerritTest) addSSHKey(c *C, g *Gerrit) string {
 	signer, err := ssh.NewSignerFromKey(key)
 	c.Assert(err, IsNil)
 	g.PublicKey = signer.PublicKey()
+	g.PrivateKeyPath = file.Name()
 	return file.Name()
 }
 
@@ -59,6 +60,17 @@ func (s *GerritTest) TestNew(c *C) {
 	}
 	cfg := NewConfig()
 	gerrit, err := New(cfg)
+	c.Assert(err, IsNil)
+	defer gerrit.Destroy() // nolint: errcheck
+
+	file, err := ioutil.TempFile("", "")
+	c.Assert(err, IsNil)
+	path := file.Name()
+	c.Assert(file.Close(), IsNil)
+	defer os.Remove(path) // nolint: errcheck
+
+	c.Assert(gerrit.WriteJSONFile(path), IsNil)
+	_, err = NewFromJSON(path)
 	c.Assert(err, IsNil)
 	c.Assert(gerrit.Destroy(), IsNil)
 }
@@ -139,7 +151,6 @@ func (s *GerritTest) TestGerrit_setupHTTPClient_errGeneratePassword(c *C) {
 			w.WriteHeader(http.StatusCreated)
 		default:
 			w.WriteHeader(http.StatusBadRequest)
-			//fmt.Fprint(w, "'Hello'")
 		}
 		requests++
 	}))
