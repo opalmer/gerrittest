@@ -94,7 +94,8 @@ func newRepositoryConfig(path string, privateKey string) (*RepositoryConfig, err
 }
 
 // Repository is used to store information about an interact
-// with a git repository.
+// with a git repository. In the end, this is a thin wrapper
+// around Git commands.
 type Repository struct {
 	Config *RepositoryConfig
 	Path   string `json:"path"`
