@@ -145,3 +145,11 @@ func (s *RepoTest) TestRepository_AddRemoteFromContainer(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(url, Equals, "ssh://admin@localhost:5000/foo/bar")
 }
+
+func (s *RepoTest) TestRepository_WriteFile(c *C) {
+	repo := s.newRepoPostInit(c)
+	c.Assert(repo.AddContent("foo/bar.txt", 0600, []byte("Hello")), IsNil)
+	content, err := ioutil.ReadFile(filepath.Join(repo.Path, "foo", "bar.txt"))
+	c.Assert(err, IsNil)
+	c.Assert(string(content), Equals, "Hello")
+}

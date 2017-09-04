@@ -9,9 +9,12 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/gerrittest/internal"
 )
 
@@ -20,12 +23,15 @@ var (
 	// to their arguments. This is used by Repository for running
 	// git commands.
 	DefaultGitCommands = map[string][]string{
-		"status":         {"status", "--porcelain"},
-		"init":           {"init", "--quiet"},
-		"config":         {"config", "--local"},
-		"add":            {"add", "--force"},
-		"remote-add":     {"remote", "add"},
-		"get-remote-url": {"remote", "get-url"},
+		"status":              {"status", "--porcelain"},
+		"init":                {"init", "--quiet"},
+		"config":              {"config", "--local"},
+		"add":                 {"add", "--force"},
+		"remote-add":          {"remote", "add"},
+		"get-remote-url":      {"remote", "get-url"},
+		"commit":              {"commit", "--message"},
+		"push":                {"push", "--porcelain"},
+		"last-commit-message": {"log", "-n", "1", "--format=medium"},
 	}
 
 	// DefaultCommitHookName is the name of the hook installed by
@@ -39,6 +45,13 @@ var (
 	// ErrRemoteExists is returned by AddRemote if the provided remote already
 	// exists.
 	ErrRemoteExists = errors.New("Remote with the given name already exists")
+
+	//ErrFailedToLocateChange is returned by functions, such as Push(), that
+	// expect to find a change number in the output from git.
+	ErrFailedToLocateChange = errors.New("Failed to locate ChangeId")
+
+	// RegexChangeId is used to match the Change-Id for a commit.
+	RegexChangeId = regexp.MustCompile(`(?m)^\s+Change-Id: (I[a-f0-9]{40}).*$`)
 )
 
 // RepositoryConfig is used to store information about a repository.
@@ -130,6 +143,11 @@ func (r *Repository) setEnvironment(cmd *exec.Cmd) error {
 }
 
 func (r *Repository) run(cmd *exec.Cmd) (string, string, error) {
+	logger := log.WithFields(log.Fields{
+		"phase": "git",
+		"repo":  r.Path,
+		"cmd":   strings.Join(cmd.Args, " "),
+	})
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", "", err
@@ -139,6 +157,7 @@ func (r *Repository) run(cmd *exec.Cmd) (string, string, error) {
 		return "", "", err
 	}
 	if err := cmd.Start(); err != nil {
+		logger.WithError(err).Error()
 		return "", "", err
 	}
 	bytesOut, err := ioutil.ReadAll(stdout)
@@ -149,7 +168,21 @@ func (r *Repository) run(cmd *exec.Cmd) (string, string, error) {
 	if err != nil {
 		return string(bytesOut), "", err
 	}
-	return string(bytesOut), string(bytesErr), cmd.Wait()
+	err = cmd.Wait()
+	sOut := string(bytesOut)
+	sErr := string(bytesErr)
+	code := 0
+	if exiterr, ok := err.(*exec.ExitError); ok {
+		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+			code = status.ExitStatus()
+		}
+	}
+	logger.WithFields(log.Fields{
+		"stdout": sOut,
+		"stderr": sErr,
+		"code":   code,
+	}).Debug()
+	return string(bytesOut), string(bytesErr), err
 }
 
 // Git runs git with the provided arguments. This also ensures the proper
@@ -206,17 +239,40 @@ func (r *Repository) Add(paths ...string) error {
 	return err
 }
 
+// AddContent is similar to Add() except it allows content to be created in
+// addition to be added to the repo.
+func (r *Repository) AddContent(path string, mode os.FileMode, content []byte) error {
+	absolute := filepath.Join(r.Path, path)
+	if err := os.MkdirAll(filepath.Dir(absolute), 0700); err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile(absolute, content, mode); err != nil {
+		return err
+	}
+	return r.Add(path)
+}
+
 // Commit will add a new commit to the repository with the
 // given message.
 func (r *Repository) Commit(message string) error {
-	return nil
+	_, _, err := r.Git(append(DefaultGitCommands["commit"], message))
+	return err
 }
 
 // Push will push changes to the given remote and reference. `remote` will
 // default to 'origin' if not provided and `ref` will default to
-// 'HEAD:refs/for/master' if not provided.
+// 'HEAD:refs/for/master' if not provided. The returned ingeter will
 func (r *Repository) Push(remote string, ref string) error {
-	return nil
+	if remote == "" {
+		remote = "origin"
+	}
+	if ref == "" {
+		ref = "HEAD:refs/for/master"
+	}
+
+	_, _, err := r.Git(append(DefaultGitCommands["push"], remote, ref))
+	return err
 }
 
 // GetRemoteURL will return the url for the given remote name. If the requested
@@ -240,10 +296,33 @@ func (r *Repository) AddRemote(name string, uri string) error {
 }
 
 // AddRemoteFromContainer adds a new remote based on the provided container.
-func (r *Repository) AddRemoteFromContainer(container *Container, remoteName string, project string) error {
-	return r.AddRemote(remoteName, fmt.Sprintf(
+func (r *Repository) AddRemoteFromContainer(container *Container, remote string, project string) error {
+	if remote == "" {
+		remote = "origin"
+	}
+
+	return r.AddRemote(remote, fmt.Sprintf(
 		"ssh://%s@%s:%d/%s", r.Config.GitConfig["user.name"],
 		container.SSH.Address, container.SSH.Public, project))
+}
+
+// ChangeId returns a string representing the change id of the last
+// commit.
+func (r *Repository) ChangeId() (string, error) {
+	stdout, _, err := r.Git(DefaultGitCommands["last-commit-message"])
+	if err != nil {
+		return "", err
+	}
+
+	matches := RegexChangeId.FindAllStringSubmatch(stdout, -1)
+	if len(matches) < 1 {
+		return "", ErrFailedToLocateChange
+	}
+	if len(matches[0]) < 2 {
+		return "", ErrFailedToLocateChange
+	}
+
+	return matches[0][1], nil
 }
 
 // Remove will remove the entire repository from disk, useful for temporary
