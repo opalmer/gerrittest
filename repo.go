@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/opalmer/gerrittest/internal"
@@ -19,15 +20,25 @@ var (
 	// to their arguments. This is used by Repository for running
 	// git commands.
 	DefaultGitCommands = map[string][]string{
-		"status": {"status", "--porcelain"},
-		"init":   {"init", "--quiet"},
-		"config": {"config", "--local"},
-		"add":    {"add", "--force"},
+		"status":         {"status", "--porcelain"},
+		"init":           {"init", "--quiet"},
+		"config":         {"config", "--local"},
+		"add":            {"add", "--force"},
+		"remote-add":     {"remote", "add"},
+		"get-remote-url": {"remote", "get-url"},
 	}
 
 	// DefaultCommitHookName is the name of the hook installed by
 	// installCommitHook.
 	DefaultCommitHookName = "commit-msg"
+
+	// ErrRemoteDoesNotExist is returned by GetRemoteURL if the requested
+	// remote does not appear to exist.
+	ErrRemoteDoesNotExist = errors.New("Requested remote does not exist")
+
+	// ErrRemoteExists is returned by AddRemote if the provided remote already
+	// exists.
+	ErrRemoteExists = errors.New("Remote with the given name already exists")
 )
 
 // RepositoryConfig is used to store information about a repository.
@@ -208,9 +219,31 @@ func (r *Repository) Push(remote string, ref string) error {
 	return nil
 }
 
-// AddRemoteFromContainer adds a new remote based on the provided spec.
+// GetRemoteURL will return the url for the given remote name. If the requested
+// remote does not exist ErrRemoteDoesNotExist will be returned.
+func (r *Repository) GetRemoteURL(name string) (string, error) {
+	stdout, stderr, err := r.Git(append(DefaultGitCommands["get-remote-url"], name))
+	if err != nil && strings.Contains(stderr, "No such remote") {
+		return "", ErrRemoteDoesNotExist
+	}
+	return strings.TrimSpace(stdout), nil
+}
+
+// AddRemote will add a remote with the given name so long as it does not
+// already exist.
+func (r *Repository) AddRemote(name string, uri string) error {
+	if _, err := r.GetRemoteURL(name); err == nil {
+		return ErrRemoteExists
+	}
+	_, _, err := r.Git(append(DefaultGitCommands["remote-add"], name, uri))
+	return err
+}
+
+// AddRemoteFromContainer adds a new remote based on the provided container.
 func (r *Repository) AddRemoteFromContainer(container *Container, remoteName string, project string) error {
-	return nil
+	return r.AddRemote(remoteName, fmt.Sprintf(
+		"ssh://%s@%s:%d/%s", r.Config.GitConfig["user.name"],
+		container.SSH.Address, container.SSH.Public, project))
 }
 
 // Remove will remove the entire repository from disk, useful for temporary

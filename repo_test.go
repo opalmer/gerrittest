@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opalmer/dockertest"
 	. "gopkg.in/check.v1"
 )
 
@@ -122,4 +123,25 @@ func (s *RepoTest) TestRepository_Add(c *C) {
 	status, err := repo.Status()
 	c.Assert(err, IsNil)
 	c.Assert(status, Equals, "A  bar.txt\nA  foo.txt\n")
+}
+
+func (s *RepoTest) TestRepository_AddRemote_ErrRemoteExists(c *C) {
+	repo := s.newRepoPostInit(c)
+	c.Assert(repo.AddRemote("foo", "bar"), IsNil)
+	c.Assert(repo.AddRemote("foo", "bar"), ErrorMatches, ErrRemoteExists.Error())
+}
+
+func (s *RepoTest) TestRepository_AddRemoteFromContainer(c *C) {
+	repo := s.newRepoPostInit(c)
+	container := &Container{
+		SSH: &dockertest.Port{
+			Address: "localhost",
+			Public:  5000,
+		},
+	}
+	c.Assert(repo.AddRemoteFromContainer(
+		container, "gerrittest", "foo/bar"), IsNil)
+	url, err := repo.GetRemoteURL("gerrittest")
+	c.Assert(err, IsNil)
+	c.Assert(url, Equals, "ssh://admin@localhost:5000/foo/bar")
 }
