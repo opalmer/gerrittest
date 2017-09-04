@@ -74,8 +74,12 @@ var Start = &cobra.Command{
 	Use:   "start",
 	Short: "Responsible for starting an instance of Gerrit.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		gerrit, err := gerrittest.New(newStartConfig(cmd))
+		cfg := newStartConfig(cmd)
+		gerrit, err := gerrittest.New(cfg)
 		if err != nil {
+			if !cfg.SkipCleanup {
+				gerrit.Destroy() // nolint: errcheck
+			}
 			return err
 		}
 		return jsonOutput(cmd, gerrit)
