@@ -3,12 +3,11 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"testing"
 
-	"os"
-
-	. "gopkg.in/check.v1"
 	"github.com/opalmer/gerrittest"
+	. "gopkg.in/check.v1"
 )
 
 type IntegrationTest struct{}
@@ -37,5 +36,4 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	// Read the struct from disk and use it to stop the container
 	c.Assert(Stop.ParseFlags(jsonFlag), IsNil)
 	c.Assert(Stop.RunE(Stop, []string{}), IsNil)
-
 }
