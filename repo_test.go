@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	. "gopkg.in/check.v1"
@@ -32,15 +31,13 @@ func (s *RepoTest) newBareRepo(c *C) *Repository {
 	cfg, err := newRepositoryConfig("", "!")
 	c.Assert(err, IsNil)
 	s.addCleanupPath(cfg.Path)
-	return &Repository{
-		mtx: &sync.Mutex{}, initialized: false, cfg: cfg,
-		Path: cfg.Path,
-	}
+	return &Repository{Config: cfg, Path: cfg.Path}
 }
 
 func (s *RepoTest) newRepoPostInit(c *C) *Repository {
 	repo := s.newBareRepo(c)
-	c.Assert(repo.init(), IsNil)
+	_, _, err := repo.Git(DefaultGitCommands["init"])
+	c.Assert(err, IsNil)
 	return repo
 }
 
@@ -101,50 +98,20 @@ func (s *RepoTest) TestRepository_Init_NewRepository(c *C) {
 	repo := s.newBareRepo(c)
 	_, err := repo.Status()
 	c.Assert(err, NotNil)
-	c.Assert(repo.init(), IsNil)
+	c.Assert(repo.Init(), IsNil)
 	_, err = repo.Status()
 	c.Assert(err, IsNil)
 }
 
-func (s *RepoTest) TestRepository_InstallCommitHook_RepoNotInit(c *C) {
-	repo := s.newBareRepo(c)
-	c.Assert(
-		repo.installCommitHook(), ErrorMatches,
-		ErrRepositoryNotInitialized.Error())
-}
-
-func (s *RepoTest) TestRepository_InstallCommitHook(c *C) {
-	repo := s.newRepoPostInit(c)
-	c.Assert(repo.installCommitHook(), IsNil)
-	_, err := os.Stat(
-		filepath.Join(repo.Path, ".git", "hooks", DefaultCommitHookName))
-	c.Assert(err, IsNil)
-}
-
-func (s *RepoTest) TestRepository_Config_RepoNotInit(c *C) {
-	repo := s.newBareRepo(c)
-	c.Assert(repo.Config("foo", "bar"), ErrorMatches, ErrRepositoryNotInitialized.Error())
-}
-
 func (s *RepoTest) TestRepository_Config(c *C) {
 	repo := s.newRepoPostInit(c)
-	c.Assert(repo.Config("foo.bar", "1"), IsNil)
+	c.Assert(repo.ConfigLocal("foo.bar", "1"), IsNil)
 	stdout, _, err := repo.Git([]string{"config", "--list", "--global"})
 	c.Assert(err, IsNil)
 	c.Assert(strings.Contains(stdout, "foo.bar"), Equals, false)
 	stdout, _, err = repo.Git([]string{"config", "--list", "--local"})
 	c.Assert(err, IsNil)
 	c.Assert(strings.Contains(stdout, "foo.bar"), Equals, true)
-}
-
-func (s *RepoTest) TestRepository_Configure(c *C) {
-	repo := s.newRepoPostInit(c)
-	c.Assert(repo.configure(), IsNil)
-}
-
-func (s *RepoTest) TestRepository_Add_RepoNotInit(c *C) {
-	repo := s.newBareRepo(c)
-	c.Assert(repo.Add(""), ErrorMatches, ErrRepositoryNotInitialized.Error())
 }
 
 func (s *RepoTest) TestRepository_Add(c *C) {
@@ -155,14 +122,4 @@ func (s *RepoTest) TestRepository_Add(c *C) {
 	status, err := repo.Status()
 	c.Assert(err, IsNil)
 	c.Assert(status, Equals, "A  bar.txt\nA  foo.txt\n")
-}
-
-func (s *RepoTest) TestRepository_Commit_RepoNotInit(c *C) {
-	repo := s.newBareRepo(c)
-	c.Assert(repo.Commit(""), ErrorMatches, ErrRepositoryNotInitialized.Error())
-}
-
-func (s *RepoTest) TestRepository_CreateFromContainer_RepoNotInit(c *C) {
-	repo := s.newBareRepo(c)
-	c.Assert(repo.CreateFromContainer(nil, "", ""), ErrorMatches, ErrRepositoryNotInitialized.Error())
 }

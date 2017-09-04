@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/opalmer/gerrittest/internal"
@@ -101,10 +100,8 @@ func newRepositoryConfig(path string, privateKey string) (*RepositoryConfig, err
 // Repository is used to store information about an interact
 // with a git repository.
 type Repository struct {
-	mtx         *sync.Mutex
-	cfg         *RepositoryConfig
-	initialized bool
-	Path        string `json:"path"`
+	Config *RepositoryConfig
+	Path   string `json:"path"`
 }
 
 // setEnvironment sets up the environment for the given command.
@@ -119,7 +116,7 @@ func (r *Repository) setEnvironment(cmd *exec.Cmd) error {
 	// Set environment variables to ensure the proper ssh command is run. Not
 	// all versions of git support core.sshCommand from the config.
 	for _, key := range []string{"GIT_SSH_COMMAND", "GIT_SSH"} {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, r.cfg.GitConfig["core.sshCommand"]))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, r.Config.GitConfig["core.sshCommand"]))
 	}
 	return nil
 }
@@ -147,49 +144,6 @@ func (r *Repository) run(cmd *exec.Cmd) (string, string, error) {
 	return string(bytesOut), string(bytesErr), cmd.Wait()
 }
 
-// init calls 'git init' on the repository but only if it does not appear
-// to already be a repository.
-func (r *Repository) init() error {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
-	if r.initialized {
-		return nil
-	}
-	if _, err := r.Status(); err != nil {
-		if _, _, err := r.Git(DefaultGitCommands["init"]); err != nil {
-			return err
-		}
-	}
-	r.initialized = true
-	return nil
-}
-
-// installCommitHook copies the commit hook into the hooks directory of the
-// repository. If the repository has not been initialized yet an error will
-// be returned. Note, this function will overwrite the existing commit-msg hook
-// by default.
-func (r *Repository) installCommitHook() error {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
-	if !r.initialized {
-		return ErrRepositoryNotInitialized
-	}
-	return ioutil.WriteFile(
-		filepath.Join(r.Path, ".git", "hooks", DefaultCommitHookName),
-		internal.MustAsset("internal/commit-msg"), 0700)
-}
-
-// configure will iterate over the configuration keys provided
-// by the RepositoryConfig struct and call Config() on each.
-func (r *Repository) configure() error {
-	for key, value := range r.cfg.GitConfig {
-		if err := r.Config(key, value); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Git runs git with the provided arguments. This also ensures the proper
 // working path and environment are set before calling git.
 func (r *Repository) Git(args []string) (string, string, error) {
@@ -206,13 +160,23 @@ func (r *Repository) Git(args []string) (string, string, error) {
 		return "", "", err
 	}
 
-	ctx, cancel := context.WithTimeout(r.cfg.Ctx, r.cfg.CommandTimeout)
+	ctx, cancel := context.WithTimeout(r.Config.Ctx, r.Config.CommandTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, r.cfg.Command, args...)
+	cmd := exec.CommandContext(ctx, r.Config.Command, args...)
 	if err := r.setEnvironment(cmd); err != nil {
 		return "", "", err
 	}
 	return r.run(cmd)
+}
+
+// Init calls 'git init' on the repository root but only if 'git status'
+// fails.
+func (r *Repository) Init() error {
+	if _, err := r.Status(); err == nil {
+		return nil
+	}
+	_, _, err := r.Git(DefaultGitCommands["init"])
+	return err
 }
 
 // Status returns the current status of the repository.
@@ -221,13 +185,8 @@ func (r *Repository) Status() (string, error) {
 	return stdout, err
 }
 
-// Config will call `git config --local key value`.
-func (r *Repository) Config(key string, value string) error {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
-	if !r.initialized {
-		return ErrRepositoryNotInitialized
-	}
+// ConfigLocal will call `git config --local key value`.
+func (r *Repository) ConfigLocal(key string, value string) error {
 	_, _, err := r.Git(append(DefaultGitCommands["config"], key, value))
 	return err
 }
@@ -235,11 +194,6 @@ func (r *Repository) Config(key string, value string) error {
 // Add adds a path to the repository. The path must be relative to the root of
 // the repository.
 func (r *Repository) Add(paths ...string) error {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
-	if !r.initialized {
-		return ErrRepositoryNotInitialized
-	}
 	_, _, err := r.Git(append(DefaultGitCommands["add"], paths...))
 	return err
 }
@@ -247,11 +201,6 @@ func (r *Repository) Add(paths ...string) error {
 // Commit will add a new commit to the repository with the
 // given message.
 func (r *Repository) Commit(message string) error {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
-	if !r.initialized {
-		return ErrRepositoryNotInitialized
-	}
 	return nil
 }
 
@@ -259,22 +208,11 @@ func (r *Repository) Commit(message string) error {
 // default to 'origin' if not provided and `ref` will default to
 // 'HEAD:refs/for/master' if not provided.
 func (r *Repository) Push(remote string, ref string) error {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
-	if !r.initialized {
-		return ErrRepositoryNotInitialized
-	}
 	return nil
 }
 
-// CreateFromContainer adds a new remote based on the provided spec.
-// nolint: unused,gosimple,unconvert,varcheck
-func (r *Repository) CreateFromContainer(container *Container, remoteName string, project string) error {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
-	if !r.initialized {
-		return ErrRepositoryNotInitialized
-	}
+// AddRemoteFromContainer adds a new remote based on the provided spec.
+func (r *Repository) AddRemoteFromContainer(container *Container, remoteName string, project string) error {
 	return nil
 }
 
@@ -284,20 +222,30 @@ func (r *Repository) Remove() error {
 	return os.RemoveAll(r.Path)
 }
 
+// WriteCommitHook writes the default commit hook to the provided repository.
+func WriteCommitHook(repo *Repository, hookName string) error {
+	return ioutil.WriteFile(
+		filepath.Join(repo.Path, ".git", "hooks", hookName),
+		internal.MustAsset("internal/commit-msg"), 0700)
+}
+
 // NewRepository constructs and returns a *Repository struct. It will also
 // ensure the repository is properly setup before returning.
 func NewRepository(cfg *RepositoryConfig) (*Repository, error) {
-	repo := &Repository{
-		mtx: &sync.Mutex{}, initialized: false,
-		Path: cfg.Path, cfg: cfg}
-	if err := repo.init(); err != nil {
+	repo := &Repository{Config: cfg, Path: cfg.Path}
+
+	if err := repo.Init(); err != nil {
 		return nil, err
 	}
-	if err := repo.installCommitHook(); err != nil {
+
+	if err := WriteCommitHook(repo, DefaultCommitHookName); err != nil {
 		return nil, err
 	}
-	if err := repo.configure(); err != nil {
-		return nil, err
+
+	for key, value := range repo.Config.GitConfig {
+		if err := repo.ConfigLocal(key, value); err != nil {
+			return nil, err
+		}
 	}
 
 	return repo, nil
