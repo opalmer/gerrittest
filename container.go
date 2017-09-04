@@ -225,19 +225,18 @@ func NewContainer(parent context.Context, http uint16, ssh uint16, image string)
 
 			// Wait for ports to open
 			errs := make(chan error, 2)
+			results := errset.ErrSet{}
 			go waitPort(parent, containerSSH, errs)
 			go waitHTTP(parent, containerHTTP, errs)
 			for i := 0; i < 2; i++ {
-				if err := <-errs; err != nil {
-					return err
-				}
+				results = append(results, <-errs)
 			}
 
 			entry.WithFields(log.Fields{
 				"task":    "end",
 				"elapsed": time.Since(pingStart),
 			}).Debug()
-			return nil
+			return results.ReturnValue()
 		},
 	}
 
