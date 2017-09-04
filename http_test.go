@@ -212,7 +212,7 @@ func (s *HTTPTest) TestHTTPClient_CreateProject(c *C) {
 	c.Assert(client.CreateProject("foobar"), IsNil)
 
 	request := handler.Request()
-	c.Assert(request.URL.Path, Equals, "/projects/foobar")
+	c.Assert(request.URL.Path, Equals, "/a/projects/foobar")
 	c.Assert(request.Method, Equals, http.MethodPut)
 	c.Assert(handler.RequestBody(), Equals, "{}")
 }

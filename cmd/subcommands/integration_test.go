@@ -8,6 +8,7 @@ import (
 	"os"
 
 	. "gopkg.in/check.v1"
+	"github.com/opalmer/gerrittest"
 )
 
 type IntegrationTest struct{}
@@ -28,7 +29,13 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	c.Assert(Start.ParseFlags(jsonFlag), IsNil)
 	c.Assert(Start.RunE(Start, []string{}), IsNil)
 
+	// Loading
+	gerrit, err := gerrittest.NewFromJSON(file.Name())
+	c.Assert(err, IsNil)
+	c.Assert(gerrit.HTTP.CreateProject("testing"), IsNil)
+
 	// Read the struct from disk and use it to stop the container
 	c.Assert(Stop.ParseFlags(jsonFlag), IsNil)
 	c.Assert(Stop.RunE(Stop, []string{}), IsNil)
+
 }

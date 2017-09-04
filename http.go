@@ -217,7 +217,7 @@ func (h *HTTPClient) InsertPublicKey(key ssh.PublicKey) error {
 // CreateProject creates a project with the specified name.
 func (h *HTTPClient) CreateProject(name string) error {
 	request, err := h.NewRequest(
-		http.MethodPut, fmt.Sprintf("/projects/%s", name), []byte("{}"))
+		http.MethodPut, fmt.Sprintf("/a/projects/%s", name), []byte("{}"))
 	if err != nil {
 		return err
 	}
