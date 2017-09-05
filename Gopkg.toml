@@ -42,6 +42,10 @@ required = ["github.com/docker/distribution/reference"]
   name = "github.com/crewjam/errset"
 
 [[constraint]]
+  name = "github.com/andygrunwald/go-gerrit"
+  version = "0.4.0"
+
+[[constraint]]
   branch = "master"
   name = "github.com/docker/distribution"
 
