@@ -68,8 +68,8 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	c.Assert(Stop.ParseFlags([]string{"--json", file.Name()}), IsNil)
 	c.Assert(Stop.RunE(Stop, []string{}), IsNil)
 
-	// Make sure the private key was not cleaned up and that the repository
-	// was cleaned up.
+	// The below test to make sure that the custom private key and
+	// repository were not removed when cleanup was run.
 	_, err = os.Stat(privateFile.Name())
 	c.Assert(err, IsNil)
 	_, err = os.Stat(gerrit.Repo.Path)
