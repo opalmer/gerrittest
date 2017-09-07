@@ -21,6 +21,9 @@ var DefaultUpstream = "upstream-gerrittest"
 // to playback changes from some kind of source. This intended to
 // be used in conjunction with *Repository.
 type PlaybackSource interface {
+	// Setup is responsible for configuring the playback source prior to Read()
+	Setup(repo *Repository) error
+
 	// Read should read the history from a source source and produce
 	// a channel containing diffs as well as an error channel. The diff
 	// channel should be closed when when there are no further diffs to
@@ -34,9 +37,14 @@ type PlaybackSource interface {
 // RemoteRepositorySource reads changes from a remote repository.
 type RemoteRepositorySource struct {
 	log    *log.Entry
-	repo   string
+	path   string
 	remote string
 	branch string
+}
+
+// Setup does nothing for this source.
+func (r *RemoteRepositorySource) Setup(repo *Repository) error {
+	return nil
 }
 
 // Read will read read revisions from the remote repository and play
@@ -47,7 +55,7 @@ func (r *RemoteRepositorySource) Read(ctx context.Context) (<-chan *Diff, error)
 
 	// First, get a list of all commits in the remote.
 	cmd := exec.CommandContext(
-		ctx, "git", "-C", r.repo, "log", "FETCH_HEAD", "--oneline")
+		ctx, "git", "-C", r.path, "log", "FETCH_HEAD", "--oneline")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -84,7 +92,7 @@ func (r *RemoteRepositorySource) Read(ctx context.Context) (<-chan *Diff, error)
 			commit := commits[i]
 			entry.WithField("commit", commit).Debug()
 			cmd := exec.CommandContext(
-				ctx, "git", "-C", r.repo, "format-patch", "-1", commit,
+				ctx, "git", "-C", r.path, "format-patch", "-1", commit,
 				"--stdout")
 			select {
 			case <-ctx.Done():
@@ -110,14 +118,14 @@ func (r *RemoteRepositorySource) Read(ctx context.Context) (<-chan *Diff, error)
 
 // Cleanup removes the temporary repository on disk.
 func (r *RemoteRepositorySource) Cleanup() error {
-	return os.RemoveAll(r.repo)
+	return os.RemoveAll(r.path)
 }
 
 // NewRemoteRepositorySource constructs and returns a *RemoteRepositorySource
 // which is an implementation of PlaybackSource.
 func NewRemoteRepositorySource(remote string, branch string) (PlaybackSource, error) {
-	logger := log.WithField("cmp", "repo-source")
-	tempdir, err := ioutil.TempDir("", "gerrittest-")
+	logger := log.WithField("cmp", "playback")
+	tempdir, err := ioutil.TempDir("", "gerrittest-playback-")
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +136,7 @@ func NewRemoteRepositorySource(remote string, branch string) (PlaybackSource, er
 		"path":   tempdir,
 	})
 	entry.Debug()
+
 	cmd := exec.Command("git", "init", tempdir, "--quiet")
 	if data, err := cmd.CombinedOutput(); err != nil {
 		entry.WithError(err).WithField("output", string(data)).Error()
@@ -161,7 +170,7 @@ func NewRemoteRepositorySource(remote string, branch string) (PlaybackSource, er
 	}
 	repo := &RemoteRepositorySource{
 		log:    logger,
-		repo:   tempdir,
+		path:   tempdir,
 		remote: remote,
 		branch: branch,
 	}

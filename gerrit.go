@@ -185,7 +185,7 @@ func (g *Gerrit) setupRepo() error {
 		}
 		path = tmppath
 	}
-	cfg, err := newRepositoryConfig(path, g.PrivateKeyPath)
+	cfg, err := NewRepositoryConfig(path, g.PrivateKeyPath)
 	if err != nil {
 		return err
 	}
@@ -302,7 +302,7 @@ func NewFromJSON(path string) (*Gerrit, error) {
 	}
 	gerrit.Container.Docker = docker
 
-	repoConfig, err := newRepositoryConfig(gerrit.Repo.Path, gerrit.PrivateKeyPath)
+	repoConfig, err := NewRepositoryConfig(gerrit.Repo.Path, gerrit.PrivateKeyPath)
 	repoConfig.Ctx = ctx
 	if err != nil {
 		return nil, err

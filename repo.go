@@ -1,6 +1,7 @@
 package gerrittest
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -32,6 +33,7 @@ var (
 		"commit":              {"commit", "--message"},
 		"push":                {"push", "--porcelain"},
 		"last-commit-message": {"log", "-n", "1", "--format=medium"},
+		"amend":               {"commit", "--amend", "--no-edit", "--allow-empty"},
 	}
 
 	// DefaultCommitHookName is the name of the hook installed by
@@ -53,6 +55,14 @@ var (
 	// RegexChangeID is used to match the Change-Id for a commit.
 	RegexChangeID = regexp.MustCompile(`(?m)^\s+Change-Id: (I[a-f0-9]{40}).*$`)
 )
+
+// Diff is a struct which represents a single commit to the
+// repository.
+type Diff struct {
+	Error   error
+	Content []byte
+	Commit  string
+}
 
 // RepositoryConfig is used to store information about a repository.
 type RepositoryConfig struct {
@@ -84,9 +94,9 @@ type RepositoryConfig struct {
 	GitConfig map[string]string `json:"git_config"`
 }
 
-// newRepositoryConfig returns a *RepositoryConfig struct. If no path is
+// NewRepositoryConfig returns a *RepositoryConfig struct. If no path is
 // provided then one will be generated for you.
-func newRepositoryConfig(path string, privateKey string) (*RepositoryConfig, error) {
+func NewRepositoryConfig(path string, privateKey string) (*RepositoryConfig, error) {
 	if privateKey == "" {
 		return nil, errors.New("Missing private key")
 	}
@@ -319,6 +329,69 @@ func (r *Repository) ChangeID() (string, error) {
 		return matches[0][1], nil
 	}
 	return "", ErrFailedToLocateChange
+}
+
+// Amend amends the current commit.
+func (r *Repository) Amend() error {
+	_, _, err := r.Git(DefaultGitCommands["amend"])
+	return err
+}
+
+// PlaybackFrom will play changes back from the given source into this
+// repository.
+func (r *Repository) PlaybackFrom(source PlaybackSource) error {
+	diffs, err := source.Read(r.Config.Ctx)
+	if err != nil {
+		return err
+	}
+
+	failures := 0
+	logger := log.WithFields(log.Fields{
+		"cmp":    "repo",
+		"phase":  "playback",
+		"action": "apply",
+	})
+
+	// TODO make sure we only do this once.
+	if err := r.AddContent(".empty", 0600, []byte("")); err != nil {
+		return err
+	}
+
+	if err := r.Push("", ""); err != nil {
+		return err
+	}
+
+	for diff := range diffs {
+		logger = logger.WithFields(log.Fields{
+			"failures": failures,
+		})
+		logger.Debug()
+
+		cmd := exec.Command("git", "-C", r.Path, "apply")
+		cmd.Stdin = bytes.NewBuffer(diff.Content)
+		if err := cmd.Run(); err != nil {
+			logger.WithError(err).Warn()
+			failures++
+			continue
+		}
+
+		if err := r.Amend(); err != nil {
+			logger.WithError(err).Warn()
+			failures++
+			continue
+		}
+		if err := r.Push("", ""); err != nil {
+			logger.WithError(err).Warn()
+			failures++
+			continue
+		}
+	}
+
+	if failures > 0 {
+		return errors.New("failed to apply any diffs")
+	}
+
+	return nil
 }
 
 // Remove will remove the entire repository from disk, useful for temporary
