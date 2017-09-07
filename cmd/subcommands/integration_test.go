@@ -53,6 +53,7 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	_, _, err = client.Projects.CreateProject("testing", nil)
 	c.Assert(err, IsNil)
 
+	// Add a remote based on the container then push a commit to it.
 	c.Assert(gerrit.Repo.AddRemoteFromContainer(gerrit.Container, "", "testing"), IsNil)
 	c.Assert(gerrit.Repo.AddContent("foo/bar.txt", 0600, []byte("Hello")), IsNil)
 	c.Assert(gerrit.Repo.Commit("42: hello"), IsNil) // Note, the number is an attempt to mess up Push()
@@ -60,6 +61,8 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	change, err := gerrit.Repo.ChangeID()
 	c.Assert(err, IsNil)
 
+	// Use the change id retrieved from git to retrieve information
+	// about the change.
 	_, _, err = client.Changes.GetChangeDetail(change, nil)
 	c.Assert(err, IsNil)
 
