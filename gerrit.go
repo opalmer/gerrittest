@@ -132,23 +132,23 @@ func (g *Gerrit) setupHTTPClient() error {
 	g.HTTP = client
 
 	logger.WithField("action", "login").Debug()
-	if err := g.HTTP.Login(); err != nil {
+	if err := g.HTTP.login(); err != nil {
 		return g.errLog(logger, err)
 	}
 
 	logger.WithField("action", "insert-key").Debug()
-	if err := g.HTTP.InsertPublicKey(g.PublicKey); err != nil {
+	if err := g.HTTP.insertPublicKey(g.PublicKey); err != nil {
 		return g.errLog(logger, err)
 	}
 
 	if g.Password != "" {
 		g.HTTP.Password = g.Password
 		logger.WithField("action", "set-password").Debug()
-		return g.HTTP.SetPassword(g.Password)
+		return g.HTTP.setPassword(g.Password)
 	}
 
 	logger.WithField("action", "generate-password").Debug()
-	generated, err := g.HTTP.GeneratePassword()
+	generated, err := g.HTTP.generatePassword()
 	g.Password = generated
 	return err
 }

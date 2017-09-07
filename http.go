@@ -34,21 +34,21 @@ func getResponseBody(response *http.Response) ([]byte, error) {
 // correctly and then perform the final steps to get it ready for
 // testing.
 type HTTPClient struct {
-	Client   *http.Client
+	client   *http.Client
 	Prefix   string
 	Username string
 	Password string
 }
 
-// URL concatenates the prefix and the given tai.
-func (h *HTTPClient) URL(tail string) string {
+// url concatenates the prefix and the given tai.
+func (h *HTTPClient) url(tail string) string {
 	return h.Prefix + tail
 }
 
-// NewRequest constructs a new http.Request, sets the proper headers and then
+// newRequest constructs a new http.Request, sets the proper headers and then
 // logs the request.
-func (h *HTTPClient) NewRequest(method string, tail string, body []byte) (*http.Request, error) {
-	requestURL := h.URL(tail)
+func (h *HTTPClient) newRequest(method string, tail string, body []byte) (*http.Request, error) {
+	requestURL := h.url(tail)
 
 	var bodyReader io.Reader
 	if body != nil {
@@ -72,7 +72,7 @@ func (h *HTTPClient) NewRequest(method string, tail string, body []byte) (*http.
 		request.Header.Add("X-User", h.Username)
 	}
 
-	for _, cookie := range h.Client.Jar.Cookies(&url.URL{Host: "localhost"}) {
+	for _, cookie := range h.client.Jar.Cookies(&url.URL{Host: "localhost"}) {
 		request.AddCookie(cookie)
 		if cookie.Name == "XSRF_TOKEN" {
 			request.Header.Set("X-Gerrit-Auth", cookie.Value)
@@ -89,8 +89,8 @@ func (h *HTTPClient) NewRequest(method string, tail string, body []byte) (*http.
 	return request, nil
 }
 
-// Do performs the request using the internal http client.
-func (h *HTTPClient) Do(request *http.Request, expectedCode int) (*http.Response, []byte, error) {
+// do performs the request using the internal http client.
+func (h *HTTPClient) do(request *http.Request, expectedCode int) (*http.Response, []byte, error) {
 	logger := log.WithFields(log.Fields{
 		"action": "response",
 		"method": request.Method,
@@ -101,7 +101,7 @@ func (h *HTTPClient) Do(request *http.Request, expectedCode int) (*http.Response
 	}
 
 	start := time.Now()
-	response, err := h.Client.Do(request)
+	response, err := h.client.Do(request)
 	if err != nil {
 		logger.WithError(err).Error()
 		return response, nil, err
@@ -129,13 +129,13 @@ func (h *HTTPClient) Do(request *http.Request, expectedCode int) (*http.Response
 	return response, body, err
 }
 
-// Login will attempt to hit /login/ as the given user.
-func (h *HTTPClient) Login() error {
-	request, err := h.NewRequest(http.MethodGet, "/login/", nil)
+// login will attempt to hit /login/ as the given user.
+func (h *HTTPClient) login() error {
+	request, err := h.newRequest(http.MethodGet, "/login/", nil)
 	if err != nil {
 		return err
 	}
-	_, _, err = h.Do(request, http.StatusOK)
+	_, _, err = h.do(request, http.StatusOK)
 	return err
 }
 
@@ -163,21 +163,21 @@ func (h *HTTPClient) Gerrit() (*gerrit.Client, error) {
 	return client, nil
 }
 
-// GeneratePassword generates and returns the account password. Note, this
+// generatePassword generates and returns the account password. Note, this
 // only works for the current account (the one which set the cookie
 // in GetAccount())
-func (h *HTTPClient) GeneratePassword() (string, error) {
+func (h *HTTPClient) generatePassword() (string, error) {
 	body, err := json.Marshal(&gerrit.HTTPPasswordInput{Generate: true})
 	if err != nil {
 		return "", err
 	}
 
-	request, err := h.NewRequest(http.MethodPut, "/a/accounts/self/password.http", body)
+	request, err := h.newRequest(http.MethodPut, "/a/accounts/self/password.http", body)
 	if err != nil {
 		return "", err
 	}
 
-	_, responseBody, err := h.Do(request, http.StatusOK)
+	_, responseBody, err := h.do(request, http.StatusOK)
 	if err != nil {
 		return "", err
 	}
@@ -188,33 +188,33 @@ func (h *HTTPClient) GeneratePassword() (string, error) {
 	return output[1 : len(output)-1], nil
 }
 
-// SetPassword sets the http password to the given value.
-func (h *HTTPClient) SetPassword(password string) error {
+// setPassword sets the http password to the given value.
+func (h *HTTPClient) setPassword(password string) error {
 	body, err := json.Marshal(&gerrit.HTTPPasswordInput{HTTPPassword: password})
 	if err != nil {
 		return err
 	}
 
-	request, err := h.NewRequest(
+	request, err := h.newRequest(
 		http.MethodPut, "/a/accounts/self/password.http", body)
 	if err != nil {
 		return err
 	}
 
-	_, _, err = h.Do(request, http.StatusOK)
+	_, _, err = h.do(request, http.StatusOK)
 	return err
 }
 
-// InsertPublicKey will insert the provided public key.
-func (h *HTTPClient) InsertPublicKey(key ssh.PublicKey) error {
-	request, err := h.NewRequest(
+// insertPublicKey will insert the provided public key.
+func (h *HTTPClient) insertPublicKey(key ssh.PublicKey) error {
+	request, err := h.newRequest(
 		http.MethodPost, "/a/accounts/self/sshkeys",
 		bytes.TrimSpace(ssh.MarshalAuthorizedKey(key)))
 	if err != nil {
 		return err
 	}
 	request.Header.Set("Content-Type", "plain/text")
-	_, _, err = h.Do(request, http.StatusCreated)
+	_, _, err = h.do(request, http.StatusCreated)
 	return err
 }
 
@@ -225,7 +225,7 @@ func NewHTTPClient(username string, password string, port *dockertest.Port) (*HT
 		return nil, errors.New("Username not provided")
 	}
 	return &HTTPClient{
-		Client:   &http.Client{Jar: NewCookieJar()},
+		client:   &http.Client{Jar: NewCookieJar()},
 		Prefix:   fmt.Sprintf("http://%s:%d", port.Address, port.Public),
 		Username: username,
 		Password: password,

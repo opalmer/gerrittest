@@ -65,7 +65,7 @@ func newClient(response *httptest.ResponseRecorder) (*HTTPClient, *testHandler, 
 	}
 	server := httptest.NewServer(handler)
 	client := &HTTPClient{
-		Client:   &http.Client{Jar: NewCookieJar()},
+		client:   &http.Client{Jar: NewCookieJar()},
 		Prefix:   fmt.Sprintf("http://%s", server.Listener.Addr()),
 		Username: "admin",
 	}
@@ -82,13 +82,13 @@ func (s *HTTPTest) TestGetResponseBody(c *C) {
 
 func (s *HTTPTest) TestHTTPClient_URL(c *C) {
 	client := HTTPClient{Prefix: "http://localhost"}
-	c.Assert(client.URL("/foo"), Equals, "http://localhost/foo")
+	c.Assert(client.url("/foo"), Equals, "http://localhost/foo")
 }
 
 func (s *HTTPTest) TestHTTPClient_NewRequest(c *C) {
 	client, _, server := newClient(nil)
 	server.Close()
-	request, err := client.NewRequest(
+	request, err := client.newRequest(
 		http.MethodGet, "/a/accounts/foo", []byte("foo"))
 	c.Assert(err, IsNil)
 	c.Assert(request.Method, Equals, http.MethodGet)
@@ -105,10 +105,10 @@ func (s *HTTPTest) TestHTTPClient_Do_BadCode(c *C) {
 	expected.Code = http.StatusCreated
 	client, _, server := newClient(expected)
 	defer server.Close()
-	request, err := client.NewRequest(
+	request, err := client.newRequest(
 		http.MethodPost, "/a/foo", []byte("foo"))
 	c.Assert(err, IsNil)
-	_, _, err = client.Do(request, http.StatusOK)
+	_, _, err = client.do(request, http.StatusOK)
 	c.Assert(err, NotNil)
 }
 
@@ -118,10 +118,10 @@ func (s *HTTPTest) TestHTTPClient_Do(c *C) {
 	expected.Body.Write([]byte("hello"))
 	client, _, server := newClient(expected)
 	defer server.Close()
-	request, err := client.NewRequest(
+	request, err := client.newRequest(
 		http.MethodPost, "/a/foo", []byte("foo"))
 	c.Assert(err, IsNil)
-	_, body, err := client.Do(request, http.StatusCreated)
+	_, body, err := client.do(request, http.StatusCreated)
 	c.Assert(err, IsNil)
 	c.Assert(body, DeepEquals, []byte("hello"))
 }
@@ -131,7 +131,7 @@ func (s *HTTPTest) TestHTTPClient_Login(c *C) {
 	expected.Code = http.StatusOK
 	client, handler, server := newClient(expected)
 	defer server.Close()
-	c.Assert(client.Login(), IsNil)
+	c.Assert(client.login(), IsNil)
 	request := handler.Request()
 	c.Assert(request.URL.Path, Equals, "/login/")
 }
@@ -147,7 +147,7 @@ func (s *HTTPTest) TestHTTPClient_GeneratePassword(c *C) {
 	expected.Body.Write(body)
 	client, handler, server := newClient(expected)
 	defer server.Close()
-	_, err = client.GeneratePassword()
+	_, err = client.generatePassword()
 	c.Assert(err, IsNil)
 
 	request := handler.Request()
@@ -160,7 +160,7 @@ func (s *HTTPTest) TestHTTPClient_SetPassword(c *C) {
 	expected.Code = http.StatusOK
 	client, handler, server := newClient(expected)
 	defer server.Close()
-	c.Assert(client.SetPassword("foobar"), IsNil)
+	c.Assert(client.setPassword("foobar"), IsNil)
 
 	request := handler.Request()
 	c.Assert(request.URL.Path, Equals, "/a/accounts/self/password.http")
@@ -179,7 +179,7 @@ func (s *HTTPTest) TestHTTPClient_InsertPublicKey(c *C) {
 	signer, err := ssh.NewSignerFromKey(private)
 	c.Assert(err, IsNil)
 	public := signer.PublicKey()
-	c.Assert(client.InsertPublicKey(public), IsNil)
+	c.Assert(client.insertPublicKey(public), IsNil)
 
 	request := handler.Request()
 	c.Assert(request.URL.Path, Equals, "/a/accounts/self/sshkeys")
