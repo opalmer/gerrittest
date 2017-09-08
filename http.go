@@ -34,10 +34,9 @@ func getResponseBody(response *http.Response) ([]byte, error) {
 // correctly and then perform the final steps to get it ready for
 // testing.
 type HTTPClient struct {
-	client   *http.Client
-	Prefix   string
-	Username string
-	Password string
+	client *http.Client
+	config *Config
+	Prefix string
 }
 
 // url concatenates the prefix and the given tai.
@@ -60,16 +59,15 @@ func (h *HTTPClient) newRequest(method string, tail string, body []byte) (*http.
 		return nil, err
 	}
 	request.Header.Set("Content-Type", "application/json")
-
-	if h.Username != "" && h.Password != "" {
-		request.SetBasicAuth(h.Username, h.Password)
+	if h.config.Username != "" && h.config.Password != "" {
+		request.SetBasicAuth(h.config.Username, h.config.Password)
 	}
 
 	// If the url is not prefixed with /a/ then assume we're relying
 	// on X-User to tell Gerrit to trust our request. In all other cases
 	// the cookie Gerrit gives us back will be relies
 	if !strings.HasPrefix(tail, "/a/") {
-		request.Header.Add("X-User", h.Username)
+		request.Header.Add("X-User", h.config.Username)
 	}
 
 	for _, cookie := range h.client.Jar.Cookies(&url.URL{Host: "localhost"}) {
@@ -143,15 +141,15 @@ func (h *HTTPClient) login() error {
 // and password must already be set and basic validation to ensure
 // the client is setup properly is performed.
 func (h *HTTPClient) Gerrit() (*gerrit.Client, error) {
-	if h.Username == "" || h.Password == "" {
-		return nil, errors.New("Username and password required")
+	if h.config.Username == "" || h.config.Password == "" {
+		return nil, errors.New("username and password required")
 	}
 	parsed, err := url.Parse(h.Prefix)
 	if err != nil {
 		return nil, err
 	}
 	client, err := gerrit.NewClient(fmt.Sprintf(
-		"%s://%s:%s@%s", parsed.Scheme, h.Username, h.Password,
+		"%s://%s:%s@%s", parsed.Scheme, h.config.Username, h.config.Password,
 		parsed.Host), nil)
 	if err != nil {
 		return nil, err
@@ -220,14 +218,12 @@ func (h *HTTPClient) insertPublicKey(key ssh.PublicKey) error {
 
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No
 // validation to ensure the service is actually running is performed.
-func NewHTTPClient(username string, password string, port *dockertest.Port) (*HTTPClient, error) {
-	if username == "" {
-		return nil, errors.New("Username not provided")
+func NewHTTPClient(config *Config, port *dockertest.Port) (*HTTPClient, error) {
+	if config.Username == "" {
+		return nil, errors.New("username not provided")
 	}
 	return &HTTPClient{
-		client:   &http.Client{Jar: NewCookieJar()},
-		Prefix:   fmt.Sprintf("http://%s:%d", port.Address, port.Public),
-		Username: username,
-		Password: password,
+		client: &http.Client{Jar: NewCookieJar()},
+		Prefix: fmt.Sprintf("http://%s:%d", port.Address, port.Public),
 	}, nil
 }

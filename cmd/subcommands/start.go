@@ -42,6 +42,10 @@ func addStartFlags(cmd *cobra.Command) {
 		"password", "p", "",
 		"If provided then use this value for the admin password instead "+
 			"of generating one.")
+	cmd.Flags().String(
+		"project", gerrittest.ProjectName,
+		"The name of the project to create in Gerrit. This will "+
+			"also be used for the remote repo name.")
 }
 
 func newStartConfig(cmd *cobra.Command) *gerrittest.Config {
@@ -65,7 +69,11 @@ func newStartConfig(cmd *cobra.Command) *gerrittest.Config {
 	config.Password = getString(cmd, "password")
 	config.Context = ctx
 	config.SkipSetup = getBool(cmd, "start-only")
-	config.SkipCleanup = getBool(cmd, "no-cleanup")
+	if getBool(cmd, "no-cleanup") {
+		config.CleanupGitRepo = false
+		config.CleanupGitRepo = false
+	}
+
 	return config
 }
 
@@ -77,10 +85,7 @@ var Start = &cobra.Command{
 		cfg := newStartConfig(cmd)
 		gerrit, err := gerrittest.New(cfg)
 		if err != nil {
-			if !cfg.SkipCleanup {
-				gerrit.Destroy() // nolint: errcheck
-			}
-			return err
+			return gerrit.Destroy()
 		}
 		return jsonOutput(cmd, gerrit)
 	},

@@ -125,7 +125,7 @@ func (r *RemoteRepositorySource) Cleanup() error {
 // which is an implementation of PlaybackSource.
 func NewRemoteRepositorySource(remote string, branch string) (PlaybackSource, error) {
 	logger := log.WithField("cmp", "playback")
-	tempdir, err := ioutil.TempDir("", "gerrittest-playback-")
+	tempdir, err := ioutil.TempDir("", fmt.Sprintf("%s-playback-", ProjectName))
 	if err != nil {
 		return nil, err
 	}

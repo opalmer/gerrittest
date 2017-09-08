@@ -7,30 +7,34 @@ import (
 	"os"
 	"path/filepath"
 
+	"fmt"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/crewjam/errset"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
 )
 
+// ProjectName is used anywhere we need a default value (temp files, default
+// field values, etc.
+const ProjectName = "gerrittest"
+
 // Gerrit is the central struct which combines multiple components
 // of the gerrittest project. Use New() to construct this struct.
 type Gerrit struct {
-	log             *log.Entry
-	CleanRepo       bool             `json:"clean_repo"`
-	CleanPrivateKey bool             `json:"clean_private_key"`
-	Config          *Config          `json:"config"`
-	Container       *Container       `json:"container"`
-	HTTP            *HTTPClient      `json:"-"`
-	HTTPPort        *dockertest.Port `json:"http"`
-	SSH             *SSHClient       `json:"-"`
-	SSHPort         *dockertest.Port `json:"ssh"`
-	Repo            *Repository      `json:"repo"`
-	PrivateKey      ssh.Signer       `json:"-"`
-	PublicKey       ssh.PublicKey    `json:"-"`
-	PrivateKeyPath  string           `json:"private_key_path"`
-	Username        string           `json:"username"`
-	Password        string           `json:"password"`
+	log        *log.Entry
+	Config     *Config          `json:"config"`
+	Container  *Container       `json:"container"`
+	HTTP       *HTTPClient      `json:"-"`
+	HTTPPort   *dockertest.Port `json:"http"`
+	SSH        *SSHClient       `json:"-"`
+	SSHPort    *dockertest.Port `json:"ssh"`
+	Repo       *Repository      `json:"repo"`
+	PrivateKey ssh.Signer       `json:"-"`
+	PublicKey  ssh.PublicKey    `json:"-"`
+	//PrivateKeyPath  string           `json:"private_key_path"`
+	//Username        string           `json:"username"`
+	//Password        string           `json:"password"`
 }
 
 func (g *Gerrit) errLog(logger *log.Entry, err error) error {
@@ -73,6 +77,8 @@ func (g *Gerrit) setupSSHKey() error {
 		"task":  "ssh-key",
 	})
 	logger.Debug()
+	g.Config.CleanupPrivateKey = false
+
 	if g.Config.PrivateKeyPath != "" {
 		entry := logger.WithFields(log.Fields{
 			"action": "read",
@@ -84,6 +90,8 @@ func (g *Gerrit) setupSSHKey() error {
 			entry.WithError(err).Error()
 			return err
 		}
+		g.Config.GitConfig["core.sshCommand"] = fmt.Sprintf(
+			"ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", g.Config.PrivateKeyPath)
 		g.PrivateKey = private
 		g.PublicKey = public
 		return nil
@@ -97,7 +105,7 @@ func (g *Gerrit) setupSSHKey() error {
 		return g.errLog(entry, err)
 	}
 
-	file, err := ioutil.TempFile("", "gerrittest-id_rsa-")
+	file, err := ioutil.TempFile("", fmt.Sprintf("%s-id_rsa-", ProjectName))
 	entry = entry.WithField("path", file.Name())
 	if err != nil {
 		return g.errLog(entry, err)
@@ -114,7 +122,10 @@ func (g *Gerrit) setupSSHKey() error {
 	}
 	g.PrivateKey = signer
 	g.PublicKey = signer.PublicKey()
-	g.PrivateKeyPath = file.Name()
+	g.Config.PrivateKeyPath = file.Name()
+	g.Config.CleanupPrivateKey = true
+	g.Config.GitConfig["core.sshCommand"] = fmt.Sprintf(
+		"ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", g.Config.PrivateKeyPath)
 	return nil
 }
 
@@ -124,7 +135,7 @@ func (g *Gerrit) setupHTTPClient() error {
 		"task":  "http-client",
 	})
 
-	client, err := NewHTTPClient(g.Username, "", g.HTTPPort)
+	client, err := NewHTTPClient(g.Config, g.HTTPPort)
 	if err != nil {
 		return g.errLog(logger, err)
 	}
@@ -141,15 +152,42 @@ func (g *Gerrit) setupHTTPClient() error {
 		return g.errLog(logger, err)
 	}
 
-	if g.Password != "" {
-		g.HTTP.Password = g.Password
-		logger.WithField("action", "set-password").Debug()
-		return g.HTTP.setPassword(g.Password)
+	// Generate or set the password.
+	if g.Config.Password != "" {
+		logger = logger.WithField("action", "set-password")
+		logger.Debug()
+
+		if _, err := g.HTTP.Gerrit(); err != nil {
+			if err := g.HTTP.setPassword(g.Config.Password); err != nil {
+				return g.errLog(logger, err)
+			}
+		}
+	} else {
+		logger = logger.WithField("action", "generate-password")
+		logger.Debug()
+		generated, err := g.HTTP.generatePassword()
+		if err != nil {
+			return g.errLog(logger, err)
+		}
+		g.Config.Password = generated
 	}
 
-	logger.WithField("action", "generate-password").Debug()
-	generated, err := g.HTTP.generatePassword()
-	g.Password = generated
+	// Create the gerrit project.
+	if g.Config.Project != "" {
+		logger = logger.WithFields(log.Fields{
+			"action":  "create-project",
+			"project": g.Config.Project,
+		})
+		gerrit, err := client.Gerrit()
+		if err != nil {
+			return g.errLog(logger, err)
+		}
+		logger.Debug()
+		if _, _, err := gerrit.Projects.CreateProject(g.Config.Project, nil); err != nil {
+			return g.errLog(logger, err)
+		}
+	}
+
 	return err
 }
 
@@ -160,7 +198,7 @@ func (g *Gerrit) setupSSHClient() error {
 	})
 	logger.Debug()
 
-	client, err := NewSSHClient(g.Username, g.PrivateKeyPath, g.SSHPort)
+	client, err := NewSSHClient(g.Config, g.SSHPort)
 	if err != nil {
 		logger.WithError(err).Error()
 		return err
@@ -177,21 +215,27 @@ func (g *Gerrit) setupRepo() error {
 	})
 	logger.Debug()
 
-	path := g.Config.RepoRoot
-	if path == "" {
-		tmppath, err := ioutil.TempDir("", "gerrittest-")
+	if g.Config.RepoRoot == "" {
+		g.Config.CleanupGitRepo = true
+		tmppath, err := ioutil.TempDir("", fmt.Sprintf("%s-", ProjectName))
 		if err != nil {
 			return err
 		}
-		path = tmppath
+		g.Config.RepoRoot = tmppath
 	}
-	cfg, err := NewRepositoryConfig(path, g.PrivateKeyPath)
+
+	repo, err := NewRepository(g.Config)
 	if err != nil {
 		return err
 	}
-	repo, err := NewRepository(cfg)
 	g.Repo = repo
-	return err
+
+	if g.Config.Project != "" {
+		return g.Repo.AddRemoteFromContainer(
+			g.Container, g.Config.OriginName, g.Config.Project)
+	}
+
+	return nil
 }
 
 // WriteJSONFile takes the current struct and writes the data to disk
@@ -210,23 +254,19 @@ func (g *Gerrit) WriteJSONFile(path string) error {
 // Destroy will destroy the container and all associated resources. Custom
 // private keys or repositories will not be cleaned up.
 func (g *Gerrit) Destroy() error {
-	if g.Config.SkipCleanup {
-		return nil
-	}
-
 	g.log.WithField("phase", "destroy").Debug()
 	errs := errset.ErrSet{}
 	if g.SSH != nil {
 		errs = append(errs, g.SSH.Close())
 	}
-	if g.Container != nil {
+	if g.Config.CleanupContainer && g.Container != nil {
 		errs = append(errs, g.Container.Terminate())
 	}
-	if g.CleanRepo && g.Repo != nil {
+	if g.Config.CleanupGitRepo && g.Repo != nil {
 		errs = append(errs, g.Repo.Remove())
 	}
-	if g.CleanPrivateKey && g.PrivateKeyPath != "" {
-		errs = append(errs, os.Remove(g.PrivateKeyPath))
+	if g.Config.CleanupPrivateKey && g.Config.PrivateKeyPath != "" {
+		errs = append(errs, os.Remove(g.Config.PrivateKeyPath))
 	}
 	return errs.ReturnValue()
 }
@@ -246,13 +286,8 @@ func New(cfg *Config) (*Gerrit, error) {
 	}
 
 	gerrit := &Gerrit{
-		log:             log.WithField("cmp", "core"),
-		Config:          cfg,
-		CleanRepo:       cfg.RepoRoot == "",
-		CleanPrivateKey: cfg.PrivateKeyPath == "",
-		Username:        username,
-		Password:        cfg.Password,
-		PrivateKeyPath:  cfg.PrivateKeyPath,
+		log:    log.WithField("cmp", "core"),
+		Config: cfg,
 	}
 	if err := gerrit.setupSSHKey(); err != nil {
 		return gerrit, err
@@ -302,25 +337,19 @@ func NewFromJSON(path string) (*Gerrit, error) {
 	}
 	gerrit.Container.Docker = docker
 
-	repoConfig, err := NewRepositoryConfig(gerrit.Repo.Path, gerrit.PrivateKeyPath)
-	repoConfig.Ctx = ctx
-	if err != nil {
-		return nil, err
-	}
-
-	repo, err := NewRepository(repoConfig)
+	repo, err := NewRepository(gerrit.Config)
 	if err != nil {
 		return nil, err
 	}
 	gerrit.Repo = repo
 
-	sshClient, err := NewSSHClient(gerrit.Username, gerrit.PrivateKeyPath, gerrit.SSHPort)
+	sshClient, err := NewSSHClient(gerrit.Config, gerrit.SSHPort)
 	if err != nil {
 		return nil, err
 	}
 	gerrit.SSH = sshClient
 
-	httpClient, err := NewHTTPClient(gerrit.Username, gerrit.Password, gerrit.HTTPPort)
+	httpClient, err := NewHTTPClient(gerrit.Config, gerrit.HTTPPort)
 	if err != nil {
 		return nil, err
 	}

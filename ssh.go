@@ -58,14 +58,14 @@ func (s *SSHClient) Version() (string, error) {
 
 // NewSSHClient produces an *SSHClient struct and attempts to connect to
 // Gerrrit.
-func NewSSHClient(user string, privateKeyPath string, port *dockertest.Port) (*SSHClient, error) {
+func NewSSHClient(config *Config, port *dockertest.Port) (*SSHClient, error) {
 	logger := log.WithFields(log.Fields{
 		"svc":  "gerrittest",
 		"cmp":  "SSHPort",
-		"path": privateKeyPath,
+		"path": config.PrivateKeyPath,
 	})
 
-	_, private, err := ReadSSHKeys(privateKeyPath)
+	_, private, err := ReadSSHKeys(config.PrivateKeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func NewSSHClient(user string, privateKeyPath string, port *dockertest.Port) (*S
 	sshClient, err := ssh.Dial(
 		"tcp", fmt.Sprintf("%s:%d", port.Address, port.Public),
 		&ssh.ClientConfig{
-			User:            user,
+			User:            config.Username,
 			Auth:            []ssh.AuthMethod{ssh.PublicKeys(private)},
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		},

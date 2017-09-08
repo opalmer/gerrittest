@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 
+	"time"
+
 	"github.com/opalmer/dockertest"
 )
 
@@ -19,10 +21,27 @@ type Config struct {
 	// PortHTTP is the port to expose the HTTP service on.
 	PortHTTP uint16 `json:"port_http"`
 
+	// Timeout is used to timeout commands and other contextual operations.
+	Timeout time.Duration `json:"timeout"`
+
 	// RepoRoot is the root of the git repository. If this field
 	// is blank then a temporary path will be used by the Gerrit
 	// struct.
 	RepoRoot string `json:"repo_root"`
+
+	// GitCommand is the git command to run. Defaults to 'git'.
+	GitCommand string `json:"git_command"`
+
+	// GitConfig contains key/value pairs to pass to 'git config'
+	GitConfig map[string]string `json:"git"`
+
+	// Project is the name of the Gerrit project to test against. This will
+	// be used to establish the remote origin of the git repository.
+	Project string `json:"project"`
+
+	// OriginName is the name of the origin of the remote repository. This
+	// will default to 'gerrittest'.
+	OriginName string `json:"origin_name"`
 
 	// Context is used internally when starting or managing
 	// containers and processes. If no context is provided then
@@ -47,8 +66,19 @@ type Config struct {
 	// none of the final setup steps will be performed.
 	SkipSetup bool `json:"skip_setup"`
 
-	// SkipCleanup when true allows all cleanup steps to be skipped.
-	SkipCleanup bool `json:"skip_cleanup"`
+	// CleanupPrivateKey when true will cause the cleanup steps to remove
+	// the private key from disk. This defaults to false but will be set
+	// to true if no path was provided to PrivateKeyPath.
+	CleanupPrivateKey bool `json:"cleanup_private_key"`
+
+	// CleanupGitRepo when will true will cause the cleanup steps to remove the
+	// repository. This defaults to false but will be set to true if
+	// RepoPath was "".
+	CleanupGitRepo bool `json:"cleanup_git_repo"`
+
+	// CleanupContainer when true will cause the cleanup steps to destroy
+	// the container running Gerrit. This defaults to true.
+	CleanupContainer bool `json:"cleanup_container"`
 }
 
 // NewConfig produces a *Config struct with reasonable defaults.
@@ -58,13 +88,25 @@ func NewConfig() *Config {
 		image = value
 	}
 	return &Config{
-		Image:       image,
-		PortSSH:     dockertest.RandomPort,
-		PortHTTP:    dockertest.RandomPort,
-		RepoRoot:    "",
-		Username:    "admin",
-		Password:    "",
-		SkipSetup:   false,
-		SkipCleanup: false,
+		Image:      image,
+		PortSSH:    dockertest.RandomPort,
+		PortHTTP:   dockertest.RandomPort,
+		Timeout:    time.Minute * 5,
+		RepoRoot:   "",
+		GitCommand: "git",
+		GitConfig: map[string]string{
+			"user.name":  "admin",
+			"user.email": "admin.localhost",
+		},
+		Project:           ProjectName,
+		OriginName:        ProjectName,
+		Context:           context.Background(),
+		PrivateKeyPath:    "",
+		Username:          "admin",
+		Password:          "",
+		SkipSetup:         false,
+		CleanupPrivateKey: false,
+		CleanupGitRepo:    false,
+		CleanupContainer:  true,
 	}
 }
