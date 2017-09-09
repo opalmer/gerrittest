@@ -183,6 +183,9 @@ func (h *HTTPClient) generatePassword() (string, error) {
 	// The generated password includes quotes, the below code removes
 	// those quotes.
 	output := strings.TrimSpace(string(responseBody))
+	if len(output) == 0 {
+		return "", nil
+	}
 	return output[1 : len(output)-1], nil
 }
 
