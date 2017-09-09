@@ -125,7 +125,7 @@ func (g *Gerrit) setupSSHKey() error {
 	return nil
 }
 
-func (g *Gerrit) setupHTTPClient() error {
+func (g *Gerrit) setupHTTPClient() error { // nolint: gocyclo
 	logger := g.log.WithFields(log.Fields{
 		"phase": "setup",
 		"task":  "http-client",

@@ -78,7 +78,11 @@ func (s *UtilTest) Test_jsonOutput_stdout(c *C) {
 
 	command := &cobra.Command{}
 	command.Flags().String("json", "", "")
-	c.Assert(jsonOutput(command, &gerrittest.Gerrit{Username: "foobar"}), IsNil)
+	cfg := gerrittest.NewConfig()
+	cfg.Username = "foobar"
+	g := &gerrittest.Gerrit{Config: cfg}
+
+	c.Assert(jsonOutput(command, g), IsNil)
 	w.Close() // nolint: errcheck
 	c.Assert(strings.Contains(<-output, "foobar"), Equals, true)
 }
@@ -92,7 +96,10 @@ func (s *UtilTest) Test_jsonOutput_file(c *C) {
 	c.Assert(file.Close(), IsNil)
 	c.Assert(command.ParseFlags(
 		[]string{fmt.Sprintf("--json=%s", file.Name())}), IsNil)
-	c.Assert(jsonOutput(command, &gerrittest.Gerrit{Username: "foobar"}), IsNil)
+	cfg := gerrittest.NewConfig()
+	cfg.Username = "foobar"
+	g := &gerrittest.Gerrit{Config: cfg}
+	c.Assert(jsonOutput(command, g), IsNil)
 	data, err := ioutil.ReadFile(file.Name())
 	c.Assert(err, IsNil)
 	c.Assert(strings.Contains(string(data), "foobar"), Equals, true)

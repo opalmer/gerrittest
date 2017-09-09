@@ -53,7 +53,7 @@ var (
 
 	// ErrRemoteNotProvided is returned by functions when a remote name
 	// or value is required by not provided.
-	ErrRemoteNotProvided = errors.New("remote not provide")
+	ErrRemoteNotProvided = errors.New("remote not provided")
 
 	// RegexChangeID is used to match the Change-Id for a commit.
 	RegexChangeID = regexp.MustCompile(`(?m)^\s+Change-Id: (I[a-f0-9]{40}).*$`)
@@ -134,7 +134,7 @@ func (r *Repository) run(cmd *exec.Cmd) (string, string, error) {
 	return string(bytesOut), string(bytesErr), err
 }
 
-// GitConfig runs git with the provided arguments. This also ensures the proper
+// Git runs git with the provided arguments. This also ensures the proper
 // working path and environment are set before calling git.
 func (r *Repository) Git(args []string) (string, string, error) {
 	workdir, err := os.Getwd()

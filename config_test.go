@@ -3,7 +3,6 @@ package gerrittest
 import (
 	"os"
 
-	"github.com/opalmer/dockertest"
 	. "gopkg.in/check.v1"
 )
 
@@ -27,19 +26,6 @@ func (s *ConfigTest) TearDownTest(c *C) {
 		return
 	}
 	c.Assert(os.Unsetenv(DefaultImageEnvironmentVar), IsNil)
-}
-
-func (s *ConfigTest) TestNewConfigDefaults(c *C) {
-	c.Assert(os.Unsetenv(DefaultImageEnvironmentVar), IsNil)
-	cfg := NewConfig()
-	c.Assert(cfg, DeepEquals, &Config{
-		Image:    DefaultImage,
-		PortSSH:  dockertest.RandomPort,
-		PortHTTP: dockertest.RandomPort,
-		RepoRoot: "",
-		Username: "admin",
-		Password: "",
-	})
 }
 
 func (s *ConfigTest) TestNewConfigOverride(c *C) {

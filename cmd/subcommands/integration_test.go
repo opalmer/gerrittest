@@ -44,8 +44,8 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	// operations.
 	gerrit, err := gerrittest.NewFromJSON(file.Name())
 	c.Assert(err, IsNil)
-	defer gerrit.Container.Terminate()   // nolint: errcheck
-	defer os.RemoveAll(gerrit.Repo.Path) // nolint: errcheck
+	defer gerrit.Container.Terminate()         // nolint: errcheck
+	defer os.RemoveAll(gerrit.Config.RepoRoot) // nolint: errcheck
 
 	client, err := gerrit.HTTP.Gerrit()
 	c.Assert(err, IsNil)
@@ -54,7 +54,8 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	c.Assert(err, IsNil)
 
 	// Add a remote based on the container then push a commit to it.
-	c.Assert(gerrit.Repo.AddRemoteFromContainer(gerrit.Container, "", "testing"), IsNil)
+	c.Assert(gerrit.Repo.AddRemoteFromContainer(gerrit.Container, "", "testing"), ErrorMatches, "remote not provided")
+	c.Assert(gerrit.Repo.AddRemoteFromContainer(gerrit.Container, "testing", "testing"), IsNil)
 	c.Assert(gerrit.Repo.AddContent("foo/bar.txt", 0600, []byte("Hello")), IsNil)
 	c.Assert(gerrit.Repo.Commit("42: hello"), IsNil) // Note, the number is an attempt to mess up Push()
 	c.Assert(gerrit.Repo.Push("", ""), IsNil)
@@ -75,6 +76,6 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	// repository were not removed when cleanup was run.
 	_, err = os.Stat(privateFile.Name())
 	c.Assert(err, IsNil)
-	_, err = os.Stat(gerrit.Repo.Path)
+	_, err = os.Stat(gerrit.Config.RepoRoot)
 	c.Assert(os.IsNotExist(err), Equals, true)
 }

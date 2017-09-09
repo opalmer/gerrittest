@@ -37,5 +37,5 @@ func (s *StartTest) Test_newStartConfig(c *C) {
 	c.Assert(cfg.Password, Equals, "password")
 	c.Assert(cfg.Context, NotNil)
 	c.Assert(cfg.SkipSetup, Equals, true)
-	c.Assert(cfg.SkipCleanup, Equals, true)
+
 }
