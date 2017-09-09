@@ -54,11 +54,11 @@ func (s *IntegrationTest) Test_StartStop(c *C) {
 	c.Assert(err, IsNil)
 
 	// Add a remote based on the container then push a commit to it.
-	c.Assert(gerrit.Repo.AddRemoteFromContainer(gerrit.Container, "", "testing"), ErrorMatches, "remote not provided")
+	c.Assert(gerrit.Repo.AddRemoteFromContainer(gerrit.Container, "", "testing"), ErrorMatches, gerrittest.ErrRemoteNotProvided.Error())
 	c.Assert(gerrit.Repo.AddRemoteFromContainer(gerrit.Container, "testing", "testing"), IsNil)
 	c.Assert(gerrit.Repo.AddContent("foo/bar.txt", 0600, []byte("Hello")), IsNil)
 	c.Assert(gerrit.Repo.Commit("42: hello"), IsNil) // Note, the number is an attempt to mess up Push()
-	c.Assert(gerrit.Repo.Push("", ""), ErrorMatches, "remote note provided")
+	c.Assert(gerrit.Repo.Push("", ""), ErrorMatches, gerrittest.ErrRemoteNotProvided.Error())
 	c.Assert(gerrit.Repo.Push("testing", ""), IsNil)
 	change, err := gerrit.Repo.ChangeID()
 	c.Assert(err, IsNil)
