@@ -41,7 +41,7 @@ func ExampleNew() {
 		"scripts/foo.bash": "echo 'foo'",
 	}
 	for relative, content := range files {
-		path := filepath.Join(gerrit.Repo.Path, relative)
+		path := filepath.Join(gerrit.Config.RepoRoot, relative)
 		if err := ioutil.WriteFile(path, []byte(content), 0600); err != nil {
 			log.Fatal(err)
 		}
