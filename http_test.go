@@ -65,9 +65,9 @@ func newClient(response *httptest.ResponseRecorder) (*HTTPClient, *testHandler, 
 	}
 	server := httptest.NewServer(handler)
 	client := &HTTPClient{
-		client:   &http.Client{Jar: NewCookieJar()},
-		Prefix:   fmt.Sprintf("http://%s", server.Listener.Addr()),
-		Username: "admin",
+		config: &Config{},
+		client: &http.Client{Jar: NewCookieJar()},
+		Prefix: fmt.Sprintf("http://%s", server.Listener.Addr()),
 	}
 	return client, handler, server
 }
@@ -189,12 +189,17 @@ func (s *HTTPTest) TestHTTPClient_InsertPublicKey(c *C) {
 }
 
 func (s *HTTPTest) TestNewHTTPClient(c *C) {
-	client, err := NewHTTPClient("admin", "", &dockertest.Port{Public: 50000, Address: "foobar"})
+	config := &Config{
+		Username: "admin",
+		Password: "port",
+	}
+	client, err := NewHTTPClient(config, &dockertest.Port{Public: 50000, Address: "foobar"})
 	c.Assert(err, IsNil)
 	c.Assert(client.Prefix, Equals, "http://foobar:50000")
 }
 
 func (s *HTTPTest) TestNewHTTPClient_Error(c *C) {
-	_, err := NewHTTPClient("", "", &dockertest.Port{Public: 50000, Address: "foobar"})
-	c.Assert(err, ErrorMatches, "Username not provided")
+	config := &Config{Username: ""}
+	_, err := NewHTTPClient(config, &dockertest.Port{Public: 50000, Address: "foobar"})
+	c.Assert(err, ErrorMatches, "username not provided")
 }
