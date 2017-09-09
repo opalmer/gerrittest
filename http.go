@@ -121,7 +121,7 @@ func (h *HTTPClient) do(request *http.Request, expectedCode int) (*http.Response
 	if response.StatusCode != expectedCode {
 		logger.WithField("body", strings.TrimSpace(string(body))).Warn()
 		return response, body, fmt.Errorf(
-			"Response code %d != %d", response.StatusCode, expectedCode)
+			"response code %d != %d", response.StatusCode, expectedCode)
 	}
 	logger.Debug()
 	return response, body, err
@@ -223,6 +223,7 @@ func NewHTTPClient(config *Config, port *dockertest.Port) (*HTTPClient, error) {
 		return nil, errors.New("username not provided")
 	}
 	return &HTTPClient{
+		config: config,
 		client: &http.Client{Jar: NewCookieJar()},
 		Prefix: fmt.Sprintf("http://%s:%d", port.Address, port.Public),
 	}, nil
