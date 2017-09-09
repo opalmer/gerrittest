@@ -3,11 +3,10 @@ package gerrittest
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"fmt"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/crewjam/errset"
@@ -32,9 +31,6 @@ type Gerrit struct {
 	Repo       *Repository      `json:"repo"`
 	PrivateKey ssh.Signer       `json:"-"`
 	PublicKey  ssh.PublicKey    `json:"-"`
-	//PrivateKeyPath  string           `json:"private_key_path"`
-	//Username        string           `json:"username"`
-	//Password        string           `json:"password"`
 }
 
 func (g *Gerrit) errLog(logger *log.Entry, err error) error {
