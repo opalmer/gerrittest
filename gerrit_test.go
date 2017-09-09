@@ -26,7 +26,6 @@ func (s *GerritTest) gerrit(c *C) *Gerrit {
 		log:    log.WithField("cmp", "core"),
 	}
 	g.Config.Username = "admin"
-	g.Username = g.Config.Username
 	return g
 }
 
@@ -41,7 +40,7 @@ func (s *GerritTest) serverToPort(c *C, server *httptest.Server) *dockertest.Por
 }
 
 func (s *GerritTest) addSSHKey(c *C, g *Gerrit) string {
-	file, err := ioutil.TempFile("", "")
+	file, err := ioutil.TempFile("", fmt.Sprintf("%s-", ProjectName))
 	c.Assert(err, IsNil)
 	key, err := GenerateRSAKey()
 	c.Assert(err, IsNil)
@@ -50,7 +49,7 @@ func (s *GerritTest) addSSHKey(c *C, g *Gerrit) string {
 	signer, err := ssh.NewSignerFromKey(key)
 	c.Assert(err, IsNil)
 	g.PublicKey = signer.PublicKey()
-	g.PrivateKeyPath = file.Name()
+	g.Config.PrivateKeyPath = file.Name()
 	return file.Name()
 }
 
@@ -58,12 +57,13 @@ func (s *GerritTest) TestNew(c *C) {
 	if testing.Short() {
 		c.Skip("-short set")
 	}
+
 	cfg := NewConfig()
 	gerrit, err := New(cfg)
 	c.Assert(err, IsNil)
 	defer gerrit.Destroy() // nolint: errcheck
 
-	file, err := ioutil.TempFile("", "")
+	file, err := ioutil.TempFile("", fmt.Sprintf("%s-", ProjectName))
 	c.Assert(err, IsNil)
 	path := file.Name()
 	c.Assert(file.Close(), IsNil)
@@ -89,6 +89,8 @@ func (s *GerritTest) TestGerrit_setupHTTPClient_passwordSet(c *C) {
 			w.WriteHeader(http.StatusOK)
 		case 1:
 			w.WriteHeader(http.StatusCreated)
+		default:
+			fmt.Fprint(w, "{}")
 		}
 		requests++
 	}))
@@ -97,7 +99,7 @@ func (s *GerritTest) TestGerrit_setupHTTPClient_passwordSet(c *C) {
 	g := s.gerrit(c)
 	defer os.Remove(s.addSSHKey(c, g)) // nolint: errcheck
 	g.HTTPPort = s.serverToPort(c, ts)
-	g.Password = "foo"
+	g.Config.Password = "foo"
 	c.Assert(g.setupHTTPClient(), IsNil)
 }
 
@@ -117,7 +119,7 @@ func (s *GerritTest) TestGerrit_setupHTTPClient_errLogin(c *C) {
 	g := s.gerrit(c)
 	defer os.Remove(s.addSSHKey(c, g)) // nolint: errcheck
 	g.HTTPPort = s.serverToPort(c, ts)
-	c.Assert(g.setupHTTPClient(), ErrorMatches, "Response code 400 != 201")
+	c.Assert(g.setupHTTPClient(), ErrorMatches, "response code 400 != 201")
 }
 
 func (s *GerritTest) TestGerrit_setupHTTPClient_generatePassword(c *C) {
@@ -129,7 +131,7 @@ func (s *GerritTest) TestGerrit_setupHTTPClient_generatePassword(c *C) {
 		case 1:
 			w.WriteHeader(http.StatusCreated)
 		default:
-			fmt.Fprint(w, "'Hello'")
+			fmt.Fprint(w, `{"password": "hello"}`)
 		}
 		requests++
 	}))
@@ -159,11 +161,11 @@ func (s *GerritTest) TestGerrit_setupHTTPClient_errGeneratePassword(c *C) {
 	g := s.gerrit(c)
 	defer os.Remove(s.addSSHKey(c, g)) // nolint: errcheck
 	g.HTTPPort = s.serverToPort(c, ts)
-	c.Assert(g.setupHTTPClient(), ErrorMatches, "Response code 400 != 200")
+	c.Assert(g.setupHTTPClient(), ErrorMatches, "response code 400 != 200")
 }
 
 func (s *GerritTest) TestGerrit_setupHTTPClient_errUsernameNotProvided(c *C) {
 	g := s.gerrit(c)
-	g.Username = ""
-	c.Assert(g.setupHTTPClient(), ErrorMatches, "Username not provided")
+	g.Config.Username = ""
+	c.Assert(g.setupHTTPClient(), ErrorMatches, "username not provided")
 }
