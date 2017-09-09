@@ -1,12 +1,11 @@
 package gerrittest
 
 import (
-	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/opalmer/dockertest"
 	. "gopkg.in/check.v1"
@@ -28,11 +27,23 @@ func (s *RepoTest) addCleanupPath(path string) {
 	s.paths = append(s.paths, path)
 }
 
-func (s *RepoTest) newBareRepo(c *C) *Repository {
-	cfg, err := NewRepositoryConfig("", "!")
+func (s *RepoTest) newConfig(c *C) *Config {
+	path, err := ioutil.TempDir("", fmt.Sprintf("%s-", ProjectName))
 	c.Assert(err, IsNil)
-	s.addCleanupPath(cfg.Path)
-	return &Repository{Config: cfg, Path: cfg.Path}
+	s.addCleanupPath(path)
+	file, err := ioutil.TempFile("", fmt.Sprintf("%s-", ProjectName))
+	c.Assert(err, IsNil)
+	private, err := GenerateRSAKey()
+	c.Assert(err, IsNil)
+	c.Assert(WriteRSAKey(private, file), IsNil)
+	cfg := NewConfig()
+	cfg.RepoRoot = path
+	cfg.PrivateKeyPath = file.Name()
+	return cfg
+}
+
+func (s *RepoTest) newBareRepo(c *C) *Repository {
+	return &Repository{config: s.newConfig(c)}
 }
 
 func (s *RepoTest) newRepoPostInit(c *C) *Repository {
@@ -43,56 +54,15 @@ func (s *RepoTest) newRepoPostInit(c *C) *Repository {
 }
 
 func (s *RepoTest) TestNewRepository(c *C) {
-	cfg, err := NewRepositoryConfig("", "!")
-	c.Assert(err, IsNil)
-	_, err = NewRepository(cfg)
+	_, err := NewRepository(s.newConfig(c))
 	c.Assert(err, IsNil)
 }
 
-func (s *RepoTest) TestNewRepositoryConfig_PathNotProvided(c *C) {
-	cfg, err := NewRepositoryConfig("", "!")
-	s.addCleanupPath(cfg.Path)
-	c.Assert(err, IsNil)
-	stat, err := os.Stat(cfg.Path)
-	c.Assert(err, IsNil)
-	c.Assert(stat.IsDir(), Equals, true)
-}
-
-func (s *RepoTest) TestNewRepositoryConfig_PathProvided(c *C) {
-	path, err := ioutil.TempDir("", "")
-	c.Assert(err, IsNil)
-	s.addCleanupPath(path)
-	cfg, err := NewRepositoryConfig(path, "!")
-	c.Assert(err, IsNil)
-	stat, err := os.Stat(cfg.Path)
-	c.Assert(err, IsNil)
-	c.Assert(stat.IsDir(), Equals, true)
-}
-
-func (s *RepoTest) TestNewRepositoryConfig_MissingPrivateKeyPath(c *C) {
-	path, err := ioutil.TempDir("", "")
-	c.Assert(err, IsNil)
-	s.addCleanupPath(path)
-	_, err = NewRepositoryConfig(path, "")
-	c.Assert(err, ErrorMatches, "Missing private key")
-}
-
-func (s *RepoTest) TestNewRepositoryConfig(c *C) {
-	cfg, err := NewRepositoryConfig("", "!")
-	c.Assert(err, IsNil)
-	s.addCleanupPath(cfg.Path)
-	c.Assert(cfg, DeepEquals, &RepositoryConfig{
-		Path:           cfg.Path,
-		Ctx:            context.Background(),
-		Command:        "git",
-		CommandTimeout: time.Minute * 10,
-		PrivateKeyPath: "!",
-		GitConfig: map[string]string{
-			"user.name":       "admin",
-			"user.email":      "admin@localhost",
-			"core.sshCommand": "ssh -i ! -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no",
-		},
-	})
+func (s *RepoTest) TestNewRepository_MissingPrivateKey(c *C) {
+	cfg := s.newConfig(c)
+	cfg.PrivateKeyPath = ""
+	_, err := NewRepository(cfg)
+	c.Assert(err, ErrorMatches, "missing private key")
 }
 
 func (s *RepoTest) TestRepository_Init_NewRepository(c *C) {
@@ -117,8 +87,8 @@ func (s *RepoTest) TestRepository_Config(c *C) {
 
 func (s *RepoTest) TestRepository_Add(c *C) {
 	repo := s.newRepoPostInit(c)
-	c.Assert(ioutil.WriteFile(filepath.Join(repo.Path, "foo.txt"), []byte("foo"), 0600), IsNil)
-	c.Assert(ioutil.WriteFile(filepath.Join(repo.Path, "bar.txt"), []byte("bar"), 0600), IsNil)
+	c.Assert(ioutil.WriteFile(filepath.Join(repo.config.RepoRoot, "foo.txt"), []byte("foo"), 0600), IsNil)
+	c.Assert(ioutil.WriteFile(filepath.Join(repo.config.RepoRoot, "bar.txt"), []byte("bar"), 0600), IsNil)
 	c.Assert(repo.Add("foo.txt", "bar.txt"), IsNil)
 	status, err := repo.Status()
 	c.Assert(err, IsNil)
@@ -149,7 +119,7 @@ func (s *RepoTest) TestRepository_AddRemoteFromContainer(c *C) {
 func (s *RepoTest) TestRepository_WriteFile(c *C) {
 	repo := s.newRepoPostInit(c)
 	c.Assert(repo.AddContent("foo/bar.txt", 0600, []byte("Hello")), IsNil)
-	content, err := ioutil.ReadFile(filepath.Join(repo.Path, "foo", "bar.txt"))
+	content, err := ioutil.ReadFile(filepath.Join(repo.config.RepoRoot, "foo", "bar.txt"))
 	c.Assert(err, IsNil)
 	c.Assert(string(content), Equals, "Hello")
 }
