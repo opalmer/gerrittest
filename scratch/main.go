@@ -27,4 +27,8 @@ func main() {
 	chkerr(change.AmendAndPush())
 	chkerr(change.Remove("foo"))
 	chkerr(change.AmendAndPush())
+	info, err := change.ApplyLabel("", "Code-Review", "+2")
+	chkerr(err)
+	//info.Labels
+	log.Debug(info)
 }

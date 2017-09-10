@@ -72,3 +72,26 @@ func (c *Change) Remove(relative string) error {
 
 	return c.gerrit.Repo.Add(path)
 }
+
+// ApplyLabel will apply the requested label to the current change. Examples
+// of labels include 'Code-Review +2' or 'Verified +1'. If a specific revision
+// is not provided then 'current' will be used.
+func (c *Change) ApplyLabel(revision string, label string, value string) (*gerrit.ReviewResult, error) {
+	c.log.WithFields(log.Fields{
+		"phase":    "apply-label",
+		"revision": revision,
+		"label":    label,
+		"value":    value,
+	}).Debug()
+	if revision == "" {
+		revision = "current"
+	}
+
+	info, _, err := c.api.Changes.SetReview(c.ID(), revision, &gerrit.ReviewInput{
+		Labels: map[string]string{
+			label: value,
+		},
+		Drafts: "PUBLISH_ALL_REVISIONS",
+	})
+	return info, err
+}
