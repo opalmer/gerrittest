@@ -24,46 +24,54 @@ $ gerrittest start
     "image": "opalmer/gerrittest:2.14.3",
     "port_ssh": 0,
     "port_http": 0,
-    "repo_root": "",
-    "private_key": "",
+    "timeout": 300000000000,
+    "repo_root": "/tmp/gerrittest-713318600",
+    "git_command": "git",
+    "git": {
+      "core.sshCommand": "ssh -i /tmp/gerrittest-id_rsa-622079437 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no",
+      "user.email": "admin.localhost",
+      "user.name": "admin"
+    },
+    "project": "gerrittest",
+    "origin_name": "gerrittest",
+    "private_key_path": "/tmp/gerrittest-id_rsa-622079437",
     "username": "admin",
-    "password": ""
+    "password": "W7ZQWupkL8S2dMLQY5vlf+s3Qh6dsh3JuoWxImaBog",
+    "skip_setup": false,
+    "cleanup_private_key": true,
+    "cleanup_git_repo": true,
+    "cleanup_container": true
   },
   "container": {
     "http": {
       "Private": 8080,
-      "port": 37573,
+      "port": 42339,
       "address": "localhost",
       "protocol": "tcp"
     },
     "ssh": {
       "Private": 29418,
-      "port": 32787,
+      "port": 32768,
       "address": "127.0.0.1",
       "protocol": "tcp"
     },
     "image": "opalmer/gerrittest:2.14.3",
-    "id": "25482db97051b0317a14e8271c36947e610a56c18550b405aa0d441c09e7947a"
+    "id": "cd7fbf9e9a4cab6c041dcaa4e92481142fcbbd5053c685657534ab579c30b649"
   },
   "http": {
     "Private": 8080,
-    "port": 37573,
+    "port": 42339,
     "address": "localhost",
     "protocol": "tcp"
   },
   "ssh": {
     "Private": 29418,
-    "port": 32787,
+    "port": 32768,
     "address": "127.0.0.1",
     "protocol": "tcp"
   },
-  "repo": {
-    "path": "/tmp/gerrittest-093084676"
-  },
-  "private_key_path": "/tmp/gerrittest-id_rsa-186419449",
-  "username": "admin",
-  "password": "l7aJMAr70ThKMTame0ZEZr/cFH4pJnrasEaNEadlTQ"
 }
+
 ```
 
 ### Combining gerrittest, bash and curl
