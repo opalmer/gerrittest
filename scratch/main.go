@@ -1,9 +1,9 @@
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/opalmer/gerrittest"
 	"github.com/opalmer/logrusutil"
+	log "github.com/sirupsen/logrus"
 )
 
 func chkerr(err error) {
@@ -21,14 +21,10 @@ func main() {
 	gerrit, err := gerrittest.NewFromJSON("/tmp/gerrit.json")
 	chkerr(err)
 	change, err := gerrit.CreateChange("foobar")
-
 	chkerr(err)
-	_ = change
 
-	//cfg := gerrittest.NewConfig()
-	//gerrit, err := gerrittest.New(cfg)
-
-	//chkerr(err)
-	//defer gerrit.Destroy()
-	//log.Warn("!!! SUCCESS !!!")
+	chkerr(change.Write("foo/bar", 0600, []byte("hello")))
+	chkerr(change.AmendAndPush())
+	chkerr(change.Remove("foo"))
+	chkerr(change.AmendAndPush())
 }
