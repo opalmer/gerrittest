@@ -35,7 +35,7 @@ required = ["github.com/docker/distribution/reference"]
 
 [[constraint]]
   name = "github.com/Sirupsen/logrus"
-  version = "1.0.2"
+  version = "1.0.3"
 
 [[constraint]]
   branch = "master"
@@ -55,11 +55,11 @@ required = ["github.com/docker/distribution/reference"]
 
 [[constraint]]
   name = "github.com/docker/go-connections"
-  version = "0.2.1"
+  version = "0.3.0"
 
 [[constraint]]
   name = "github.com/docker/go-units"
-  version = "0.3.1"
+  version = "0.3.2"
 
 [[constraint]]
   branch = "master"
