@@ -29,7 +29,7 @@ var (
 		"add":                 {"add", "--force"},
 		"remote-add":          {"remote", "add"},
 		"get-remote-url":      {"remote", "get-url"},
-		"commit":              {"commit", "--message"},
+		"commit":              {"commit", "--allow-empty", "--message"},
 		"push":                {"push", "--porcelain"},
 		"last-commit-message": {"log", "-n", "1", "--format=medium"},
 		"amend":               {"commit", "--amend", "--no-edit", "--allow-empty"},
@@ -54,6 +54,10 @@ var (
 	// ErrRemoteNotProvided is returned by functions when a remote name
 	// or value is required by not provided.
 	ErrRemoteNotProvided = errors.New("remote not provided")
+
+	// ErrNoCommits is returned by ChangeID if there are not any commits
+	// to the repository yet.
+	ErrNoCommits = errors.New("no commits")
 
 	// RegexChangeID is used to match the Change-Id for a commit.
 	RegexChangeID = regexp.MustCompile(`(?m)^\s+Change-Id: (I[a-f0-9]{40}).*$`)
@@ -257,7 +261,11 @@ func (r *Repository) AddRemoteFromContainer(container *Container, remote string,
 // ChangeID returns a string representing the change id of the last
 // commit.
 func (r *Repository) ChangeID() (string, error) {
-	stdout, _, err := r.Git(DefaultGitCommands["last-commit-message"])
+	stdout, stderr, err := r.Git(DefaultGitCommands["last-commit-message"])
+	if strings.Contains(stderr, "does not have any commits yet") {
+		return "", ErrNoCommits
+	}
+
 	if err != nil {
 		return "", err
 	}

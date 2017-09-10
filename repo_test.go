@@ -123,3 +123,16 @@ func (s *RepoTest) TestRepository_WriteFile(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(string(content), Equals, "Hello")
 }
+
+func (s *RepoTest) TestRepository_ChangeID_ErrNoCommits(c *C) {
+	repo := s.newRepoPostInit(c)
+	_, err := repo.ChangeID()
+	c.Assert(err, ErrorMatches, ErrNoCommits.Error())
+}
+
+func (s *RepoTest) TestRepository_ChangeID_ErrFailedToLocateChange(c *C) {
+	repo := s.newRepoPostInit(c)
+	c.Assert(repo.Commit("empty commit"), IsNil)
+	_, err := repo.ChangeID()
+	c.Assert(err, ErrorMatches, ErrFailedToLocateChange.Error())
+}

@@ -247,12 +247,13 @@ func (g *Gerrit) CreateChange(subject string) (*Change, error) {
 	entry := logger.WithField("action", "create")
 	entry.Debug()
 
-	change, err := g.Repo.ChangeID()
+	changeID, err := g.Repo.ChangeID()
+	change := &Change{gerrit: g, api: client, log: logger, id: changeID}
 	if err == nil {
-		return &Change{gerrit: g, api: client, log: logger, id: change}, nil
+		return change, nil
 	}
 
-	if err == ErrFailedToLocateChange {
+	if err == ErrNoCommits {
 		if err := g.Repo.Commit(subject); err != nil {
 			entry.WithError(err).Error()
 			return nil, err
@@ -261,6 +262,7 @@ func (g *Gerrit) CreateChange(subject string) (*Change, error) {
 		if err := g.Repo.Push(ProjectName, ""); err != nil {
 			return nil, err
 		}
+		return change, nil
 	}
 	entry.WithError(err).Error()
 	return nil, err
