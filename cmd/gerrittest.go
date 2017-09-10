@@ -6,6 +6,7 @@ import (
 
 	"github.com/opalmer/gerrittest/cmd/subcommands"
 	log "github.com/sirupsen/logrus"
+	"github.com/opalmer/logrusutil"
 	"github.com/spf13/cobra"
 )
 
@@ -19,12 +20,10 @@ var RootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		level, err := log.ParseLevel(value)
-		if err != nil {
-			return err
-		}
-		log.SetLevel(level)
-		return nil
+		cfg := logrusutil.NewConfig()
+		cfg.Level = value
+		return logrusutil.ConfigureLogger(log.StandardLogger(), cfg)
+
 	},
 }
 
