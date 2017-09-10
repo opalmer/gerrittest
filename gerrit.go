@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/andygrunwald/go-gerrit"
 	"github.com/crewjam/errset"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
@@ -31,6 +32,7 @@ type Gerrit struct {
 	Repo       *Repository      `json:"-"`
 	PrivateKey ssh.Signer       `json:"-"`
 	PublicKey  ssh.PublicKey    `json:"-"`
+
 }
 
 func (g *Gerrit) errLog(logger *log.Entry, err error) error {
@@ -234,6 +236,40 @@ func (g *Gerrit) setupRepo() error {
 	return nil
 }
 
+// CreateChange will create a new change and then return a *Change struct
+// that may be used to manipulate the change. Note, this function makes no
+// attempts to keep you from calling this function multiple times. But keep in
+// mind that each *Change struct will have the same repository underneath.
+// Calling this function will also apply the newly created change to the
+// current repository.
+func (g *Gerrit) CreateChange(project string, subject string, topic string) (*Change, error) {
+	client, err := g.HTTP.Gerrit()
+	if err != nil {
+		return nil, err
+	}
+
+	logger := g.log.WithField("cmp", "change")
+	entry := logger.WithField("action", "create")
+	entry.Debug()
+	input := &gerrit.ChangeInfo{
+		Project: project,
+		Subject: subject,
+		Status:  "NEW",
+	}
+	if topic != "" {
+		input.Topic = topic
+	}
+
+	info, _, err := client.Changes.CreateChange(input)
+	if err != nil {
+		logger.WithError(err).Error()
+		return nil, err
+	}
+	logger = logger.WithField("id", input.ID[:8])
+	// TODO retrieve change and then apply it to the current repo
+	return &Change{gerrit: g, api: client, log: logger, change: info}, nil
+}
+
 // WriteJSONFile takes the current struct and writes the data to disk
 // as json.
 func (g *Gerrit) WriteJSONFile(path string) error {
@@ -281,32 +317,32 @@ func New(cfg *Config) (*Gerrit, error) {
 		cfg.Context = context.Background()
 	}
 
-	gerrit := &Gerrit{
+	g := &Gerrit{
 		log:    log.WithField("cmp", "core"),
 		Config: cfg,
 	}
-	if err := gerrit.setupSSHKey(); err != nil {
-		return gerrit, err
+	if err := g.setupSSHKey(); err != nil {
+		return g, err
 	}
-	if err := gerrit.startContainer(); err != nil {
-		return gerrit, err
+	if err := g.startContainer(); err != nil {
+		return g, err
 	}
 
 	if cfg.SkipSetup {
-		return gerrit, nil
+		return g, nil
 	}
 
-	if err := gerrit.setupHTTPClient(); err != nil {
-		return gerrit, err
+	if err := g.setupHTTPClient(); err != nil {
+		return g, err
 	}
-	if err := gerrit.setupSSHClient(); err != nil {
-		return gerrit, err
+	if err := g.setupSSHClient(); err != nil {
+		return g, err
 	}
-	if err := gerrit.setupRepo(); err != nil {
-		return gerrit, err
+	if err := g.setupRepo(); err != nil {
+		return g, err
 	}
 
-	return gerrit, nil
+	return g, nil
 }
 
 // NewFromJSON reads information from a json file and returns a *Gerrit
@@ -318,38 +354,38 @@ func NewFromJSON(path string) (*Gerrit, error) {
 	}
 
 	ctx := context.Background()
-	gerrit := &Gerrit{
+	g := &Gerrit{
 		log: log.WithField("cmp", "core"),
 	}
-	if err := json.Unmarshal(data, gerrit); err != nil {
+	if err := json.Unmarshal(data, g); err != nil {
 		return nil, err
 	}
-	gerrit.Config.Context = ctx
-	gerrit.Container.ctx = ctx
+	g.Config.Context = ctx
+	g.Container.ctx = ctx
 
 	docker, err := dockertest.NewClient()
 	if err != nil {
 		return nil, err
 	}
-	gerrit.Container.Docker = docker
+	g.Container.Docker = docker
 
-	repo, err := NewRepository(gerrit.Config)
+	repo, err := NewRepository(g.Config)
 	if err != nil {
 		return nil, err
 	}
-	gerrit.Repo = repo
+	g.Repo = repo
 
-	sshClient, err := NewSSHClient(gerrit.Config, gerrit.SSHPort)
+	sshClient, err := NewSSHClient(g.Config, g.SSHPort)
 	if err != nil {
 		return nil, err
 	}
-	gerrit.SSH = sshClient
+	g.SSH = sshClient
 
-	httpClient, err := NewHTTPClient(gerrit.Config, gerrit.HTTPPort)
+	httpClient, err := NewHTTPClient(g.Config, g.HTTPPort)
 	if err != nil {
 		return nil, err
 	}
-	gerrit.HTTP = httpClient
+	g.HTTP = httpClient
 
-	return gerrit, nil
+	return g, nil
 }
