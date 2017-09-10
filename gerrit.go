@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/andygrunwald/go-gerrit"
 	"github.com/crewjam/errset"
 	"github.com/opalmer/dockertest"
 	"golang.org/x/crypto/ssh"
@@ -32,7 +31,6 @@ type Gerrit struct {
 	Repo       *Repository      `json:"-"`
 	PrivateKey ssh.Signer       `json:"-"`
 	PublicKey  ssh.PublicKey    `json:"-"`
-
 }
 
 func (g *Gerrit) errLog(logger *log.Entry, err error) error {
@@ -170,23 +168,24 @@ func (g *Gerrit) setupHTTPClient() error { // nolint: gocyclo
 		g.Config.Password = generated
 	}
 
-	// Create the gerrit project.
-	if g.Config.Project != "" {
-		logger = logger.WithFields(log.Fields{
-			"action":  "create-project",
-			"project": g.Config.Project,
-		})
-		gerrit, err := client.Gerrit()
-		if err != nil {
-			return g.errLog(logger, err)
-		}
-		logger.Debug()
-		if _, _, err := gerrit.Projects.CreateProject(g.Config.Project, nil); err != nil {
-			return g.errLog(logger, err)
-		}
+	gc, err := client.Gerrit()
+	if err != nil {
+		return g.errLog(logger, err)
 	}
 
-	return err
+	if g.Config.Project == "" {
+		g.Config.Project = ProjectName
+	}
+
+	logger = logger.WithFields(log.Fields{
+		"action":  "create-project",
+		"project": g.Config.Project,
+	})
+	logger.Debug()
+	if _, _, err := gc.Projects.CreateProject(g.Config.Project, nil); err != nil {
+		return g.errLog(logger, err)
+	}
+	return nil
 }
 
 func (g *Gerrit) setupSSHClient() error {
@@ -236,13 +235,9 @@ func (g *Gerrit) setupRepo() error {
 	return nil
 }
 
-// CreateChange will create a new change and then return a *Change struct
-// that may be used to manipulate the change. Note, this function makes no
-// attempts to keep you from calling this function multiple times. But keep in
-// mind that each *Change struct will have the same repository underneath.
-// Calling this function will also apply the newly created change to the
-// current repository.
-func (g *Gerrit) CreateChange(project string, subject string, topic string) (*Change, error) {
+// CreateChange will return a *Change struct. If a change has already been
+// created then that change will be returned instead of creating a new one.
+func (g *Gerrit) CreateChange(subject string) (*Change, error) {
 	client, err := g.HTTP.Gerrit()
 	if err != nil {
 		return nil, err
@@ -251,23 +246,24 @@ func (g *Gerrit) CreateChange(project string, subject string, topic string) (*Ch
 	logger := g.log.WithField("cmp", "change")
 	entry := logger.WithField("action", "create")
 	entry.Debug()
-	input := &gerrit.ChangeInfo{
-		Project: project,
-		Subject: subject,
-		Status:  "NEW",
-	}
-	if topic != "" {
-		input.Topic = topic
+
+	change, err := g.Repo.ChangeID()
+	if err == nil {
+		return &Change{gerrit: g, api: client, log: logger, id: change}, nil
 	}
 
-	info, _, err := client.Changes.CreateChange(input)
-	if err != nil {
-		logger.WithError(err).Error()
-		return nil, err
+	if err == ErrFailedToLocateChange {
+		if err := g.Repo.Commit(subject); err != nil {
+			entry.WithError(err).Error()
+			return nil, err
+		}
+
+		if err := g.Repo.Push(ProjectName, ""); err != nil {
+			return nil, err
+		}
 	}
-	logger = logger.WithField("id", input.ID[:8])
-	// TODO retrieve change and then apply it to the current repo
-	return &Change{gerrit: g, api: client, log: logger, change: info}, nil
+	entry.WithError(err).Error()
+	return nil, err
 }
 
 // WriteJSONFile takes the current struct and writes the data to disk
