@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	. "gopkg.in/check.v1"
 )
 
