@@ -14,8 +14,8 @@ import (
 	"strings"
 	"syscall"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/gerrittest/internal"
+	log "github.com/sirupsen/logrus"
 )
 
 var (

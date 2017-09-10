@@ -11,8 +11,8 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/opalmer/dockertest"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 

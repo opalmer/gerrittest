@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // DefaultUpstream is the upstream used for pulling in repo repositories.

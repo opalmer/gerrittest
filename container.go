@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/crewjam/errset"
 	"github.com/opalmer/dockertest"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
