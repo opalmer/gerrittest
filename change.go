@@ -3,7 +3,7 @@ package gerrittest
 import (
 	"os"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/andygrunwald/go-gerrit"
 )
 
