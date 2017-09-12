@@ -27,8 +27,10 @@ func main() {
 	chkerr(change.AmendAndPush())
 	chkerr(change.Remove("foo"))
 	chkerr(change.AmendAndPush())
-	info, err := change.ApplyLabel("", "Code-Review", "+2")
+	_, err = change.ApplyLabel("", "Code-Review", "+2")
+	chkerr(err)
+	_, err = change.AddTopLevelComment("", "Hello, world")
 	chkerr(err)
 	//info.Labels
-	log.Debug(info)
+	//log.Debug(info)
 }

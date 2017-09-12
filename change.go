@@ -8,6 +8,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	// DefaultRevision is the revision to use in the Change struct when
+	// no other revision is provided.
+	DefaultRevision = "current"
+)
+
 // Change is used to interact with an manipulate a single change.
 type Change struct {
 	gerrit *Gerrit
@@ -77,15 +83,15 @@ func (c *Change) Remove(relative string) error {
 // of labels include 'Code-Review +2' or 'Verified +1'. If a specific revision
 // is not provided then 'current' will be used.
 func (c *Change) ApplyLabel(revision string, label string, value string) (*gerrit.ReviewResult, error) {
+	if revision == "" {
+		revision = DefaultRevision
+	}
 	c.log.WithFields(log.Fields{
 		"phase":    "apply-label",
 		"revision": revision,
 		"label":    label,
 		"value":    value,
 	}).Debug()
-	if revision == "" {
-		revision = "current"
-	}
 
 	info, _, err := c.api.Changes.SetReview(c.ID(), revision, &gerrit.ReviewInput{
 		Labels: map[string]string{
@@ -94,4 +100,26 @@ func (c *Change) ApplyLabel(revision string, label string, value string) (*gerri
 		Drafts: "PUBLISH_ALL_REVISIONS",
 	})
 	return info, err
+}
+
+
+// AddTopLevelComment will a single top level comment to the current
+// change.
+func (c *Change) AddTopLevelComment(revision string, comment string) (*gerrit.ReviewResult, error){
+	if revision == "" {
+		revision = DefaultRevision
+	}
+	c.log.WithFields(log.Fields{
+		"phase":    "add-top-level-comment",
+		"revision": revision,
+		"comment":    comment,
+	}).Debug()
+
+	result, _, err := c.api.Changes.SetReview(c.ID(), revision, &gerrit.ReviewInput{
+		Message: comment,
+		Drafts: "PUBLISH_ALL_REVISIONS",
+		Notify: "NONE", // Don't send email
+		OmitDuplicateComments: true,
+	})
+	return result, err
 }
