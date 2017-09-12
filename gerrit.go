@@ -1,6 +1,7 @@
 package gerrittest
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -205,6 +206,103 @@ func (g *Gerrit) setupSSHClient() error {
 	return nil
 }
 
+// Creates a temporary repository and use it to configure
+// the server.
+func (g *Gerrit) pushConfig() error {
+	logger := g.log.WithFields(log.Fields{
+		"phase": "setup",
+		"task":  "push-config",
+	})
+	logger.Debug()
+
+	dir, err := ioutil.TempDir("", fmt.Sprintf("%s-", ProjectName))
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(dir) // nolint: errcheck
+
+	cfg := NewConfig()
+	cfg.PrivateKeyPath = g.Config.PrivateKeyPath
+	cfg.RepoRoot = dir
+	logger.Warnf("g.Repo.config.RepoRoot: %s", g.Repo.config.RepoRoot)
+	logger.Warnf("cfg.RepoRoot: %s", cfg.RepoRoot)
+
+	repo, err := NewRepository(cfg)
+	if err != nil {
+		logger.WithError(err).Error()
+		return err
+	}
+
+	if err := repo.AddRemoteFromContainer(g.Container, "origin", "All-Projects"); err != nil {
+		logger.WithError(err).Error()
+		return err
+	}
+
+
+	logger.Warnf("g.Repo.config.RepoRoot: %s", g.Repo.config.RepoRoot)
+	logger.Warnf("cfg.RepoRoot: %s", cfg.RepoRoot)
+	logger.WithField("action", "fetch-origin").Debug()
+	_, _, err = repo.Git([]string{
+		"fetch", "origin",
+		"refs/meta/config:refs/remotes/origin/meta/config"})
+	if err != nil {
+		logger.WithError(err).Error()
+		return err
+	}
+
+	logger.WithField("action", "checkout").Debug()
+	_, _, err = repo.Git([]string{"checkout", "meta/config"})
+	if err != nil {
+		logger.WithError(err).Error()
+		return err
+	}
+
+	configPath := filepath.Join(dir, "project.config")
+	data, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		logger.WithError(err).Error()
+		return err
+	}
+
+	header := "[label \"Verified\"]"
+	if !bytes.Contains(data, []byte(header)) {
+		logger.WithField("action", "modify-config").Debug()
+		file, err := os.OpenFile(configPath, os.O_APPEND, 0661)
+		if err != nil {
+			logger.WithError(err).Error()
+			return err
+		}
+		values := []string{
+			"[label \"Verified\"]",
+			"function = MaxWithBlock",
+			"value = -1 Fails",
+			"value =  0 No score",
+			"value = +1 Verified",
+		}
+		for _, value := range values {
+			logger.WithFields(log.Fields{"action": "write", "value": value}).Debug()
+			if _, err := file.WriteString(value + "\n"); err != nil {
+				return err
+			}
+
+		}
+		if err := file.Close(); err != nil {
+			return err
+		}
+
+		logger.WithField("action", "commit").Debug()
+		if _, _, err := repo.Git([]string{"commit", "--all", "--message", "adding verified label"}); err != nil {
+			logger.WithError(err).Error()
+			return err
+		}
+		logger.WithField("action", "push").Debug()
+		if _, _, err := repo.Git([]string{"git", "push", "origin", "meta/config:meta/config"}); err != nil {
+			logger.WithError(err).Error()
+		}
+	}
+	return nil
+}
+
 func (g *Gerrit) setupRepo() error {
 	logger := g.log.WithFields(log.Fields{
 		"phase": "setup",
@@ -337,6 +435,9 @@ func New(cfg *Config) (*Gerrit, error) {
 		return g, err
 	}
 	if err := g.setupRepo(); err != nil {
+		return g, err
+	}
+	if err := g.pushConfig(); err != nil {
 		return g, err
 	}
 
