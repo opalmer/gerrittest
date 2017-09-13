@@ -78,8 +78,8 @@ func (g *Gerrit) setupSSHKey() error {
 
 	if g.Config.PrivateKeyPath != "" {
 		entry := logger.WithFields(log.Fields{
-			"action": "read",
-			"path":   g.Config.PrivateKeyPath,
+			"action":   "read",
+			"key-path": g.Config.PrivateKeyPath,
 		})
 		entry.Debug()
 		public, private, err := ReadSSHKeys(g.Config.PrivateKeyPath)
@@ -93,9 +93,7 @@ func (g *Gerrit) setupSSHKey() error {
 		g.PublicKey = public
 		return nil
 	}
-	entry := logger.WithFields(log.Fields{
-		"action": "generate",
-	})
+	entry := logger.WithField("action", "generate")
 
 	private, err := GenerateRSAKey()
 	if err != nil {
@@ -153,12 +151,12 @@ func (g *Gerrit) setupHTTPClient() error { // nolint: gocyclo
 	if g.Config.Password != "" {
 		logger = logger.WithField("action", "set-password")
 		logger.Debug()
-
 		if _, err := g.HTTP.Gerrit(); err != nil {
 			if err := g.HTTP.setPassword(g.Config.Password); err != nil {
 				return g.errLog(logger, err)
 			}
 		}
+
 	} else {
 		logger = logger.WithField("action", "generate-password")
 		logger.Debug()
@@ -176,6 +174,11 @@ func (g *Gerrit) setupHTTPClient() error { // nolint: gocyclo
 
 	if g.Config.Project == "" {
 		g.Config.Project = ProjectName
+	}
+
+	logger = logger.WithField("action", "configure-email")
+	if err := g.HTTP.configureEmail(); err != nil {
+		return g.errLog(logger, err)
 	}
 
 	logger = logger.WithFields(log.Fields{
@@ -224,80 +227,73 @@ func (g *Gerrit) pushConfig() error {
 	cfg := NewConfig()
 	cfg.PrivateKeyPath = g.Config.PrivateKeyPath
 	cfg.RepoRoot = dir
-	logger.Warnf("g.Repo.config.RepoRoot: %s", g.Repo.config.RepoRoot)
-	logger.Warnf("cfg.RepoRoot: %s", cfg.RepoRoot)
 
+	// Be sure to copy the original git config. This contains information
+	// about the ssh command, user, email, etc. Without this git commands
+	// will fail in unexpected ways.
+	cfg.GitConfig = g.Config.GitConfig
+
+	logger.WithField("action", "new-repo").Debug()
 	repo, err := NewRepository(cfg)
 	if err != nil {
-		logger.WithError(err).Error()
 		return err
 	}
 
 	if err := repo.AddRemoteFromContainer(g.Container, "origin", "All-Projects"); err != nil {
-		logger.WithError(err).Error()
 		return err
 	}
 
-
-	logger.Warnf("g.Repo.config.RepoRoot: %s", g.Repo.config.RepoRoot)
-	logger.Warnf("cfg.RepoRoot: %s", cfg.RepoRoot)
-	logger.WithField("action", "fetch-origin").Debug()
-	_, _, err = repo.Git([]string{
-		"fetch", "origin",
-		"refs/meta/config:refs/remotes/origin/meta/config"})
-	if err != nil {
-		logger.WithError(err).Error()
+	if _, _, err := repo.Git([]string{
+		"fetch", "origin", "refs/meta/config:refs/remotes/origin/meta/config"}); err != nil {
 		return err
 	}
 
 	logger.WithField("action", "checkout").Debug()
-	_, _, err = repo.Git([]string{"checkout", "meta/config"})
-	if err != nil {
-		logger.WithError(err).Error()
+	if _, _, err := repo.Git([]string{"checkout", "meta/config"}); err != nil {
 		return err
 	}
 
+	config := []byte{}
 	configPath := filepath.Join(dir, "project.config")
+
 	data, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		logger.WithError(err).Error()
-		return err
+	if err == nil {
+		config = data
 	}
 
 	header := "[label \"Verified\"]"
-	if !bytes.Contains(data, []byte(header)) {
+	if !bytes.Contains(config, []byte(header)) {
 		logger.WithField("action", "modify-config").Debug()
-		file, err := os.OpenFile(configPath, os.O_APPEND, 0661)
-		if err != nil {
-			logger.WithError(err).Error()
-			return err
-		}
 		values := []string{
-			"[label \"Verified\"]",
+			header,
 			"function = MaxWithBlock",
 			"value = -1 Fails",
 			"value =  0 No score",
 			"value = +1 Verified",
 		}
-		for _, value := range values {
-			logger.WithFields(log.Fields{"action": "write", "value": value}).Debug()
-			if _, err := file.WriteString(value + "\n"); err != nil {
-				return err
-			}
 
+		for _, value := range values {
+			config = append(config, []byte(value+"\n")...)
 		}
-		if err := file.Close(); err != nil {
+
+		logger.WithField("action", "write-config").Debug()
+		if err := ioutil.WriteFile(configPath, config, 0644); err != nil {
+			return err
+		}
+
+		logger.WithField("action", "add").Debug()
+		if _, _, err := repo.Git(append(DefaultGitCommands["add"], configPath)); err != nil {
 			return err
 		}
 
 		logger.WithField("action", "commit").Debug()
-		if _, _, err := repo.Git([]string{"commit", "--all", "--message", "adding verified label"}); err != nil {
-			logger.WithError(err).Error()
+		if _, _, err := repo.Git([]string{"commit", "--message", "add verified label"}); err != nil {
 			return err
 		}
+
 		logger.WithField("action", "push").Debug()
-		if _, _, err := repo.Git([]string{"git", "push", "origin", "meta/config:meta/config"}); err != nil {
-			logger.WithError(err).Error()
+		if _, _, err := repo.Git([]string{"push", "origin", "meta/config:meta/config"}); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -312,11 +308,11 @@ func (g *Gerrit) setupRepo() error {
 
 	if g.Config.RepoRoot == "" {
 		g.Config.CleanupGitRepo = true
-		tmppath, err := ioutil.TempDir("", fmt.Sprintf("%s-", ProjectName))
+		tempdir, err := ioutil.TempDir("", fmt.Sprintf("%s-", ProjectName))
 		if err != nil {
 			return err
 		}
-		g.Config.RepoRoot = tmppath
+		g.Config.RepoRoot = tempdir
 	}
 
 	repo, err := NewRepository(g.Config)
@@ -330,7 +326,7 @@ func (g *Gerrit) setupRepo() error {
 			g.Container, g.Config.OriginName, g.Config.Project)
 	}
 
-	return nil
+	return g.pushConfig()
 }
 
 // CreateChange will return a *Change struct. If a change has already been
@@ -486,5 +482,5 @@ func NewFromJSON(path string) (*Gerrit, error) {
 	}
 	g.HTTP = httpClient
 
-	return g, nil
+	return g, g.pushConfig()
 }

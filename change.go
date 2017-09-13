@@ -102,23 +102,22 @@ func (c *Change) ApplyLabel(revision string, label string, value string) (*gerri
 	return info, err
 }
 
-
 // AddTopLevelComment will a single top level comment to the current
 // change.
-func (c *Change) AddTopLevelComment(revision string, comment string) (*gerrit.ReviewResult, error){
+func (c *Change) AddTopLevelComment(revision string, comment string) (*gerrit.ReviewResult, error) {
 	if revision == "" {
 		revision = DefaultRevision
 	}
 	c.log.WithFields(log.Fields{
 		"phase":    "add-top-level-comment",
 		"revision": revision,
-		"comment":    comment,
+		"comment":  comment,
 	}).Debug()
 
 	result, _, err := c.api.Changes.SetReview(c.ID(), revision, &gerrit.ReviewInput{
-		Message: comment,
-		Drafts: "PUBLISH_ALL_REVISIONS",
-		Notify: "NONE", // Don't send email
+		Message:               comment,
+		Drafts:                "PUBLISH_ALL_REVISIONS",
+		Notify:                "NONE", // Don't send email
 		OmitDuplicateComments: true,
 	})
 	return result, err

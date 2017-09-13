@@ -219,6 +219,24 @@ func (h *HTTPClient) insertPublicKey(key ssh.PublicKey) error {
 	return err
 }
 
+func (h *HTTPClient) configureEmail() error {
+	g, err := h.Gerrit()
+	if err != nil {
+		return err
+	}
+	account, _, err := g.Accounts.GetAccount("self")
+	if err != nil {
+		return err
+	}
+
+	_, _, err = g.Accounts.CreateAccountEmail(account.Username, h.config.GitConfig["user.email"], &gerrit.EmailInput{
+		Email:          h.config.GitConfig["user.email"],
+		Preferred:      true,
+		NoConfirmation: true,
+	})
+	return err
+}
+
 // NewHTTPClient takes a *Service struct and returns an *HTTPClient. No
 // validation to ensure the service is actually running is performed.
 func NewHTTPClient(config *Config, port *dockertest.Port) (*HTTPClient, error) {

@@ -13,13 +13,13 @@ func chkerr(err error) {
 }
 
 func main() {
-	log.SetLevel(log.DebugLevel)
 	logcfg := logrusutil.NewConfig()
 	logcfg.Level = "debug"
 	chkerr(logrusutil.ConfigureLogger(log.StandardLogger(), logcfg))
 
 	gerrit, err := gerrittest.NewFromJSON("/tmp/gerrit.json")
 	chkerr(err)
+	_ = gerrit
 	change, err := gerrit.CreateChange("foobar")
 	chkerr(err)
 
@@ -31,6 +31,4 @@ func main() {
 	chkerr(err)
 	_, err = change.AddTopLevelComment("", "Hello, world")
 	chkerr(err)
-	//info.Labels
-	//log.Debug(info)
 }

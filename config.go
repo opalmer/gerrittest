@@ -96,7 +96,7 @@ func NewConfig() *Config {
 		GitCommand: "git",
 		GitConfig: map[string]string{
 			"user.name":  "admin",
-			"user.email": "admin.localhost",
+			"user.email": "admin@localhost",
 		},
 		Project:           ProjectName,
 		OriginName:        ProjectName,

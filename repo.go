@@ -96,11 +96,16 @@ func (r *Repository) setEnvironment(cmd *exec.Cmd) error {
 }
 
 func (r *Repository) run(cmd *exec.Cmd) (string, string, error) {
+	cwd, err := os.Getwd()
 	logger := log.WithFields(log.Fields{
-		"phase": "git",
-		"repo":  r.config.PrivateKeyPath,
+		"phase": "run",
+		"key":   r.config.PrivateKeyPath,
 		"cmd":   strings.Join(cmd.Args, " "),
+		"wd":    cwd,
 	})
+	if err != nil {
+		return "", "", err
+	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", "", err
