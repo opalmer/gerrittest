@@ -3,10 +3,11 @@ package gerrittest
 import (
 	"context"
 	"os"
-
 	"time"
 
+	"github.com/go-ini/ini"
 	"github.com/opalmer/dockertest"
+	log "github.com/sirupsen/logrus"
 )
 
 // Config is used to tell the *runner struct what setup steps
@@ -109,4 +110,69 @@ func NewConfig() *Config {
 		CleanupGitRepo:    false,
 		CleanupContainer:  true,
 	}
+}
+
+const (
+	accessHeads   = `access "refs/heads/*"`
+	labelVerified = `label "Verified"`
+)
+
+// projectConfig is an internal struct which is used to edit the existing
+// configuration.
+type projectConfig struct {
+	log *log.Entry
+	ini *ini.File
+}
+
+func (c *projectConfig) modifyVerifiedTag() {
+	logger := c.log.WithField("phase", "create-verified-tag")
+	logger.Debug()
+
+	section := c.ini.Section(labelVerified)
+	section.Key("function").SetValue("MaxWithBlock")
+	section.Key("defaultValue").SetValue("0")
+	value := section.Key("value")
+	value.SetValue("-1 Fails")
+	value.AddShadow("0 No Score")  // nolint: errcheck
+	value.AddShadow("+1 Verified") // nolint: errcheck
+}
+
+func (c *projectConfig) modifyAccess() {
+	logger := c.log.WithField("phase", "modify-access")
+	logger.Debug()
+
+	section := c.ini.Section(accessHeads)
+	value := section.Key("label-Verified")
+	value.SetValue("-1..+1 group Administrators")
+	value.AddShadow("-1..+1 group Project Owners") // nolint: errcheck
+}
+
+func (c *projectConfig) write(path string) error {
+	c.modifyVerifiedTag()
+	c.modifyAccess()
+	c.log.WithField("phase", "write").Debug()
+	return c.ini.SaveTo(path)
+}
+
+// newProjectConfig produces a projectConfig struct.
+func newProjectConfig(path string) (*projectConfig, error) {
+	logger := log.WithField("cmp", "project-config")
+	options := ini.LoadOptions{AllowShadows: true}
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		logger.WithField("action", "new").Debug()
+		cfg, err := ini.LoadSources(options, []byte(""))
+		if err != nil {
+			return nil, err
+		}
+		return &projectConfig{log: logger, ini: cfg}, nil
+	}
+
+	logger = logger.WithField("path", path)
+	logger.WithField("action", "load").Debug()
+	cfg, err := ini.LoadSources(options, path)
+	if err != nil {
+		return nil, err
+	}
+	return &projectConfig{log: logger, ini: cfg}, nil
 }

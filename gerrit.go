@@ -1,7 +1,6 @@
 package gerrittest
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -209,8 +208,9 @@ func (g *Gerrit) setupSSHClient() error {
 	return nil
 }
 
-// Creates a temporary repository and use it to configure
-// the server.
+// pushConfig pushes configuration data to the Gerrit instance. This ensures
+// that certain settings, such as permissions around the Verified +1 tag, are
+// set properly.
 func (g *Gerrit) pushConfig() error {
 	logger := g.log.WithFields(log.Fields{
 		"phase": "setup",
@@ -222,7 +222,7 @@ func (g *Gerrit) pushConfig() error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(dir) // nolint: errcheck
+	//defer os.RemoveAll(dir) // nolint: errcheck
 
 	cfg := NewConfig()
 	cfg.PrivateKeyPath = g.Config.PrivateKeyPath
@@ -253,48 +253,28 @@ func (g *Gerrit) pushConfig() error {
 		return err
 	}
 
-	config := []byte{}
-	configPath := filepath.Join(dir, "project.config")
-
-	data, err := ioutil.ReadFile(configPath)
-	if err == nil {
-		config = data
+	path := filepath.Join(dir, "project.config")
+	ini, err := newProjectConfig(path)
+	if err != nil {
+		return err
+	}
+	if err := ini.write(path); err != nil {
+		return err
 	}
 
-	header := "[label \"Verified\"]"
-	if !bytes.Contains(config, []byte(header)) {
-		logger.WithField("action", "modify-config").Debug()
-		values := []string{
-			header,
-			"function = MaxWithBlock",
-			"value = -1 Fails",
-			"value =  0 No score",
-			"value = +1 Verified",
-		}
+	logger.WithField("action", "add").Debug()
+	if _, _, err := repo.Git(append(DefaultGitCommands["add"], path)); err != nil {
+		return err
+	}
 
-		for _, value := range values {
-			config = append(config, []byte(value+"\n")...)
-		}
+	logger.WithField("action", "commit").Debug()
+	if _, _, err := repo.Git([]string{"commit", "--message", "add verified label"}); err != nil {
+		return err
+	}
 
-		logger.WithField("action", "write-config").Debug()
-		if err := ioutil.WriteFile(configPath, config, 0644); err != nil {
-			return err
-		}
-
-		logger.WithField("action", "add").Debug()
-		if _, _, err := repo.Git(append(DefaultGitCommands["add"], configPath)); err != nil {
-			return err
-		}
-
-		logger.WithField("action", "commit").Debug()
-		if _, _, err := repo.Git([]string{"commit", "--message", "add verified label"}); err != nil {
-			return err
-		}
-
-		logger.WithField("action", "push").Debug()
-		if _, _, err := repo.Git([]string{"push", "origin", "meta/config:meta/config"}); err != nil {
-			return err
-		}
+	logger.WithField("action", "push").Debug()
+	if _, _, err := repo.Git([]string{"push", "origin", "meta/config:meta/config"}); err != nil {
+		return err
 	}
 	return nil
 }

@@ -78,6 +78,10 @@ required = [
   name = "gopkg.in/check.v1"
 
 [[constraint]]
+  branch = "v1"
+  name = "gopkg.in/ini.v1"
+
+[[constraint]]
   name = "github.com/opencontainers/runc"
   version = "1.0.0-rc4"
 
