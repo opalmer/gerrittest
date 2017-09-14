@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"strconv"
+
 	"github.com/andygrunwald/go-gerrit"
 	log "github.com/sirupsen/logrus"
 )
@@ -12,6 +14,14 @@ var (
 	// DefaultRevision is the revision to use in the Change struct when
 	// no other revision is provided.
 	DefaultRevision = "current"
+)
+
+const (
+	// VerifiedLabel is a string representing the 'Verified' label
+	VerifiedLabel = "Verified"
+
+	// CodeReviewLabel is a string representing the 'Code-Review' label
+	CodeReviewLabel = "Code-Review"
 )
 
 // Change is used to interact with an manipulate a single change.
@@ -82,7 +92,7 @@ func (c *Change) Remove(relative string) error {
 // ApplyLabel will apply the requested label to the current change. Examples
 // of labels include 'Code-Review +2' or 'Verified +1'. If a specific revision
 // is not provided then 'current' will be used.
-func (c *Change) ApplyLabel(revision string, label string, value string) (*gerrit.ReviewResult, error) {
+func (c *Change) ApplyLabel(revision string, label string, value int) (*gerrit.ReviewResult, error) {
 	if revision == "" {
 		revision = DefaultRevision
 	}
@@ -95,10 +105,25 @@ func (c *Change) ApplyLabel(revision string, label string, value string) (*gerri
 
 	info, _, err := c.api.Changes.SetReview(c.ID(), revision, &gerrit.ReviewInput{
 		Labels: map[string]string{
-			label: value,
+			label: strconv.Itoa(value),
 		},
 		Drafts: "PUBLISH_ALL_REVISIONS",
 	})
+	return info, err
+}
+
+// Submit will submit the change. Note, this typically will only work if the
+// change has Code-Review +2 and Verified +1 labels applied.
+func (c *Change) Submit() (*gerrit.ChangeInfo, error) {
+	info, _, err := c.api.Changes.SubmitChange(c.ID(), &gerrit.SubmitInput{})
+	return info, err
+}
+
+// Submit will submit the change. Note, this will only work if the change
+// has Code-Review +2 and Verified +1 already applied.
+func (c *Change) Abandon() (*gerrit.ChangeInfo, error) {
+	info, _, err := c.api.Changes.SubmitChange(c.ID(), &gerrit.SubmitInput{})
+
 	return info, err
 }
 

@@ -27,8 +27,11 @@ func main() {
 	chkerr(change.AmendAndPush())
 	chkerr(change.Remove("foo"))
 	chkerr(change.AmendAndPush())
-	_, err = change.ApplyLabel("", "Code-Review", "+2")
+	_, err = change.ApplyLabel("", gerrittest.CodeReviewLabel, 2)
 	chkerr(err)
 	_, err = change.AddTopLevelComment("", "Hello, world")
 	chkerr(err)
+	_, err = change.ApplyLabel("", gerrittest.VerifiedLabel, 1)
+	chkerr(err)
+
 }
