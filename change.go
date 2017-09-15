@@ -115,6 +115,7 @@ func (c *Change) ApplyLabel(revision string, label string, value int) (*gerrit.R
 // Submit will submit the change. Note, this typically will only work if the
 // change has Code-Review +2 and Verified +1 labels applied.
 func (c *Change) Submit() (*gerrit.ChangeInfo, error) {
+	c.log.WithField("phase", "submit").Debug()
 	info, _, err := c.api.Changes.SubmitChange(c.ID(), &gerrit.SubmitInput{})
 	return info, err
 }
@@ -122,8 +123,8 @@ func (c *Change) Submit() (*gerrit.ChangeInfo, error) {
 // Submit will submit the change. Note, this will only work if the change
 // has Code-Review +2 and Verified +1 already applied.
 func (c *Change) Abandon() (*gerrit.ChangeInfo, error) {
-	info, _, err := c.api.Changes.SubmitChange(c.ID(), &gerrit.SubmitInput{})
-
+	c.log.WithField("phase", "abandon").Debug()
+	info, _, err := c.api.Changes.AbandonChange(c.ID(), &gerrit.AbandonInput{})
 	return info, err
 }
 
