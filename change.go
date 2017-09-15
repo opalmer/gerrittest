@@ -122,8 +122,7 @@ func (c *Change) Submit() (*gerrit.ChangeInfo, error) {
 	return info, err
 }
 
-// Submit will submit the change. Note, this will only work if the change
-// has Code-Review +2 and Verified +1 already applied.
+// Abandon will abandon the change.
 func (c *Change) Abandon() (*gerrit.ChangeInfo, error) {
 	c.log.WithField("phase", "abandon").Debug()
 	info, _, err := c.api.Changes.AbandonChange(c.ID(), &gerrit.AbandonInput{})

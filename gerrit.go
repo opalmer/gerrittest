@@ -211,7 +211,7 @@ func (g *Gerrit) setupSSHClient() error {
 // pushConfig pushes configuration data to the Gerrit instance. This ensures
 // that certain settings, such as permissions around the Verified +1 tag, are
 // set properly.
-func (g *Gerrit) pushConfig() error {
+func (g *Gerrit) pushConfig() error { // nolint: gocyclo
 	logger := g.log.WithFields(log.Fields{
 		"phase": "setup",
 		"task":  "push-config",
@@ -222,7 +222,7 @@ func (g *Gerrit) pushConfig() error {
 	if err != nil {
 		return err
 	}
-	//defer os.RemoveAll(dir) // nolint: errcheck
+	defer os.RemoveAll(dir) // nolint: errcheck
 
 	cfg := NewConfig()
 	cfg.PrivateKeyPath = g.Config.PrivateKeyPath
@@ -273,10 +273,8 @@ func (g *Gerrit) pushConfig() error {
 	}
 
 	logger.WithField("action", "push").Debug()
-	if _, _, err := repo.Git([]string{"push", "origin", "meta/config:meta/config"}); err != nil {
-		return err
-	}
-	return nil
+	_, _, err = repo.Git([]string{"push", "origin", "meta/config:meta/config"})
+	return err
 }
 
 func (g *Gerrit) setupRepo() error {
