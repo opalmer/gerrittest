@@ -21,7 +21,8 @@
 #  version = "2.4.0"
 
 # NOTE: The below dependencies are mainly used for testing
-# purposes. This mirrors the dependencies required of
+# purposes. This mirrors the dependencies required of dockertest
+# for the most part.
 
 required = [
     "github.com/docker/distribution/reference",
@@ -56,10 +57,10 @@ required = [
 [[constraint]]
   branch = "master"
   name = "github.com/docker/distribution"
-
-[[constraint]]
-  name = "github.com/docker/docker"
-  revision = "13fec0607394f7c6da0148f8d513b6fcbf7cce61"
+#
+#[[constraint]]
+#  name = "github.com/docker/docker"
+#  revision = "13fec0607394f7c6da0148f8d513b6fcbf7cce61"
 
 [[constraint]]
   name = "github.com/docker/go-units"
