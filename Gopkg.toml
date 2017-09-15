@@ -27,7 +27,8 @@
 required = [
     "github.com/docker/distribution/reference",
     "github.com/opencontainers/runc",
-    "github.com/docker/go-connections"
+    "github.com/docker/go-connections",
+    "github.com/docker/docker"
 ]
 
 [[constraint]]
@@ -57,10 +58,10 @@ required = [
 [[constraint]]
   branch = "master"
   name = "github.com/docker/distribution"
-#
-#[[constraint]]
-#  name = "github.com/docker/docker"
-#  revision = "13fec0607394f7c6da0148f8d513b6fcbf7cce61"
+
+[[constraint]]
+  name = "github.com/docker/docker"
+  revision = "13fec0607394f7c6da0148f8d513b6fcbf7cce61"
 
 [[constraint]]
   name = "github.com/docker/go-units"
