@@ -6,6 +6,8 @@ import (
 
 	"strconv"
 
+	"io/ioutil"
+
 	"github.com/andygrunwald/go-gerrit"
 	log "github.com/sirupsen/logrus"
 )
@@ -134,17 +136,63 @@ func (c *Change) AddTopLevelComment(revision string, comment string) (*gerrit.Re
 	if revision == "" {
 		revision = DefaultRevision
 	}
-	c.log.WithFields(log.Fields{
+	logger := c.log.WithFields(log.Fields{
 		"phase":    "add-top-level-comment",
 		"revision": revision,
 		"comment":  comment,
-	}).Debug()
+	})
+	logger.Debug()
 
-	result, _, err := c.api.Changes.SetReview(c.ID(), revision, &gerrit.ReviewInput{
+	result, response, err := c.api.Changes.SetReview(c.ID(), revision, &gerrit.ReviewInput{
 		Message:               comment,
 		Drafts:                "PUBLISH_ALL_REVISIONS",
 		Notify:                "NONE", // Don't send email
 		OmitDuplicateComments: true,
 	})
+	if err != nil {
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		logger.WithError(err).WithField("body", string(body)).Warn()
+	}
+	return result, err
+}
+
+// AddFileComment will apply a comment to a specific file in a specific
+// location
+func (c *Change) AddFileComment(revision string, path string, line int, comment string) (*gerrit.ReviewResult, error) {
+	if revision == "" {
+		revision = DefaultRevision
+	}
+	logger := c.log.WithFields(log.Fields{
+		"phase":    "add-top-level-comment",
+		"revision": revision,
+		"comment":  comment,
+	})
+	logger.Debug()
+	comments := map[string][]gerrit.CommentInput{}
+	comments[path] = append(comments[path], gerrit.CommentInput{
+		Message: comment,
+		Line:    line,
+		Side:    "REVISION",
+		Range: gerrit.CommentRange{
+			StartLine: line,
+			EndLine:   line,
+		},
+	})
+	result, response, err := c.api.Changes.SetReview(c.ID(), revision, &gerrit.ReviewInput{
+		Comments:              comments,
+		Drafts:                "PUBLISH_ALL_REVISIONS",
+		Notify:                "NONE", // Don't send email
+		OmitDuplicateComments: true,
+	})
+	if err != nil {
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		logger.WithError(err).WithField("body", string(body)).Warn()
+	}
 	return result, err
 }
