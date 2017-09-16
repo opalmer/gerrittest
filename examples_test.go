@@ -28,7 +28,7 @@ func ExampleNewContainer() {
 
 // Once you've started the service you'll want to setup Gerrit inside
 // the container. Running Setup.Init will cause the administrative user to
-// be created, generate an http api password and insert a public key for ssh
+// be created, generate an http API password and insert a public key for ssh
 // access.
 func ExampleNew() {
 	cfg := NewConfig()
