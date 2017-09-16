@@ -82,6 +82,13 @@ type Config struct {
 	CleanupContainer bool `json:"cleanup_container"`
 }
 
+// Copy will return a copy of the existing Config struct.
+func (c *Config) Copy() *Config {
+	v := new(Config)
+	*v = *c
+	return v
+}
+
 // NewConfig produces a *Config struct with reasonable defaults.
 func NewConfig() *Config {
 	image := DefaultImage
