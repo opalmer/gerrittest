@@ -318,27 +318,7 @@ func (g *Gerrit) CreateChange(subject string) (*Change, error) {
 	logger := g.log.WithField("cmp", "change")
 	entry := logger.WithField("action", "create")
 	entry.Debug()
-
-	changeID, err := g.Repo.ChangeID()
-	change := &Change{gerrit: g, api: client, log: logger, id: changeID}
-	if err == nil {
-		return change, nil
-	}
-
-	// FIXME This does not seem to work in tests.
-	if err == ErrNoCommits {
-		if err := g.Repo.Commit(subject); err != nil {
-			entry.WithError(err).Error()
-			return nil, err
-		}
-
-		if err := g.Repo.Push(ProjectName, ""); err != nil {
-			return nil, err
-		}
-		return change, nil
-	}
-	entry.WithError(err).Error()
-	return nil, err
+	return &Change{Gerrit: g, API: client, log: logger}, err
 }
 
 // WriteJSONFile takes the current struct and writes the data to disk

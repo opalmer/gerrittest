@@ -284,7 +284,10 @@ func (r *Repository) ChangeID() (string, error) {
 
 // Amend amends the current commit.
 func (r *Repository) Amend() error {
-	_, _, err := r.Git(DefaultGitCommands["amend"])
+	_, stderr, err := r.Git(DefaultGitCommands["amend"])
+	if strings.Contains(stderr, "You have nothing to amend") {
+		return ErrNoCommits
+	}
 	return err
 }
 
