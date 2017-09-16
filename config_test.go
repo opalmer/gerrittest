@@ -1,8 +1,8 @@
 package gerrittest
 
 import (
-	"os"
 	"io/ioutil"
+	"os"
 
 	"github.com/go-ini/ini"
 	. "gopkg.in/check.v1"
@@ -65,10 +65,12 @@ func (s *ConfigTest) Test_projectConfig_newProjectConfig_missingFile(c *C) {
 
 func (s *ConfigTest) Test_projectConfig_newProjectConfig_existingConifg(c *C) {
 	file, err := ioutil.TempFile("", "")
-	file.WriteString(`
+	c.Assert(err, IsNil)
+	_, err = file.WriteString(`
 [label "Verified"]
 default = 1
 	`)
+	c.Assert(err, IsNil)
 	defer os.Remove(file.Name()) // nolint: errcheck
 	c.Assert(err, IsNil)
 	c.Assert(file.Close(), IsNil)
