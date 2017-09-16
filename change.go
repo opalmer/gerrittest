@@ -172,7 +172,7 @@ func (c *Change) AddFileComment(revision string, path string, line int, comment 
 		revision = DefaultRevision
 	}
 	logger := c.log.WithFields(log.Fields{
-		"phase":    "add-top-level-comment",
+		"phase":    "add-file-comment",
 		"revision": revision,
 		"comment":  comment,
 	})
