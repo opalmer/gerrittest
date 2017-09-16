@@ -1,12 +1,10 @@
 package gerrittest
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
-
 	"strconv"
-
-	"io/ioutil"
 
 	"github.com/andygrunwald/go-gerrit"
 	log "github.com/sirupsen/logrus"
@@ -91,6 +89,14 @@ func (c *Change) Remove(relative string) error {
 	return c.gerrit.Repo.Add(path)
 }
 
+func (c *Change) logError(err error, logger *log.Entry, response *gerrit.Response) {
+	if err != nil {
+		logger = logger.WithError(err)
+		body, _ := ioutil.ReadAll(response.Body) // nolint: errcheck
+		logger.WithField("body", string(body)).Error()
+	}
+}
+
 // ApplyLabel will apply the requested label to the current change. Examples
 // of labels include 'Code-Review +2' or 'Verified +1'. If a specific revision
 // is not provided then 'current' will be used.
@@ -98,34 +104,40 @@ func (c *Change) ApplyLabel(revision string, label string, value int) (*gerrit.R
 	if revision == "" {
 		revision = DefaultRevision
 	}
-	c.log.WithFields(log.Fields{
+	logger := c.log.WithFields(log.Fields{
 		"phase":    "apply-label",
 		"revision": revision,
 		"label":    label,
 		"value":    value,
-	}).Debug()
+	})
+	logger.Debug()
 
-	info, _, err := c.api.Changes.SetReview(c.ID(), revision, &gerrit.ReviewInput{
+	info, response, err := c.api.Changes.SetReview(c.ID(), revision, &gerrit.ReviewInput{
 		Labels: map[string]string{
 			label: strconv.Itoa(value),
 		},
 		Drafts: "PUBLISH_ALL_REVISIONS",
 	})
+	c.logError(err, logger, response)
 	return info, err
 }
 
 // Submit will submit the change. Note, this typically will only work if the
 // change has Code-Review +2 and Verified +1 labels applied.
 func (c *Change) Submit() (*gerrit.ChangeInfo, error) {
-	c.log.WithField("phase", "submit").Debug()
-	info, _, err := c.api.Changes.SubmitChange(c.ID(), &gerrit.SubmitInput{})
+	logger := c.log.WithField("phase", "submit")
+	logger.Debug()
+	info, response, err := c.api.Changes.SubmitChange(c.ID(), &gerrit.SubmitInput{})
+	c.logError(err, logger, response)
 	return info, err
 }
 
 // Abandon will abandon the change.
 func (c *Change) Abandon() (*gerrit.ChangeInfo, error) {
-	c.log.WithField("phase", "abandon").Debug()
-	info, _, err := c.api.Changes.AbandonChange(c.ID(), &gerrit.AbandonInput{})
+	logger := c.log.WithField("phase", "abandon")
+	logger.Debug()
+	info, response, err := c.api.Changes.AbandonChange(c.ID(), &gerrit.AbandonInput{})
+	c.logError(err, logger, response)
 	return info, err
 }
 
@@ -148,18 +160,13 @@ func (c *Change) AddTopLevelComment(revision string, comment string) (*gerrit.Re
 		Notify:                "NONE", // Don't send email
 		OmitDuplicateComments: true,
 	})
-	if err != nil {
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			return nil, err
-		}
-		logger.WithError(err).WithField("body", string(body)).Warn()
-	}
+	c.logError(err, logger, response)
 	return result, err
 }
 
 // AddFileComment will apply a comment to a specific file in a specific
 // location
+// FIXME Tests are not finding the file for some reason.
 func (c *Change) AddFileComment(revision string, path string, line int, comment string) (*gerrit.ReviewResult, error) {
 	if revision == "" {
 		revision = DefaultRevision
@@ -186,12 +193,6 @@ func (c *Change) AddFileComment(revision string, path string, line int, comment 
 		Notify:                "NONE", // Don't send email
 		OmitDuplicateComments: true,
 	})
-	if err != nil {
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			return nil, err
-		}
-		logger.WithError(err).WithField("body", string(body)).Warn()
-	}
+	c.logError(err, logger, response)
 	return result, err
 }

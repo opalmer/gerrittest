@@ -325,6 +325,7 @@ func (g *Gerrit) CreateChange(subject string) (*Change, error) {
 		return change, nil
 	}
 
+	// FIXME This does not seem to work in tests.
 	if err == ErrNoCommits {
 		if err := g.Repo.Commit(subject); err != nil {
 			entry.WithError(err).Error()
