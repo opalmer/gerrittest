@@ -147,7 +147,6 @@ func (c *Change) AddTopLevelComment(revision string, comment string) (*gerrit.Re
 
 // AddFileComment will apply a comment to a specific file in a specific
 // location
-// FIXME Tests are not finding the file for some reason.
 func (c *Change) AddFileComment(revision string, path string, line int, comment string) (*gerrit.ReviewResult, error) {
 	if revision == "" {
 		revision = DefaultRevision
