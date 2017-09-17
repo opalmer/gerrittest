@@ -243,7 +243,7 @@ func (g *Gerrit) pushConfig() error { // nolint: gocyclo
 
 // CreateChange will return a *Change struct. If a change has already been
 // created then that change will be returned instead of creating a new one.
-func (g *Gerrit) CreateChange(project string, subject string) (*Change, error) {
+func (g *Gerrit) CreateChange(project string, subject string) (*Change, error) { // nolint: gocyclo
 	logger := g.log.WithField("phase", "create-change")
 	client, err := g.HTTP.Gerrit()
 	if err != nil {
@@ -274,7 +274,7 @@ func (g *Gerrit) CreateChange(project string, subject string) (*Change, error) {
 	}
 
 	logger = logger.WithFields(log.Fields{
-		"path": path,
+		"path":   path,
 		"action": "new-repo",
 	})
 	logger.Debug()
