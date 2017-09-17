@@ -137,6 +137,25 @@ func (s *ChangeTest) TestSubmit(c *C) {
 	})
 	info, err := s.change.Submit()
 	c.Assert(err, IsNil)
-
 	c.Assert(info.ChangeID, Equals, s.change.ChangeID)
+}
+
+func (s *ChangeTest) TestAbandon(c *C) {
+	s.TestPush(c)
+	info, err := s.change.Abandon()
+	c.Assert(err, IsNil)
+	c.Assert(info.ChangeID, Equals, s.change.ChangeID)
+}
+
+func (s *ChangeTest) TestAddTopLevelComment(c *C) {
+	s.TestPush(c)
+	_, err := s.change.AddTopLevelComment("", "hello")
+	c.Assert(err, IsNil)
+}
+
+func (s *ChangeTest) TestAddFileComment(c *C) {
+	relative, _ := s.testAdd(c)
+	c.Assert(s.change.Push(), IsNil)
+	_, err := s.change.AddFileComment("1", relative, 1, "hello")
+	c.Assert(err, IsNil)
 }
