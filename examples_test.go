@@ -28,7 +28,7 @@ func ExampleNewContainer() {
 // the container. Running Setup.Init will cause the administrative user to
 // be created, generate an http API password and insert a public key for ssh
 // access.
-func ExampleNew() {
+func ExampleGerrit_CreateChange() {
 	cfg := NewConfig()
 	gerrit, err := New(cfg)
 	if err != nil {
@@ -54,4 +54,14 @@ func ExampleNew() {
 	if err := change.Push(); err != nil {
 		log.Fatal(err)
 	}
+	if _, err := change.ApplyLabel("1", CodeReviewLabel, 2); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := change.ApplyLabel("1", VerifiedLabel, 1); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := change.Submit(); err != nil {
+		log.Fatal(err)
+	}
+
 }
