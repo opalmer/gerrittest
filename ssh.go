@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"strings"
 
@@ -25,7 +26,21 @@ type SSHClient struct {
 
 // Close will close the SSHPort client and session.
 func (s *SSHClient) Close() error {
-	return s.Client.Close()
+	err := s.Client.Close()
+	if err != nil {
+		if operr, ok := err.(*net.OpError); ok {
+			// If the error occurred due to Close() being
+			// called then ignore it rather than return an
+			// error. SSHClient is short lived so we should
+			// expect the socket to be closed when the program
+			// terminates.
+			if operr.Op == "close" {
+				err = nil
+			}
+		}
+	}
+
+	return err
 }
 
 // Run executes a command over ssh.
