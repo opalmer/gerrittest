@@ -25,15 +25,11 @@ $ gerrittest start
     "port_ssh": 0,
     "port_http": 0,
     "timeout": 300000000000,
-    "repo_root": "/tmp/gerrittest-713318600",
-    "git_command": "git",
     "git": {
       "core.sshCommand": "ssh -i /tmp/gerrittest-id_rsa-622079437 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no",
       "user.email": "admin.localhost",
       "user.name": "admin"
     },
-    "project": "gerrittest",
-    "origin_name": "gerrittest",
     "private_key_path": "/tmp/gerrittest-id_rsa-622079437",
     "username": "admin",
     "password": "W7ZQWupkL8S2dMLQY5vlf+s3Qh6dsh3JuoWxImaBog",
