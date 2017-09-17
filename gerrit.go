@@ -344,11 +344,6 @@ func (g *Gerrit) Destroy() error {
 // a container, an admin user will be created and a git repository will
 // be setup pointing at the service in the container.
 func New(cfg *Config) (*Gerrit, error) {
-	username := cfg.Username
-	if username == "" {
-		username = "admin"
-	}
-
 	if cfg.Context == nil {
 		cfg.Context = context.Background()
 	}
