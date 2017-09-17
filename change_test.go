@@ -9,7 +9,6 @@ import (
 type ChangeTest struct {
 	gerrit *Gerrit
 	change *Change
-	roots  []string
 }
 
 var _ = Suite(&ChangeTest{})
@@ -28,7 +27,7 @@ func (s *ChangeTest) TearDownSuite(c *C) {
 	if testing.Short() {
 		c.Skip("-short provided")
 	}
-	s.gerrit.Destroy()
+	c.Assert(s.gerrit.Destroy(), IsNil)
 }
 
 func (s *ChangeTest) SetUpTest(c *C) {
