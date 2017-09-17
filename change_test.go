@@ -6,44 +6,74 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type ChangeTest struct{}
+type ChangeTest struct {
+	gerrit *Gerrit
+	change *Change
+	roots  []string
+}
 
 var _ = Suite(&ChangeTest{})
 
-func (s *ChangeTest) TestChange(c *C) {
+func (s *ChangeTest) SetUpSuite(c *C) {
 	if testing.Short() {
 		c.Skip("-short provided")
 	}
 
-	cfg := NewConfig()
-	gerrit, err := New(cfg)
+	gerrit, err := New(NewConfig())
 	c.Assert(err, IsNil)
-	defer gerrit.Destroy() // nolint: errcheck
+	s.gerrit = gerrit
+}
 
-	// FIXME: Commit should not be required first
-	c.Assert(gerrit.Repo.Commit("testing"), IsNil)
-	change, err := gerrit.CreateChange("foobar")
+func (s *ChangeTest) TearDownSuite(c *C) {
+	if testing.Short() {
+		c.Skip("-short provided")
+	}
+	s.gerrit.Destroy()
+}
+
+func (s *ChangeTest) SetUpTest(c *C) {
+	if testing.Short() {
+		c.Skip("-short provided")
+	}
+
+	change, err := s.gerrit.CreateChange("", "testing")
 	c.Assert(err, IsNil)
+	s.change = change
+}
 
-	c.Assert(change.Write("foo/bar.txt", 0600, []byte("hello")), IsNil)
-	c.Assert(change.AmendAndPush(), IsNil)
-	c.Assert(change.Remove("foo"), IsNil)
-	c.Assert(change.AmendAndPush(), IsNil)
+func (s *ChangeTest) TearDownTest(c *C) {
+	if testing.Short() {
+		c.Skip("-short provided")
+	}
+	c.Assert(s.change.Destroy(), IsNil)
+}
 
-	// TODO This is failing for some reason
-	//_, err = change.AddFileComment("", "foo/bar.txt", 1, "Test comment.")
-	//c.Assert(err, IsNil)
-
-	_, err = change.ApplyLabel("", "Code-Review", 2)
-	c.Assert(err, IsNil)
-
-	_, err = change.ApplyLabel("", "Verified", 1)
-	c.Assert(err, IsNil)
-
-	_, err = change.AddTopLevelComment("", "looks good")
-	c.Assert(err, IsNil)
-
-	_, err = change.Submit()
-	c.Assert(err, IsNil)
+func (s *ChangeTest) TestAdd(c *C) {
 
 }
+
+//	c.Assert(s.change.Remove(), IsNil)
+//	_, err := os.Stat(s.change.cfg)
+//	c.Assert(os.IsNotExist(err), Equals, true)
+//	s.change = nil
+//}
+//
+//func (s *ChangeTest) TestAddFile(c *C) {
+//	c.Assert(s.change.Add("foo.txt", 0600, []byte("hello")), IsNil)
+//	c.Assert(s.change.AmendAndPush(), IsNil)
+//}
+//
+//func (s *ChangeTest) TestRemoveFile(c *C) {
+//	c.Assert(s.change.Add("foo.txt", 0600, []byte("hello")), IsNil)
+//	c.Assert(s.change.AmendAndPush(), IsNil)
+//	c.Assert(s.change.Remove("foo.txt"), IsNil)
+//	c.Assert(s.change.AmendAndPush(), IsNil)
+//}
+//
+//func (s *ChangeTest) TestApplyLabel(c *C) {
+//	c.Assert(s.change.Add("foo.txt", 0600, []byte("hello")), IsNil)
+//	c.Assert(s.change.AmendAndPush(), IsNil)
+//	info, err := s.change.ApplyLabel("", CodeReviewLabel, 2)
+//	c.Assert(err, IsNil)
+//	c.Assert(info.Labels[CodeReviewLabel], Equals, 2)
+//}

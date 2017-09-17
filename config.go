@@ -25,11 +25,6 @@ type Config struct {
 	// Timeout is used to timeout commands and other contextual operations.
 	Timeout time.Duration `json:"timeout"`
 
-	// RepoRoot is the root of the git repository. If this field
-	// is blank then a temporary path will be used by the Gerrit
-	// struct.
-	RepoRoot string `json:"repo_root"`
-
 	// GitCommand is the git command to run. Defaults to 'git'.
 	GitCommand string `json:"git_command"`
 
@@ -72,21 +67,9 @@ type Config struct {
 	// to true if no path was provided to PrivateKeyPath.
 	CleanupPrivateKey bool `json:"cleanup_private_key"`
 
-	// CleanupGitRepo when will true will cause the cleanup steps to remove the
-	// repository. This defaults to false but will be set to true if
-	// RepoPath was "".
-	CleanupGitRepo bool `json:"cleanup_git_repo"`
-
 	// CleanupContainer when true will cause the cleanup steps to destroy
 	// the container running Gerrit. This defaults to true.
 	CleanupContainer bool `json:"cleanup_container"`
-}
-
-// Copy will return a copy of the existing Config struct.
-func (c *Config) Copy() *Config {
-	v := new(Config)
-	*v = *c
-	return v
 }
 
 // NewConfig produces a *Config struct with reasonable defaults.
@@ -100,21 +83,17 @@ func NewConfig() *Config {
 		PortSSH:    dockertest.RandomPort,
 		PortHTTP:   dockertest.RandomPort,
 		Timeout:    time.Minute * 5,
-		RepoRoot:   "",
 		GitCommand: "git",
 		GitConfig: map[string]string{
 			"user.name":  "admin",
 			"user.email": "admin@localhost",
 		},
-		Project:           ProjectName,
-		OriginName:        ProjectName,
 		Context:           context.Background(),
 		PrivateKeyPath:    "",
 		Username:          "admin",
 		Password:          "",
 		SkipSetup:         false,
 		CleanupPrivateKey: false,
-		CleanupGitRepo:    false,
 		CleanupContainer:  true,
 	}
 }

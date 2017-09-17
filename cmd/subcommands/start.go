@@ -70,8 +70,8 @@ func newStartConfig(cmd *cobra.Command) *gerrittest.Config {
 	config.Context = ctx
 	config.SkipSetup = getBool(cmd, "start-only")
 	if getBool(cmd, "no-cleanup") {
-		config.CleanupGitRepo = false
-		config.CleanupGitRepo = false
+		config.CleanupPrivateKey = false
+		config.CleanupContainer = false
 	}
 
 	return config

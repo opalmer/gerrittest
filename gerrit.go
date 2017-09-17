@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -28,7 +29,6 @@ type Gerrit struct {
 	HTTPPort   *dockertest.Port `json:"http"`
 	SSH        *SSHClient       `json:"-"`
 	SSHPort    *dockertest.Port `json:"ssh"`
-	Repo       *Repository      `json:"-"`
 	PrivateKey ssh.Signer       `json:"-"`
 	PublicKey  ssh.PublicKey    `json:"-"`
 }
@@ -166,29 +166,7 @@ func (g *Gerrit) setupHTTPClient() error { // nolint: gocyclo
 		g.Config.Password = generated
 	}
 
-	gc, err := client.Gerrit()
-	if err != nil {
-		return g.errLog(logger, err)
-	}
-
-	if g.Config.Project == "" {
-		g.Config.Project = ProjectName
-	}
-
-	logger = logger.WithField("action", "configure-email")
-	if err := g.HTTP.configureEmail(); err != nil {
-		return g.errLog(logger, err)
-	}
-
-	logger = logger.WithFields(log.Fields{
-		"action":  "create-project",
-		"project": g.Config.Project,
-	})
-	logger.Debug()
-	if _, _, err := gc.Projects.CreateProject(g.Config.Project, nil); err != nil {
-		return g.errLog(logger, err)
-	}
-	return nil
+	return g.HTTP.configureEmail()
 }
 
 func (g *Gerrit) setupSSHClient() error {
@@ -224,22 +202,14 @@ func (g *Gerrit) pushConfig() error { // nolint: gocyclo
 	}
 	defer os.RemoveAll(dir) // nolint: errcheck
 
-	cfg := NewConfig()
-	cfg.PrivateKeyPath = g.Config.PrivateKeyPath
-	cfg.RepoRoot = dir
-
-	// Be sure to copy the original git config. This contains information
-	// about the ssh command, user, email, etc. Without this git commands
-	// will fail in unexpected ways.
-	cfg.GitConfig = g.Config.GitConfig
-
 	logger.WithField("action", "new-repo").Debug()
-	repo, err := NewRepository(cfg)
+	repo, err := NewRepository(g.Config)
 	if err != nil {
 		return err
 	}
+	defer repo.Destroy() // nolint: errcheck
 
-	if err := repo.AddRemoteFromContainer(g.Container, "origin", "All-Projects"); err != nil {
+	if err := repo.AddOriginFromContainer(g.Container, "All-Projects"); err != nil {
 		return err
 	}
 
@@ -277,48 +247,62 @@ func (g *Gerrit) pushConfig() error { // nolint: gocyclo
 	return err
 }
 
-func (g *Gerrit) setupRepo() error {
-	logger := g.log.WithFields(log.Fields{
-		"phase": "setup",
-		"task":  "repo",
-	})
-	logger.Debug()
-
-	if g.Config.RepoRoot == "" {
-		g.Config.CleanupGitRepo = true
-		tempdir, err := ioutil.TempDir("", fmt.Sprintf("%s-", ProjectName))
-		if err != nil {
-			return err
-		}
-		g.Config.RepoRoot = tempdir
-	}
-
-	repo, err := NewRepository(g.Config)
-	if err != nil {
-		return err
-	}
-	g.Repo = repo
-
-	if g.Config.Project != "" {
-		return g.Repo.AddRemoteFromContainer(
-			g.Container, g.Config.OriginName, g.Config.Project)
-	}
-
-	return g.pushConfig()
-}
-
 // CreateChange will return a *Change struct. If a change has already been
 // created then that change will be returned instead of creating a new one.
-func (g *Gerrit) CreateChange(subject string) (*Change, error) {
+func (g *Gerrit) CreateChange(project string, subject string) (*Change, error) {
+	logger := g.log.WithField("phase", "create-change")
 	client, err := g.HTTP.Gerrit()
+	if err != nil {
+		logger.WithError(err).Error()
+		return nil, err
+	}
+
+	if project == "" {
+		project = ProjectName
+	}
+
+	logger = logger.WithField("project", project)
+	logger.Debug()
+
+	// Create the project if it does not already exist.
+	if _, response, err := client.Projects.GetProject(project); err != nil {
+		if response.StatusCode == http.StatusNotFound {
+			logger.WithField("action", "create-project").Debug()
+			if _, _, err := client.Projects.CreateProject(project, nil); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	path, err := ioutil.TempDir("", fmt.Sprintf("%s-", ProjectName))
 	if err != nil {
 		return nil, err
 	}
 
-	logger := g.log.WithField("cmp", "change")
-	entry := logger.WithField("action", "create")
-	entry.Debug()
-	return &Change{Gerrit: g, API: client, log: logger}, err
+	logger = logger.WithField("path", path)
+
+	logger = logger.WithField("action", "new-repo")
+	logger.Debug()
+	repo, err := NewRepository(g.Config)
+	if err != nil {
+		logger.WithError(err).Error()
+		return nil, err
+	}
+
+	logger.WithField("action", "add-remote-container").Debug()
+	if err := repo.AddOriginFromContainer(g.Container, project); err != nil {
+		return nil, err
+	}
+
+	logger.WithField("action", "commit").Debug()
+	if err := repo.Commit(subject); err != nil {
+		return nil, err
+	}
+	return &Change{
+		api:  client,
+		log:  g.log.WithField("cmp", "change"),
+		repo: repo,
+	}, nil
 }
 
 // WriteJSONFile takes the current struct and writes the data to disk
@@ -337,20 +321,23 @@ func (g *Gerrit) WriteJSONFile(path string) error {
 // Destroy will destroy the container and all associated resources. Custom
 // private keys or repositories will not be cleaned up.
 func (g *Gerrit) Destroy() error {
-	g.log.WithField("phase", "destroy").Debug()
 	errs := errset.ErrSet{}
-	if g.SSH != nil {
-		errs = append(errs, g.SSH.Close())
+
+	if g.Config == nil {
+		panic("HJHHHH")
 	}
+
 	if g.Config.CleanupContainer && g.Container != nil {
 		errs = append(errs, g.Container.Terminate())
 	}
-	if g.Config.CleanupGitRepo && g.Repo != nil {
-		errs = append(errs, g.Repo.Remove())
-	}
-	if g.Config.CleanupPrivateKey && g.Config.PrivateKeyPath != "" {
-		errs = append(errs, os.Remove(g.Config.PrivateKeyPath))
-	}
+
+	//if g.SSH != nil {
+	//	errs = append(errs, g.SSH.Close())
+	//}
+	//
+	//if g.Config.CleanupPrivateKey && g.Config.PrivateKeyPath != "" {
+	//	errs = append(errs, os.Remove(g.Config.PrivateKeyPath))
+	//}
 	return errs.ReturnValue()
 }
 
@@ -389,9 +376,6 @@ func New(cfg *Config) (*Gerrit, error) {
 	if err := g.setupSSHClient(); err != nil {
 		return g, err
 	}
-	if err := g.setupRepo(); err != nil {
-		return g, err
-	}
 	if err := g.pushConfig(); err != nil {
 		return g, err
 	}
@@ -422,12 +406,6 @@ func NewFromJSON(path string) (*Gerrit, error) {
 		return nil, err
 	}
 	g.Container.Docker = docker
-
-	repo, err := NewRepository(g.Config)
-	if err != nil {
-		return nil, err
-	}
-	g.Repo = repo
 
 	sshClient, err := NewSSHClient(g.Config, g.SSHPort)
 	if err != nil {

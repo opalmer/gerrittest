@@ -2,9 +2,7 @@ package gerrittest
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
-	"path/filepath"
 
 	"github.com/opalmer/dockertest"
 )
@@ -40,27 +38,20 @@ func ExampleNew() {
 		"README.md":        "# Hello",
 		"scripts/foo.bash": "echo 'foo'",
 	}
+
+	change, err := gerrit.CreateChange("testing", "test")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer change.Destroy() // nolint: errcheck
+	defer gerrit.Destroy() // nolint: errcheck
+
 	for relative, content := range files {
-		path := filepath.Join(gerrit.Config.RepoRoot, relative)
-		if err := ioutil.WriteFile(path, []byte(content), 0600); err != nil {
-			log.Fatal(err)
-		}
-		if err := gerrit.Repo.Add(relative); err != nil {
+		if err := change.Add(relative, 0600, content); err != nil {
 			log.Fatal(err)
 		}
 	}
-
-	if err := gerrit.Repo.Commit("test: first change"); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := gerrit.Repo.Push("origin", "refs/for/master:HEAD"); err != nil {
-		log.Fatal(err)
-	}
-
-	// Terminate the container and cleanup all data related to
-	// this run.
-	if err := gerrit.Destroy(); err != nil {
+	if err := change.Push(); err != nil {
 		log.Fatal(err)
 	}
 }

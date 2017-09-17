@@ -36,16 +36,6 @@ func (s *ConfigTest) TestNewConfigOverride(c *C) {
 	c.Assert(cfg.Image, Equals, "override")
 }
 
-func (s *ConfigTest) TestConfigCopy(c *C) {
-	cfg := NewConfig()
-	cfg.RepoRoot = "foo"
-	cfg2 := cfg.Copy()
-	c.Assert(cfg2.RepoRoot, Equals, "foo")
-	cfg2.RepoRoot = "bar"
-	c.Assert(cfg2.RepoRoot, Equals, "bar")
-	c.Assert(cfg.RepoRoot, Equals, "foo")
-}
-
 func (s *ConfigTest) testWrittenConfig(c *C, path string) {
 	cfg, err := ini.LoadSources(ini.LoadOptions{AllowShadows: true}, path)
 	c.Assert(err, IsNil)
