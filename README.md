@@ -15,10 +15,14 @@ is available via godoc: https://godoc.org/github.com/opalmer/gerrittest
 * `go install github.com/opalmer/gerrittest/cmd`
 
 ## Command Line Usage
-### Start
+### Start and Stop
 
 ```
-$ gerrittest start
+$ go get github.com/opalmer/gerrittest
+$ cd ~/go/src/github.com/opalmer/gerrittest
+$ make dep build
+$ ./gerrittest start --json /tmp/gerrit.json
+$ cat /tmp/gerrit.json
 {
   "config": {
     "image": "opalmer/gerrittest:2.14.3",
@@ -67,7 +71,7 @@ $ gerrittest start
     "protocol": "tcp"
   },
 }
-
+$ ./gerrittest stop --json /tmp/gerrit.json
 ```
 
 ### Combining gerrittest, bash and curl
