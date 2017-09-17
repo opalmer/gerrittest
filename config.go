@@ -31,14 +31,6 @@ type Config struct {
 	// GitConfig contains key/value pairs to pass to 'git config'
 	GitConfig map[string]string `json:"git"`
 
-	// Project is the name of the Gerrit project to test against. This will
-	// be used to establish the remote origin of the git repository.
-	Project string `json:"project"`
-
-	// OriginName is the name of the origin of the remote repository. This
-	// will default to 'gerrittest'.
-	OriginName string `json:"origin_name"`
-
 	// Context is used internally when starting or managing
 	// containers and processes. If no context is provided then
 	// context.Background() will be used.
