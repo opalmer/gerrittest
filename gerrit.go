@@ -196,12 +196,6 @@ func (g *Gerrit) pushConfig() error { // nolint: gocyclo
 	})
 	logger.Debug()
 
-	dir, err := ioutil.TempDir("", fmt.Sprintf("%s-", ProjectName))
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(dir) // nolint: errcheck
-
 	logger.WithField("action", "new-repo").Debug()
 	repo, err := NewRepository(g.Config)
 	if err != nil {
@@ -223,7 +217,7 @@ func (g *Gerrit) pushConfig() error { // nolint: gocyclo
 		return err
 	}
 
-	path := filepath.Join(dir, "project.config")
+	path := filepath.Join(repo.Root, "project.config")
 	ini, err := newProjectConfig(path)
 	if err != nil {
 		return err
