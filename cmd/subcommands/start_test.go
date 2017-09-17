@@ -29,7 +29,8 @@ func (s *StartTest) Test_newStartConfig(c *C) {
 			"--start-only",
 		}),
 		IsNil)
-	cfg := newStartConfig(command)
+	cfg, err := newStartConfig(command)
+	c.Assert(err, IsNil)
 	c.Assert(cfg.Image, Equals, "image")
 	c.Assert(cfg.PortHTTP, Equals, uint16(1))
 	c.Assert(cfg.PortSSH, Equals, uint16(2))

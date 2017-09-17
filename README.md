@@ -115,5 +115,5 @@ If you're having trouble with a specific test you can enable debug
 logging and run that test specifically:
 
 ```
-$ go test -gerrittest.loglevel=debug -check.vv -check.f RepoTest.* github.com/opalmer/gerrittest
+$ go test -gerrittest.log-level=debug -check.vv -check.f RepoTest.* github.com/opalmer/gerrittest
 ```

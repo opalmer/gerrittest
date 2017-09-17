@@ -8,6 +8,8 @@ import (
 
 	"github.com/opalmer/dockertest"
 	"github.com/opalmer/gerrittest"
+	"github.com/opalmer/logrusutil"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -46,9 +48,19 @@ func addStartFlags(cmd *cobra.Command) {
 		"project", gerrittest.ProjectName,
 		"The name of the project to create in Gerrit. This will "+
 			"also be used for the remote repo name.")
+	cmd.Flags().String(
+		"log-level", "panic",
+		"Configures the logging level")
 }
 
-func newStartConfig(cmd *cobra.Command) *gerrittest.Config {
+func newStartConfig(cmd *cobra.Command) (*gerrittest.Config, error) {
+	// Setup logging
+	cfg := logrusutil.NewConfig()
+	cfg.Level = getString(cmd, "log-level")
+	if err := logrusutil.ConfigureLogger(log.StandardLogger(), cfg); err != nil {
+		return nil, err
+	}
+
 	// Setup timeout and Ctrl+C handling.
 	timeout := getDuration(cmd, "timeout")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -74,7 +86,7 @@ func newStartConfig(cmd *cobra.Command) *gerrittest.Config {
 		config.CleanupContainer = false
 	}
 
-	return config
+	return config, nil
 }
 
 // Start implements the `start` subcommand.
@@ -82,7 +94,10 @@ var Start = &cobra.Command{
 	Use:   "start",
 	Short: "Responsible for starting an instance of Gerrit.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := newStartConfig(cmd)
+		cfg, err := newStartConfig(cmd)
+		if err != nil {
+			return err
+		}
 		gerrit, err := gerrittest.New(cfg)
 		if err != nil {
 			return gerrit.Destroy()
