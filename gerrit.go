@@ -273,9 +273,10 @@ func (g *Gerrit) CreateChange(project string, subject string) (*Change, error) {
 		return nil, err
 	}
 
-	logger = logger.WithField("path", path)
-
-	logger = logger.WithField("action", "new-repo")
+	logger = logger.WithFields(log.Fields{
+		"path": path,
+		"action": "new-repo",
+	})
 	logger.Debug()
 	repo, err := NewRepository(g.Config)
 	if err != nil {
@@ -292,10 +293,18 @@ func (g *Gerrit) CreateChange(project string, subject string) (*Change, error) {
 	if err := repo.Commit(subject); err != nil {
 		return nil, err
 	}
+	id, err := repo.ChangeID()
+	if err != nil {
+		return nil, err
+	}
 	return &Change{
-		api:  client,
-		log:  g.log.WithField("cmp", "change"),
-		repo: repo,
+		api: client,
+		log: g.log.WithFields(log.Fields{
+			"cmp": "change",
+			"id":  id,
+		}),
+		Repo:     repo,
+		ChangeID: id,
 	}, nil
 }
 

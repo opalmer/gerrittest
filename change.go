@@ -25,9 +25,10 @@ const (
 
 // Change is used to interact with an manipulate a single change.
 type Change struct {
-	api  *gerrit.Client
-	repo *Repository
-	log  *log.Entry
+	api      *gerrit.Client
+	log      *log.Entry
+	ChangeID string
+	Repo     *Repository
 }
 
 func (c *Change) logError(err error, logger *log.Entry, response *gerrit.Response) {
@@ -41,31 +42,31 @@ func (c *Change) logError(err error, logger *log.Entry, response *gerrit.Respons
 // Destroy is responsible for removing any files on disk related to
 // this change.
 func (c *Change) Destroy() error {
-	return c.repo.Destroy()
+	return c.Repo.Destroy()
 }
 
 // Push pushes changes to Gerrit.
 func (c *Change) Push() error {
-	return c.repo.Push("HEAD:refs/for/master")
+	return c.Repo.Push("HEAD:refs/for/master")
 }
 
 // Add writes a file to the repository but does not commit it. The added or
 // modified path will be staged for commit.
 func (c *Change) Add(relative string, mode os.FileMode, content string) error {
-	if err := c.repo.Add(relative, mode, []byte(content)); err != nil {
+	if err := c.Repo.Add(relative, mode, []byte(content)); err != nil {
 		return err
 	}
-	return c.repo.Amend()
+	return c.Repo.Amend()
 }
 
 // Remove will remove the given relative path from the repository. If the file
 // or directory does not exist this function does nothing. The removed path
 // will staged for commit.
 func (c *Change) Remove(relative string) error {
-	if err := c.repo.Remove(relative); err != nil {
+	if err := c.Repo.Remove(relative); err != nil {
 		return err
 	}
-	return c.repo.Amend()
+	return c.Repo.Amend()
 }
 
 // ApplyLabel will apply the requested label to the current change. Examples
@@ -82,14 +83,10 @@ func (c *Change) ApplyLabel(revision string, label string, value int) (*gerrit.R
 		"value":    value,
 	})
 
-	id, err := c.repo.ChangeID()
-	if err != nil {
-		return nil, err
-	}
-	logger = logger.WithField("id", id)
+	logger = logger.WithField("id", c.ChangeID)
 	logger.Debug()
 
-	info, response, err := c.api.Changes.SetReview(id, revision, &gerrit.ReviewInput{
+	info, response, err := c.api.Changes.SetReview(c.ChangeID, revision, &gerrit.ReviewInput{
 		Labels: map[string]string{
 			label: strconv.Itoa(value),
 		},
@@ -103,13 +100,8 @@ func (c *Change) ApplyLabel(revision string, label string, value int) (*gerrit.R
 // change has Code-Review +2 and Verified +1 labels applied.
 func (c *Change) Submit() (*gerrit.ChangeInfo, error) {
 	logger := c.log.WithField("phase", "submit")
-	id, err := c.repo.ChangeID()
-	if err != nil {
-		return nil, err
-	}
-	logger = logger.WithField("id", id)
 	logger.Debug()
-	info, response, err := c.api.Changes.SubmitChange(id, &gerrit.SubmitInput{})
+	info, response, err := c.api.Changes.SubmitChange(c.ChangeID, &gerrit.SubmitInput{})
 	c.logError(err, logger, response)
 	return info, err
 }
@@ -117,13 +109,8 @@ func (c *Change) Submit() (*gerrit.ChangeInfo, error) {
 // Abandon will abandon the change.
 func (c *Change) Abandon() (*gerrit.ChangeInfo, error) {
 	logger := c.log.WithField("phase", "abandon")
-	id, err := c.repo.ChangeID()
-	if err != nil {
-		return nil, err
-	}
-	logger = logger.WithField("id", id)
 	logger.Debug()
-	info, response, err := c.api.Changes.AbandonChange(id, &gerrit.AbandonInput{})
+	info, response, err := c.api.Changes.AbandonChange(c.ChangeID, &gerrit.AbandonInput{})
 	c.logError(err, logger, response)
 	return info, err
 }
@@ -139,7 +126,7 @@ func (c *Change) AddTopLevelComment(revision string, comment string) (*gerrit.Re
 		"revision": revision,
 		"comment":  comment,
 	})
-	id, err := c.repo.ChangeID()
+	id, err := c.Repo.ChangeID()
 	if err != nil {
 		return nil, err
 	}
@@ -168,13 +155,6 @@ func (c *Change) AddFileComment(revision string, path string, line int, comment 
 		"revision": revision,
 		"comment":  comment,
 	})
-
-	id, err := c.repo.ChangeID()
-	if err != nil {
-		return nil, err
-	}
-	logger = logger.WithField("id", id)
-	logger.Debug()
 	comments := map[string][]gerrit.CommentInput{}
 	comments[path] = append(comments[path], gerrit.CommentInput{
 		Message: comment,
@@ -185,7 +165,7 @@ func (c *Change) AddFileComment(revision string, path string, line int, comment 
 			EndLine:   line,
 		},
 	})
-	result, response, err := c.api.Changes.SetReview(id, revision, &gerrit.ReviewInput{
+	result, response, err := c.api.Changes.SetReview(c.ChangeID, revision, &gerrit.ReviewInput{
 		Comments:              comments,
 		Drafts:                "PUBLISH_ALL_REVISIONS",
 		Notify:                "NONE", // Don't send email
