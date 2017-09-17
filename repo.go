@@ -205,7 +205,13 @@ func (r *Repository) Push(ref string) error {
 		ref = "HEAD:refs/for/master"
 	}
 
-	_, _, err := r.Git(append(DefaultGitCommands["push"], "origin", ref))
+	_, stderr, err := r.Git(append(DefaultGitCommands["push"], "origin", ref))
+	if err != nil {
+		r.log.WithFields(log.Fields{
+			"phase":  "push",
+			"stderr": stderr,
+		}).WithError(err).Error()
+	}
 	return err
 }
 
