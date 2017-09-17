@@ -25,9 +25,6 @@ type Config struct {
 	// Timeout is used to timeout commands and other contextual operations.
 	Timeout time.Duration `json:"timeout"`
 
-	// GitCommand is the git command to run. Defaults to 'git'.
-	GitCommand string `json:"git_command"`
-
 	// GitConfig contains key/value pairs to pass to 'git config'
 	GitConfig map[string]string `json:"git"`
 
@@ -71,11 +68,10 @@ func NewConfig() *Config {
 		image = value
 	}
 	return &Config{
-		Image:      image,
-		PortSSH:    dockertest.RandomPort,
-		PortHTTP:   dockertest.RandomPort,
-		Timeout:    time.Minute * 5,
-		GitCommand: "git",
+		Image:    image,
+		PortSSH:  dockertest.RandomPort,
+		PortHTTP: dockertest.RandomPort,
+		Timeout:  time.Minute * 5,
 		GitConfig: map[string]string{
 			"user.name":  "admin",
 			"user.email": "admin@localhost",
