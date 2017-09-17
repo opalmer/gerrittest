@@ -322,22 +322,17 @@ func (g *Gerrit) WriteJSONFile(path string) error {
 // private keys or repositories will not be cleaned up.
 func (g *Gerrit) Destroy() error {
 	errs := errset.ErrSet{}
-
-	if g.Config == nil {
-		panic("HJHHHH")
-	}
-
 	if g.Config.CleanupContainer && g.Container != nil {
 		errs = append(errs, g.Container.Terminate())
 	}
 
-	//if g.SSH != nil {
-	//	errs = append(errs, g.SSH.Close())
-	//}
-	//
-	//if g.Config.CleanupPrivateKey && g.Config.PrivateKeyPath != "" {
-	//	errs = append(errs, os.Remove(g.Config.PrivateKeyPath))
-	//}
+	if g.SSH != nil {
+		errs = append(errs, g.SSH.Close())
+	}
+
+	if g.Config.CleanupPrivateKey && g.Config.PrivateKeyPath != "" {
+		errs = append(errs, os.Remove(g.Config.PrivateKeyPath))
+	}
 	return errs.ReturnValue()
 }
 
