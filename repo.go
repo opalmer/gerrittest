@@ -35,13 +35,18 @@ var (
 		"amend":               {"commit", "--amend", "--no-edit", "--allow-empty"},
 	}
 
-	// ErrRemoteDoesNotExist is returned by GetRemoteURL if the requested
+	// ErrRemoteDoesNotExist is returned by GetRemote if the requested
 	// remote does not appear to exist.
 	ErrRemoteDoesNotExist = errors.New("requested remote does not exist")
 
 	//ErrFailedToLocateChange is returned by functions, such as Push(), that
 	// expect to find a change number in the output from git.
 	ErrFailedToLocateChange = errors.New("failed to locate ChangeID")
+
+	// ErrRemoteDiffers is returned by any function that adds a remote
+	// where the named remote already exists but with a different url.
+	ErrRemoteDiffers = errors.New(
+		"the requested remote exists but with a different url")
 
 	// ErrNoCommits is returned by ChangeID if there are not any commits
 	// to the repository yet.
@@ -55,6 +60,7 @@ var (
 // with a git repository. In the end, this is a thin wrapper
 // around GitConfig commands.
 type Repository struct {
+	log        *log.Entry
 	SSHCommand string
 	Root       string
 	Username   string
@@ -79,7 +85,7 @@ func (r *Repository) setEnvironment(cmd *exec.Cmd) error {
 
 func (r *Repository) run(cmd *exec.Cmd) (string, string, error) {
 	cwd, err := os.Getwd()
-	logger := log.WithFields(log.Fields{
+	logger := r.log.WithFields(log.Fields{
 		"phase": "run",
 		"cmd":   strings.Join(cmd.Args, " "),
 		"wd":    cwd,
@@ -203,9 +209,9 @@ func (r *Repository) Push(ref string) error {
 	return err
 }
 
-// GetRemoteURL will return the url for the given remote name. If the requested
+// GetRemote will return the url for the given remote name. If the requested
 // remote does not exist ErrRemoteDoesNotExist will be returned.
-func (r *Repository) GetRemoteURL(name string) (string, error) {
+func (r *Repository) GetRemote(name string) (string, error) {
 	stdout, stderr, err := r.Git(append(DefaultGitCommands["get-remote-url"], name))
 	if err != nil && strings.Contains(stderr, "No such remote") {
 		return "", ErrRemoteDoesNotExist
@@ -216,10 +222,21 @@ func (r *Repository) GetRemoteURL(name string) (string, error) {
 // AddRemote will add a remote with the given name so long as it does not
 // already exist.
 func (r *Repository) AddRemote(name string, uri string) error {
-	if _, err := r.GetRemoteURL(name); err == nil {
-		return nil
+	logger := r.log.WithFields(log.Fields{
+		"phase": "add-remote",
+		"name":  name,
+		"uri":   uri,
+	})
+	logger.Debug()
+	remote, err := r.GetRemote(name)
+	if err == ErrRemoteDoesNotExist {
+		_, _, err := r.Git(append(DefaultGitCommands["remote-add"], name, uri))
+		return err
 	}
-	_, _, err := r.Git(append(DefaultGitCommands["remote-add"], name, uri))
+	if err == nil && remote != uri {
+		logger.WithField("existing-uri", remote).Warn()
+		return ErrRemoteDiffers
+	}
 	return err
 }
 
@@ -273,6 +290,7 @@ func NewRepository(config *Config) (*Repository, error) {
 	}
 
 	repo := &Repository{
+		log:        log.WithField("cmp", "repo"),
 		Username:   config.GitConfig["user.name"],
 		SSHCommand: config.GitConfig["core.sshCommand"],
 		Root:       root,
