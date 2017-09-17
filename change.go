@@ -110,7 +110,9 @@ func (c *Change) Submit() (*gerrit.ChangeInfo, error) {
 func (c *Change) Abandon() (*gerrit.ChangeInfo, error) {
 	logger := c.log.WithField("phase", "abandon")
 	logger.Debug()
-	info, response, err := c.api.Changes.AbandonChange(c.ChangeID, &gerrit.AbandonInput{})
+	info, response, err := c.api.Changes.AbandonChange(c.ChangeID, &gerrit.AbandonInput{
+		Notify: "NONE",
+	})
 	c.logError(err, logger, response)
 	return info, err
 }
