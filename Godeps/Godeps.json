@@ -2,6 +2,9 @@
 	"ImportPath": "github.com/opalmer/gerrittest",
 	"GoVersion": "go1.9",
 	"GodepVersion": "v79",
+	"Packages": [
+		"github.com/opalmer/gerrittest/cmd/..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/Microsoft/go-winio",
@@ -152,6 +155,11 @@
 			"Rev": "53e6ce116135b80d037921a7fdd5138cf32d7a8a"
 		},
 		{
+			"ImportPath": "github.com/inconshreveable/mousetrap",
+			"Comment": "v1.0",
+			"Rev": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
+		},
+		{
 			"ImportPath": "github.com/opalmer/dockertest",
 			"Comment": "v0.3.9-4-g77914e6",
 			"Rev": "77914e6f84dfbbbad36acdcf501f5c8b78411a4c"
@@ -185,6 +193,14 @@
 			"ImportPath": "github.com/sirupsen/logrus",
 			"Comment": "v1.0.3-11-g89742ae",
 			"Rev": "89742aefa4b206dcf400792f3bd35b542998eb3b"
+		},
+		{
+			"ImportPath": "github.com/spf13/cobra",
+			"Rev": "10f6b9d7e1631a54ad07c5c0fb71c28a1abfd3c2"
+		},
+		{
+			"ImportPath": "github.com/spf13/pflag",
+			"Rev": "2300d0f8576fe575f71aaa5b9bbe4e1b0dc2eb51"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/curve25519",
