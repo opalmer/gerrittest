@@ -7,7 +7,7 @@ PACKAGE_DIRS=$(shell go list -f '{{ .Dir }}' ./... | egrep -v /vendor/ | tail -n
 SOURCES = $(shell for f in $(PACKAGES); do ls $$GOPATH/src/$$f/*.go; done)
 EXTRA_DEPENDENCIES = \
     github.com/golang/lint/golint \
-    github.com/golang/dep/cmd/dep \
+    github.com/tools/godep \
     github.com/wadey/gocovmerge \
     github.com/alecthomas/gometalinter
 
@@ -25,7 +25,6 @@ check: deps vet docker lint build test coverage
 deps:
 	go get $(EXTRA_DEPENDENCIES)
 	gometalinter --install > /dev/null
-	dep ensure
 
 docker:
 	$(MAKE) -C docker build

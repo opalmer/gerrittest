@@ -3,6 +3,4 @@
 /gerrittest
 /gerrittest.exe
 /coverage.txt
-/vendor/
-/Gopkg.lock
 /.gocoverage/
