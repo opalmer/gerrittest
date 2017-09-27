@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -156,4 +157,77 @@ func WriteRSAKey(key *rsa.PrivateKey, file *os.File) error {
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	})
+}
+
+// SSHKey contains information about an ssh key.
+type SSHKey struct {
+	Public    ssh.PublicKey `json:"-"`
+	Private   ssh.Signer    `json:"-"`
+	Path      string        `json:"path"`
+	Generated bool          `json:"generated"`
+	Default   bool          `json:"default"`
+}
+
+// Remove will remove the key material from disk but only if the key was
+// generated.
+func (s *SSHKey) Remove() error {
+	if s.Generated {
+		return os.Remove(s.Path)
+	}
+	return nil
+}
+
+// LoadSSHKey loads an SSH key from disk and returns a *SSHKey struct.
+func LoadSSHKey(path string) (*SSHKey, error) {
+	public, signer, err := ReadSSHKeys(path)
+	if err != nil {
+		return nil, err
+	}
+	return &SSHKey{
+		Public:    public,
+		Private:   signer,
+		Path:      path,
+		Generated: false,
+		Default:   true,
+	}, nil
+}
+
+// NewSSHKey will generate and return an *SSHKey.
+// TODO add tests
+func NewSSHKey() (*SSHKey, error) {
+	key, err := GenerateRSAKey()
+	if err != nil {
+		return nil, err
+	}
+	file, err := ioutil.TempFile(
+		"", fmt.Sprintf("%s-id_rsa-", ProjectName))
+	if err != nil {
+		return nil, err
+	}
+	defer file.Name() // nolint: errcheck
+
+	buffer := &bytes.Buffer{}
+	if err := pem.Encode(buffer, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	}); err != nil {
+		return nil, err
+	}
+
+	signer, err := ssh.ParsePrivateKey(buffer.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := io.Copy(file, buffer); err != nil {
+		return nil, err
+	}
+
+	return &SSHKey{
+		Private:   signer,
+		Public:    signer.PublicKey(),
+		Path:      file.Name(),
+		Generated: true,
+		Default:   true,
+	}, nil
 }

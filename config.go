@@ -33,10 +33,8 @@ type Config struct {
 	// context.Background() will be used.
 	Context context.Context `json:"-"`
 
-	// PrivateKeyPath is the path to the private key to insert into
-	// Gerrit. If a path is not provided then a private key will
-	// be generated automatically.
-	PrivateKeyPath string `json:"private_key_path"`
+	// SSHKeys store information about one or more ssh keys.
+	SSHKeys []*SSHKey `json:"ssh_keys"`
 
 	// Username is the name of the Gerrit admin account to create. By default
 	// this will be 'admin' unless otherwise specified.
@@ -50,11 +48,6 @@ type Config struct {
 	// SkipSetup when true will cause the container to be started but
 	// none of the final setup steps will be performed.
 	SkipSetup bool `json:"skip_setup"`
-
-	// CleanupPrivateKey when true will cause the cleanup steps to remove
-	// the private key from disk. This defaults to false but will be set
-	// to true if no path was provided to PrivateKeyPath.
-	CleanupPrivateKey bool `json:"cleanup_private_key"`
 
 	// CleanupContainer when true will cause the cleanup steps to destroy
 	// the container running Gerrit. This defaults to true.
@@ -76,13 +69,12 @@ func NewConfig() *Config {
 			"user.name":  "admin",
 			"user.email": "admin@localhost",
 		},
-		Context:           context.Background(),
-		PrivateKeyPath:    "",
-		Username:          "admin",
-		Password:          "",
-		SkipSetup:         false,
-		CleanupPrivateKey: false,
-		CleanupContainer:  true,
+		Context:          context.Background(),
+		SSHKeys:          []*SSHKey{},
+		Username:         "admin",
+		Password:         "",
+		SkipSetup:        false,
+		CleanupContainer: true,
 	}
 }
 
