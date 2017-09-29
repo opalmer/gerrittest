@@ -177,8 +177,8 @@ func (s *HTTPTest) TestHTTPClient_InsertPublicKey(c *C) {
 	key, err := NewSSHKey()
 	c.Assert(err, IsNil)
 	defer key.Remove() // nolint: errcheck
+	client.config.SSHKeys = append(client.config.SSHKeys, key)
 	c.Assert(client.insertPublicKeys(), IsNil)
-
 	request := handler.Request()
 	c.Assert(request.URL.Path, Equals, "/a/accounts/self/sshkeys")
 	c.Assert(request.Method, Equals, http.MethodPost)
