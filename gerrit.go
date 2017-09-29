@@ -110,8 +110,8 @@ func (g *Gerrit) setupHTTPClient() error { // nolint: gocyclo
 		return g.errLog(logger, err)
 	}
 
-	logger.WithField("action", "insert-key").Debug()
-	if err := g.HTTP.insertPublicKey(g.PublicKey); err != nil {
+	logger.WithField("action", "insert-keys").Debug()
+	if err := g.HTTP.insertPublicKeys(); err != nil {
 		return g.errLog(logger, err)
 	}
 

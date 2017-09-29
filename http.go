@@ -206,17 +206,22 @@ func (h *HTTPClient) setPassword(password string) error {
 	return err
 }
 
-// insertPublicKey will insert the provided public key.
-func (h *HTTPClient) insertPublicKey(key ssh.PublicKey) error {
-	request, err := h.newRequest(
-		http.MethodPost, "/a/accounts/self/sshkeys",
-		bytes.TrimSpace(ssh.MarshalAuthorizedKey(key)))
-	if err != nil {
-		return err
+// insertPublicKeys will insert all public keys in the config into Gerrit.
+func (h *HTTPClient) insertPublicKeys() error {
+	for _, key := range h.config.SSHKeys {
+		request, err := h.newRequest(
+			http.MethodPost, "/a/accounts/self/sshkeys",
+			bytes.TrimSpace(ssh.MarshalAuthorizedKey(key.Public)))
+		if err != nil {
+			return err
+		}
+		request.Header.Set("Content-Type", "plain/text")
+		_, _, err = h.do(request, http.StatusCreated)
+		if err != nil {
+			return err
+		}
 	}
-	request.Header.Set("Content-Type", "plain/text")
-	_, _, err = h.do(request, http.StatusCreated)
-	return err
+	return nil
 }
 
 func (h *HTTPClient) configureEmail() error {
