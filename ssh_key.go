@@ -39,7 +39,10 @@ func ReadSSHKeys(path string) (ssh.PublicKey, ssh.Signer, error) {
 
 	logger.WithField("action", "parse-key").Debug()
 	signer, err := ssh.ParsePrivateKey(data)
-	return signer.PublicKey(), signer, err
+	if err != nil {
+		return nil, nil, err
+	}
+	return signer.PublicKey(), signer, nil
 }
 
 // WriteRSAKey will take a private key and write out the public
