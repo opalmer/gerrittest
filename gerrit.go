@@ -21,13 +21,13 @@ const ProjectName = "gerrittest"
 // Gerrit is the central struct which combines multiple components
 // of the gerrittest project. Use New() to construct this struct.
 type Gerrit struct {
-	log        *log.Entry
-	Config     *Config          `json:"config"`
-	Container  *Container       `json:"container"`
-	HTTP       *HTTPClient      `json:"-"`
-	HTTPPort   *dockertest.Port `json:"http"`
-	SSH        *SSHClient       `json:"-"`
-	SSHPort    *dockertest.Port `json:"ssh"`
+	log       *log.Entry
+	Config    *Config          `json:"config"`
+	Container *Container       `json:"container"`
+	HTTP      *HTTPClient      `json:"-"`
+	HTTPPort  *dockertest.Port `json:"http"`
+	SSH       *SSHClient       `json:"-"`
+	SSHPort   *dockertest.Port `json:"ssh"`
 }
 
 func (g *Gerrit) errLog(logger *log.Entry, err error) error {
