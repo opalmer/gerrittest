@@ -46,7 +46,7 @@ fmt:
 	goimports -w $(SOURCES)
 
 test:
-	$(TESTCMD) -race $(PACKAGES)
+	$(TESTCMD) -race $(PACKAGES) -check.v
 
 # coverage runs the tests to collect coverage but does not attempt to look
 # for race conditions.
@@ -57,7 +57,7 @@ coverage: $(patsubst %,%.coverage,$(PACKAGES))
 
 %.coverage:
 	@[ -d .gocoverage ] || mkdir .gocoverage
-	$(TESTCMD) -covermode=count -coverprofile=.gocoverage/$(subst /,-,$*).out $*
+	$(TESTCMD) -covermode=count -coverprofile=.gocoverage/$(subst /,-,$*).out $* -check.v
 
 bindata:
 	go-bindata -pkg internal -o internal/internal.go internal/commit-msg
