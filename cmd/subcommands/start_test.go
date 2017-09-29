@@ -34,7 +34,15 @@ func (s *StartTest) Test_newStartConfig(c *C) {
 	c.Assert(cfg.Image, Equals, "image")
 	c.Assert(cfg.PortHTTP, Equals, uint16(1))
 	c.Assert(cfg.PortSSH, Equals, uint16(2))
-	c.Assert(cfg.PrivateKeyPath, Equals, "private-key")
+
+	found := false
+	for _, key := range cfg.SSHKeys {
+		if key.Path == "private-key" {
+			found = true
+		}
+	}
+	c.Assert(found, Equals, true)
+
 	c.Assert(cfg.Password, Equals, "password")
 	c.Assert(cfg.Context, NotNil)
 	c.Assert(cfg.SkipSetup, Equals, true)

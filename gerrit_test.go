@@ -12,7 +12,6 @@ import (
 
 	"github.com/opalmer/dockertest"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/ssh"
 	. "gopkg.in/check.v1"
 )
 
@@ -41,15 +40,9 @@ func (s *GerritTest) serverToPort(c *C, server *httptest.Server) *dockertest.Por
 
 func (s *GerritTest) addSSHKey(c *C, g *Gerrit) string {
 	file, err := ioutil.TempFile("", fmt.Sprintf("%s-", ProjectName))
+	key, err := NewSSHKey()
 	c.Assert(err, IsNil)
-	key, err := GenerateRSAKey()
-	c.Assert(err, IsNil)
-	c.Assert(WriteRSAKey(key, file), IsNil)
-	g.Config.PrivateKeyPath = file.Name()
-	signer, err := ssh.NewSignerFromKey(key)
-	c.Assert(err, IsNil)
-	g.PublicKey = signer.PublicKey()
-	g.Config.PrivateKeyPath = file.Name()
+	g.Config.SSHKeys = append(g.Config.SSHKeys, key)
 	return file.Name()
 }
 

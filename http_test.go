@@ -174,18 +174,16 @@ func (s *HTTPTest) TestHTTPClient_InsertPublicKey(c *C) {
 	client, handler, server := newClient(expected)
 	defer server.Close()
 
-	private, err := GenerateRSAKey()
+	key, err := NewSSHKey()
 	c.Assert(err, IsNil)
-	signer, err := ssh.NewSignerFromKey(private)
-	c.Assert(err, IsNil)
-	public := signer.PublicKey()
-	c.Assert(client.insertPublicKey(public), IsNil)
+	defer key.Remove() // nolint: errcheck
+	c.Assert(client.insertPublicKeys(), IsNil)
 
 	request := handler.Request()
 	c.Assert(request.URL.Path, Equals, "/a/accounts/self/sshkeys")
 	c.Assert(request.Method, Equals, http.MethodPost)
 	c.Assert(request.Header.Get("Content-Type"), Equals, "plain/text")
-	c.Assert(handler.RequestBody(), Equals, string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(public))))
+	c.Assert(handler.RequestBody(), Equals, string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(key.Public))))
 }
 
 func (s *HTTPTest) TestNewHTTPClient(c *C) {
