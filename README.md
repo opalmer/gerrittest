@@ -30,46 +30,50 @@ $ cat /tmp/gerrit.json
     "port_http": 0,
     "timeout": 300000000000,
     "git": {
-      "core.sshCommand": "ssh -i /tmp/gerrittest-id_rsa-622079437 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no",
-      "user.email": "admin.localhost",
+      "core.sshCommand": "ssh -i /tmp/gerrittest-id_rsa-706055562 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no",
+      "user.email": "admin@localhost",
       "user.name": "admin"
     },
-    "private_key_path": "/tmp/gerrittest-id_rsa-622079437",
+    "ssh_keys": [
+      {
+        "path": "/tmp/gerrittest-id_rsa-706055562",
+        "generated": true,
+        "default": true
+      }
+    ],
     "username": "admin",
-    "password": "W7ZQWupkL8S2dMLQY5vlf+s3Qh6dsh3JuoWxImaBog",
+    "password": "oD7BNb6YE21+7ZGEXefJtFk3HY85wKYrfiZg13H6Mg",
     "skip_setup": false,
-    "cleanup_private_key": true,
-    "cleanup_git_repo": true,
     "cleanup_container": true
   },
   "container": {
     "http": {
       "Private": 8080,
-      "port": 42339,
+      "port": 33511,
       "address": "localhost",
       "protocol": "tcp"
     },
     "ssh": {
       "Private": 29418,
-      "port": 32768,
+      "port": 32791,
       "address": "127.0.0.1",
       "protocol": "tcp"
     },
     "image": "opalmer/gerrittest:2.14.3",
-    "id": "cd7fbf9e9a4cab6c041dcaa4e92481142fcbbd5053c685657534ab579c30b649"
+    "id": "6ef42639c9a40aa3a5e793b8d7fe33005e585ae1ce636671e1bb2d15fc8b1173"
   },
   "http": {
     "Private": 8080,
-    "port": 42339,
+    "port": 33511,
     "address": "localhost",
     "protocol": "tcp"
   },
   "ssh": {
     "Private": 29418,
-    "port": 32768,
+    "port": 32791,
     "address": "127.0.0.1",
     "protocol": "tcp"
-  },
+  }
 }
 $ ./gerrittest stop --json /tmp/gerrit.json
 ```
