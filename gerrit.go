@@ -349,6 +349,11 @@ func New(cfg *Config) (*Gerrit, error) {
 // NewFromJSON reads information from a json file and returns a *Gerrit
 // struct.
 func NewFromJSON(path string) (*Gerrit, error) {
+	logger := log.WithField("phase", "new-from-json")
+	logger.WithFields(log.Fields{
+		"path":   path,
+		"action": "read",
+	}).Debug()
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -364,11 +369,25 @@ func NewFromJSON(path string) (*Gerrit, error) {
 	g.Config.Context = ctx
 	g.Container.ctx = ctx
 
+	logger.WithFields(log.Fields{
+		"path":   path,
+		"action": "get-dockertest-client",
+	}).Debug()
 	docker, err := dockertest.NewClient()
 	if err != nil {
 		return nil, err
 	}
 	g.Container.Docker = docker
+
+	logger.WithFields(log.Fields{
+		"path":   path,
+		"action": "load-ssh-keys",
+	}).Debug()
+	for _, key := range g.Config.SSHKeys {
+		if err := key.load(); err != nil {
+			return nil, err
+		}
+	}
 
 	sshClient, err := NewSSHClient(g.Config, g.SSHPort)
 	if err != nil {
