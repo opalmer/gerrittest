@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/opalmer/gerrittest"
 	"github.com/spf13/cobra"
 	. "gopkg.in/check.v1"
 )
@@ -18,12 +21,15 @@ func (s *StartTest) Test_addStartFlags(c *C) {
 func (s *StartTest) Test_newStartConfig(c *C) {
 	command := &cobra.Command{}
 	addStartFlags(command)
+	generated, err := gerrittest.NewSSHKey()
+	c.Assert(err, IsNil)
+	defer generated.Remove() // nolint: errcheck
 	c.Assert(command.ParseFlags(
 		[]string{
 			"--image=image",
 			"--port-http=1",
 			"--port-ssh=2",
-			"--private-key=private-key",
+			fmt.Sprintf("--private-key=%s", generated.Path),
 			"--password=password",
 			"--no-cleanup",
 			"--start-only",
@@ -37,14 +43,13 @@ func (s *StartTest) Test_newStartConfig(c *C) {
 
 	found := false
 	for _, key := range cfg.SSHKeys {
-		if key.Path == "private-key" {
+		if key.Path == key.Path {
 			found = true
 		}
 	}
-	c.Assert(found, Equals, true)
 
+	c.Assert(found, Equals, true)
 	c.Assert(cfg.Password, Equals, "password")
 	c.Assert(cfg.Context, NotNil)
 	c.Assert(cfg.SkipSetup, Equals, true)
-
 }
