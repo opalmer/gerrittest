@@ -77,12 +77,26 @@ func newStartConfig(cmd *cobra.Command) (*gerrittest.Config, error) {
 	config.Image = getString(cmd, "image")
 	config.PortSSH = getUInt16(cmd, "port-ssh")
 	config.PortHTTP = getUInt16(cmd, "port-http")
-	config.PrivateKeyPath = getString(cmd, "private-key")
+	privateKey := getString(cmd, "private-key")
+
+	if privateKey != "" {
+		key, err := gerrittest.LoadSSHKey(getString(cmd, "private-key"))
+		if err != nil {
+			return nil, err
+		}
+		config.SSHKeys = append(config.SSHKeys, key)
+	} else {
+		key, err := gerrittest.NewSSHKey()
+		if err != nil {
+			return nil, err
+		}
+		config.SSHKeys = append(config.SSHKeys, key)
+	}
+
 	config.Password = getString(cmd, "password")
 	config.Context = ctx
 	config.SkipSetup = getBool(cmd, "start-only")
 	if getBool(cmd, "no-cleanup") {
-		config.CleanupPrivateKey = false
 		config.CleanupContainer = false
 	}
 
