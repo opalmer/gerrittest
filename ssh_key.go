@@ -1,13 +1,11 @@
 package gerrittest
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 
@@ -75,10 +73,34 @@ type SSHKey struct {
 	Default   bool          `json:"default"`
 }
 
+func (s *SSHKey) load() error {
+	logger := log.WithField("phase", "ssh-key")
+	logger.WithField("action", "check").Debug()
+
+	logger.WithFields(log.Fields{
+		"path":   s.Path,
+		"action": "read",
+	}).Debug()
+	public, signer, err := ReadSSHKeys(s.Path)
+	if err != nil {
+		return err
+	}
+	s.Public = public
+	s.Private = signer
+	return err
+}
+
+// String outputs a useful string representing the struct.
+func (s *SSHKey) String() string {
+	return fmt.Sprintf(
+		"SSHKey{path: %s, generated: %t, default: %t}",
+		s.Path, s.Generated, s.Default)
+}
+
 // Remove will remove the key material from disk but only if the key was
 // generated.
 func (s *SSHKey) Remove() error {
-	if s.Generated {
+	if s.Generated && !s.Default {
 		return os.Remove(s.Path)
 	}
 	return nil
@@ -86,23 +108,18 @@ func (s *SSHKey) Remove() error {
 
 // LoadSSHKey loads an SSH key from disk and returns a *SSHKey struct.
 func LoadSSHKey(path string) (*SSHKey, error) {
-	public, signer, err := ReadSSHKeys(path)
-	if err != nil {
-		return nil, err
-	}
-	return &SSHKey{
-		Public:    public,
-		Private:   signer,
+	key := &SSHKey{
 		Path:      path,
 		Generated: false,
 		Default:   true,
-	}, nil
+	}
+	return key, key.load()
 }
 
 // NewSSHKey will generate and return an *SSHKey.
 // TODO add tests
 func NewSSHKey() (*SSHKey, error) {
-	key, err := GenerateRSAKey()
+	generated, err := GenerateRSAKey()
 	if err != nil {
 		return nil, err
 	}
@@ -111,30 +128,13 @@ func NewSSHKey() (*SSHKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Name() // nolint: errcheck
-
-	buffer := &bytes.Buffer{}
-	if err := pem.Encode(buffer, &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(key),
-	}); err != nil {
+	if err := WriteRSAKey(generated, file); err != nil {
 		return nil, err
 	}
-
-	signer, err := ssh.ParsePrivateKey(buffer.Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := io.Copy(file, buffer); err != nil {
-		return nil, err
-	}
-
-	return &SSHKey{
-		Private:   signer,
-		Public:    signer.PublicKey(),
+	key := &SSHKey{
 		Path:      file.Name(),
 		Generated: true,
 		Default:   true,
-	}, nil
+	}
+	return key, key.load()
 }
