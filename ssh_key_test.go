@@ -11,17 +11,17 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-type SSHTest struct{}
+type SSHKeyTest struct{}
 
-var _ = Suite(&SSHTest{})
+var _ = Suite(&SSHKeyTest{})
 
-func (s *SSHTest) generateKey(c *C) *rsa.PrivateKey {
+func (s *SSHKeyTest) generateKey(c *C) *rsa.PrivateKey {
 	private, err := GenerateRSAKey()
 	c.Assert(err, IsNil)
 	return private
 }
 
-func (s *SSHTest) writeKey(c *C, key *rsa.PrivateKey) string {
+func (s *SSHKeyTest) writeKey(c *C, key *rsa.PrivateKey) string {
 	file, err := ioutil.TempFile("", "")
 	c.Assert(err, IsNil)
 	c.Assert(pem.Encode(file, &pem.Block{
@@ -31,11 +31,11 @@ func (s *SSHTest) writeKey(c *C, key *rsa.PrivateKey) string {
 	c.Assert(file.Close(), IsNil)
 	return file.Name()
 }
-func (s *SSHTest) TestGenerateRSAKey(c *C) {
+func (s *SSHKeyTest) TestGenerateRSAKey(c *C) {
 	s.generateKey(c)
 }
 
-func (s *SSHTest) TestReadSSHKeys(c *C) {
+func (s *SSHKeyTest) TestReadSSHKeys(c *C) {
 	key := s.generateKey(c)
 	path := s.writeKey(c, key)
 	_, private, err := ReadSSHKeys(path)
@@ -46,7 +46,7 @@ func (s *SSHTest) TestReadSSHKeys(c *C) {
 	c.Assert(os.Remove(path), IsNil)
 }
 
-func (s *SSHTest) TestWriteRSAKey(c *C) {
+func (s *SSHKeyTest) TestWriteRSAKey(c *C) {
 	key := s.generateKey(c)
 	fileA := s.writeKey(c, key)
 	fileB, err := ioutil.TempFile("", "")
