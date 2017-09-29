@@ -12,7 +12,6 @@ import (
 	"github.com/crewjam/errset"
 	"github.com/opalmer/dockertest"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/ssh"
 )
 
 // ProjectName is used anywhere we need a default value (temp files, default
@@ -29,8 +28,6 @@ type Gerrit struct {
 	HTTPPort   *dockertest.Port `json:"http"`
 	SSH        *SSHClient       `json:"-"`
 	SSHPort    *dockertest.Port `json:"ssh"`
-	PrivateKey ssh.Signer       `json:"-"`
-	PublicKey  ssh.PublicKey    `json:"-"`
 }
 
 func (g *Gerrit) errLog(logger *log.Entry, err error) error {
@@ -78,8 +75,6 @@ func (g *Gerrit) setupSSHKey() error {
 		if key.Default {
 			g.Config.GitConfig["core.sshCommand"] = fmt.Sprintf(
 				"ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", key.Path)
-			g.PrivateKey = key.Private
-			g.PublicKey = key.Public
 			return nil
 		}
 	}
