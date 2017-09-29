@@ -73,54 +73,23 @@ func (g *Gerrit) setupSSHKey() error {
 		"task":  "ssh-key",
 	})
 	logger.Debug()
-	g.Config.CleanupPrivateKey = false
 
-	if g.Config.PrivateKeyPath != "" {
-		entry := logger.WithFields(log.Fields{
-			"action":   "read",
-			"key-path": g.Config.PrivateKeyPath,
-		})
-		entry.Debug()
-		public, private, err := ReadSSHKeys(g.Config.PrivateKeyPath)
-		if err != nil {
-			entry.WithError(err).Error()
-			return err
+	for _, key := range g.Config.SSHKeys {
+		if key.Default {
+			g.Config.GitConfig["core.sshCommand"] = fmt.Sprintf(
+				"ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", key.Path)
+			g.PrivateKey = key.Private
+			g.PublicKey = key.Public
+			return nil
 		}
-		g.Config.GitConfig["core.sshCommand"] = fmt.Sprintf(
-			"ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", g.Config.PrivateKeyPath)
-		g.PrivateKey = private
-		g.PublicKey = public
-		return nil
 	}
-	entry := logger.WithField("action", "generate")
 
-	private, err := GenerateRSAKey()
+	key, err := NewSSHKey()
 	if err != nil {
-		return g.errLog(entry, err)
+		return err
 	}
-
-	file, err := ioutil.TempFile("", fmt.Sprintf("%s-id_rsa-", ProjectName))
-	entry = entry.WithField("path", file.Name())
-	if err != nil {
-		return g.errLog(entry, err)
-	}
-
-	defer file.Close() // nolint: errcheck
-	if err := WriteRSAKey(private, file); err != nil {
-		return g.errLog(entry, err)
-	}
-
-	signer, err := ssh.NewSignerFromKey(private)
-	if err != nil {
-		return g.errLog(entry, err)
-	}
-	g.PrivateKey = signer
-	g.PublicKey = signer.PublicKey()
-	g.Config.PrivateKeyPath = file.Name()
-	g.Config.CleanupPrivateKey = true
-	g.Config.GitConfig["core.sshCommand"] = fmt.Sprintf(
-		"ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", g.Config.PrivateKeyPath)
-	return nil
+	g.Config.SSHKeys = append(g.Config.SSHKeys, key)
+	return g.setupSSHKey()
 }
 
 func (g *Gerrit) setupHTTPClient() error { // nolint: gocyclo
@@ -333,9 +302,10 @@ func (g *Gerrit) Destroy() error {
 		errs = append(errs, g.SSH.Close())
 	}
 
-	if g.Config.CleanupPrivateKey && g.Config.PrivateKeyPath != "" {
-		errs = append(errs, os.Remove(g.Config.PrivateKeyPath))
+	for _, key := range g.Config.SSHKeys {
+		errs = append(errs, key.Remove())
 	}
+
 	return errs.ReturnValue()
 }
 
