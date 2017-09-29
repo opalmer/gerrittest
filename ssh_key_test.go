@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -60,4 +61,52 @@ func (s *SSHKeyTest) TestWriteRSAKey(c *C) {
 	c.Assert(a, DeepEquals, b)
 	c.Assert(os.Remove(fileA), IsNil)
 	c.Assert(os.Remove(fileB.Name()), IsNil)
+}
+
+func (s *SSHKeyTest) TestLoadSSHKey(c *C) {
+	key := s.generateKey(c)
+	fileA := s.writeKey(c, key)
+	loaded, err := LoadSSHKey(fileA)
+	c.Assert(err, IsNil)
+	c.Assert(loaded.Path, Equals, fileA)
+	c.Assert(loaded.Private, NotNil)
+	c.Assert(loaded.Public, NotNil)
+	c.Assert(loaded.Generated, Equals, false)
+}
+
+func (s *SSHKeyTest) TestNewSSHKey(c *C) {
+	key, err := NewSSHKey()
+	c.Assert(err, IsNil)
+	c.Assert(key.Default, Equals, true)
+	key.Default = false
+	c.Assert(key.Remove(), IsNil)
+	c.Assert(key.Generated, Equals, true)
+}
+
+func (s *SSHKeyTest) TestSSHKeyRemove(c *C) {
+	key, err := NewSSHKey()
+	c.Assert(err, IsNil)
+	key.Default = false
+	c.Assert(key.Remove(), IsNil)
+	_, err = os.Stat(key.Path)
+	c.Assert(os.IsNotExist(err), Equals, true)
+}
+
+func (s *SSHKeyTest) TestSSHKeyRemoveDoesNotRemove(c *C) {
+	key, err := NewSSHKey()
+	c.Assert(err, IsNil)
+	key.Generated = false
+	c.Assert(key.Remove(), IsNil)
+	_, err = os.Stat(key.Path)
+	c.Assert(err, IsNil)
+}
+
+func (s *SSHKeyTest) TestSSHKeyString(c *C) {
+	key, err := NewSSHKey()
+	c.Assert(err, IsNil)
+	key.Default = false
+	c.Assert(key.Remove(), IsNil)
+	c.Assert(key.String(), Equals, fmt.Sprintf(
+		"SSHKey{path: %s, generated: %t, default: %t}",
+		key.Path, key.Generated, key.Default))
 }
