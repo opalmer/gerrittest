@@ -21,6 +21,8 @@ const ProjectName = "gerrittest"
 // Gerrit is the central struct which combines multiple components
 // of the gerrittest project. Use New() to construct this struct.
 type Gerrit struct {
+	ctx       context.Context    `json:"-"`
+	cancel    context.CancelFunc `json:"-"`
 	log       *log.Entry
 	Config    *Config          `json:"config"`
 	Container *Container       `json:"container"`
@@ -43,7 +45,7 @@ func (g *Gerrit) startContainer() error {
 	})
 	logger.Debug()
 	container, err := NewContainer(
-		g.Config.Context, g.Config.PortHTTP, g.Config.PortSSH, g.Config.Image)
+		g.ctx, g.Config.PortHTTP, g.Config.PortSSH, g.Config.Image)
 	if err != nil {
 		logger.WithError(err).Error()
 		return err
@@ -293,6 +295,7 @@ func (g *Gerrit) WriteJSONFile(path string) error {
 // Destroy will destroy the container and all associated resources. Custom
 // private keys or repositories will not be cleaned up.
 func (g *Gerrit) Destroy() error {
+	g.cancel()
 	errs := errset.ErrSet{}
 	if g.Config.CleanupContainer && g.Container != nil {
 		errs = append(errs, g.Container.Terminate())
@@ -314,11 +317,10 @@ func (g *Gerrit) Destroy() error {
 // a container, an admin user will be created and a git repository will
 // be setup pointing at the service in the container.
 func New(cfg *Config) (*Gerrit, error) {
-	if cfg.Context == nil {
-		cfg.Context = context.Background()
-	}
-
+	ctx, cancel := context.WithCancel(cfg.Context)
 	g := &Gerrit{
+		ctx:    ctx,
+		cancel: cancel,
 		log:    log.WithField("cmp", "core"),
 		Config: cfg,
 	}
@@ -354,12 +356,7 @@ func LoadJSON(path string) (*Gerrit, error) {
 		return nil, err
 	}
 	g := &Gerrit{log: log.WithField("cmp", "core")}
-	err = json.Unmarshal(data, g)
-	if err == nil {
-		g.Config.Context = context.Background()
-		g.Container.ctx = context.Background()
-	}
-	return g, err
+	return g, json.Unmarshal(data, g)
 }
 
 // NewFromJSON reads information from a json file and returns a *Gerrit
@@ -374,6 +371,10 @@ func NewFromJSON(path string) (*Gerrit, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	g.ctx = ctx
+	g.cancel = cancel
 
 	logger.WithFields(log.Fields{
 		"path":   path,
