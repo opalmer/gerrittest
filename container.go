@@ -20,7 +20,7 @@ var (
 	// DefaultImage defines the default docker image to use in
 	// NewConfig(). This may be overridden with the $GERRITTEST_DOCKER_IMAGE
 	// environment variable.
-	DefaultImage = "opalmer/gerrittest:2.14.3"
+	DefaultImage = "opalmer/gerrittest:2.14.4"
 )
 
 const (
