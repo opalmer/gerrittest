@@ -295,7 +295,7 @@ func (g *Gerrit) WriteJSONFile(path string) error {
 // Destroy will destroy the container and all associated resources. Custom
 // private keys or repositories will not be cleaned up.
 func (g *Gerrit) Destroy() error {
-	defer gg.cancel()
+	defer g.cancel()
 	errs := errset.ErrSet{}
 	if g.Config.CleanupContainer && g.Container != nil {
 		errs = append(errs, g.Container.Terminate())
