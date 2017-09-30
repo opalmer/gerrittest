@@ -208,9 +208,7 @@ func (h *HTTPClient) setPassword(password string) error {
 
 // insertPublicKeys will insert all public keys in the config into Gerrit.
 func (h *HTTPClient) insertPublicKeys() error {
-	logger := log.WithFields(log.Fields{
-		"phase": "insert-public-key",
-	})
+	logger := log.WithField("phase", "insert-public-key")
 	for _, key := range h.config.SSHKeys {
 		logger.WithField("key", key).Debug()
 		request, err := h.newRequest(
