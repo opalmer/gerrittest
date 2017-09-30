@@ -67,7 +67,7 @@ func addCommonFlags(cmd *cobra.Command) {
 		"log-level", "panic",
 		"Configures the logging level")
 	cmd.Flags().StringP(
-		"j", "json", "",
+		"json", "j", "",
 		"The location to write information about the service to. Any "+
 			"existing content will be overwritten.")
 }
