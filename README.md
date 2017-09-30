@@ -78,6 +78,13 @@ $ cat /tmp/gerrit.json
 $ ./gerrittest stop --json /tmp/gerrit.json
 ```
 
+### Retrieving the SSH Command
+
+```
+$ ./gerrittest get-ssh-command --json /tmp/gerrit.json
+ssh -i /tmp/gerrittest-id_rsa-706055562 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 32791 admin@127.0.0.1
+```
+
 ### Combining gerrittest, bash and curl
 
 ```bash
