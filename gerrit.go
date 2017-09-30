@@ -71,20 +71,25 @@ func (g *Gerrit) setupSSHKey() error {
 	})
 	logger.Debug()
 
+	// If no keys have been provided generate one and add it
+	// to the config.
+	if len(g.Config.SSHKeys) == 0 {
+		key, err := NewSSHKey()
+		if err != nil {
+			return err
+		}
+		g.Config.SSHKeys = append(g.Config.SSHKeys, key)
+	}
+
 	for _, key := range g.Config.SSHKeys {
 		if key.Default {
 			g.Config.GitConfig["core.sshCommand"] = fmt.Sprintf(
 				"ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", key.Path)
-			return nil
+			break
 		}
 	}
 
-	key, err := NewSSHKey()
-	if err != nil {
-		return err
-	}
-	g.Config.SSHKeys = append(g.Config.SSHKeys, key)
-	return g.setupSSHKey()
+	return nil
 }
 
 func (g *Gerrit) setupHTTPClient() error { // nolint: gocyclo
