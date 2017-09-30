@@ -35,10 +35,5 @@ var Stop = &cobra.Command{
 }
 
 func init() {
-	Stop.Flags().String(
-		"json", "",
-		"The json file containing the container to stop.")
-	Stop.Flags().String(
-		"log-level", "panic",
-		"Configures the logging level")
+	addCommonFlags(Stop)
 }

@@ -22,10 +22,6 @@ func addStartFlags(cmd *cobra.Command) {
 		"If provided then do not cleanup the container on failure. "+
 			"Useful when debugging changes to the docker image.")
 	cmd.Flags().String(
-		"json", "",
-		"The location to write information about the service to. Any "+
-			"existing content will be overwritten.")
-	cmd.Flags().String(
 		"image", gerrittest.DefaultImage,
 		"The Docker image to spin up Gerrit.")
 	cmd.Flags().Uint16(
@@ -48,9 +44,7 @@ func addStartFlags(cmd *cobra.Command) {
 		"project", gerrittest.ProjectName,
 		"The name of the project to create in Gerrit. This will "+
 			"also be used for the remote repo name.")
-	cmd.Flags().String(
-		"log-level", "panic",
-		"Configures the logging level")
+	addCommonFlags(cmd)
 }
 
 func newStartConfig(cmd *cobra.Command) (*gerrittest.Config, error) {

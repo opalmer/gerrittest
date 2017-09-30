@@ -61,3 +61,13 @@ func jsonOutput(cmd *cobra.Command, gerrit *gerrittest.Gerrit) error {
 
 	return gerrit.WriteJSONFile(path)
 }
+
+func addCommonFlags(cmd *cobra.Command) {
+	cmd.Flags().String(
+		"log-level", "panic",
+		"Configures the logging level")
+	cmd.Flags().StringP(
+		"j", "json", "",
+		"The location to write information about the service to. Any "+
+			"existing content will be overwritten.")
+}
