@@ -2,6 +2,8 @@ package gerrittest
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -141,4 +143,20 @@ func newProjectConfig(path string) (*projectConfig, error) {
 		return nil, err
 	}
 	return &projectConfig{log: logger, ini: cfg}, nil
+}
+
+// GetSSHCommand returns a string representing the ssh command to
+// run to access the Gerrit container over ssh.
+func GetSSHCommand(gerrit *Gerrit) (string, error) {
+	for _, key := range gerrit.Config.SSHKeys {
+		if key.Default {
+			return fmt.Sprintf(
+				"ssh -i %s -o UserKnownHostsFile=/dev/null "+
+					"-o StrictHostKeyChecking=no -p %d %s@%s",
+				key.Path, gerrit.SSHPort.Public, gerrit.Config.Username,
+				gerrit.SSHPort.Address), nil
+		}
+	}
+
+	return "", errors.New("no default ssh keys present")
 }

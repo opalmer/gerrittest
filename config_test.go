@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/go-ini/ini"
+	"github.com/opalmer/dockertest"
 	. "gopkg.in/check.v1"
 )
 
@@ -78,4 +79,37 @@ default = 1
 	c.Assert(err, IsNil)
 	c.Assert(cfg.write(file.Name()), IsNil)
 	s.testWrittenConfig(c, file.Name())
+}
+
+func (s *ConfigTest) getConfigForGetSSHCommandTest() *Gerrit {
+	return &Gerrit{
+		Config: &Config{
+			Username: "testing",
+			SSHKeys: []*SSHKey{{
+				Path:    "/tmp/id_rsa",
+				Default: true,
+			}},
+		},
+		SSHPort: &dockertest.Port{
+			Address: "1.2.3.4",
+			Public:  65535,
+		},
+	}
+}
+
+func (s *ConfigTest) TestGetSSHCommand(c *C) {
+	cmd, err := GetSSHCommand(s.getConfigForGetSSHCommandTest())
+	c.Assert(err, IsNil)
+	c.Assert(
+		cmd, Equals,
+		"ssh -i /tmp/id_rsa -o UserKnownHostsFile=/dev/null "+
+			"-o StrictHostKeyChecking=no -p 65535 testing@1.2.3.4")
+}
+
+func (s *ConfigTest) TestGetSSHCommandNoDefaultKeys(c *C) {
+	g := s.getConfigForGetSSHCommandTest()
+	g.Config.SSHKeys[0].Default = false
+	cmd, err := GetSSHCommand(g)
+	c.Assert(err, ErrorMatches, "no default ssh keys present")
+	c.Assert(cmd, Equals, "")
 }
