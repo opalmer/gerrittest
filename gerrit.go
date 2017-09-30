@@ -21,8 +21,8 @@ const ProjectName = "gerrittest"
 // Gerrit is the central struct which combines multiple components
 // of the gerrittest project. Use New() to construct this struct.
 type Gerrit struct {
-	ctx       context.Context    `json:"-"`
-	cancel    context.CancelFunc `json:"-"`
+	ctx       context.Context
+	cancel    context.CancelFunc
 	log       *log.Entry
 	Config    *Config          `json:"config"`
 	Container *Container       `json:"container"`
