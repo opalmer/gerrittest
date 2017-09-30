@@ -62,3 +62,8 @@ coverage: $(patsubst %,%.coverage,$(PACKAGES))
 bindata:
 	go-bindata -pkg internal -o internal/internal.go internal/commit-msg
 	$(MAKE) fmt
+
+dist:
+	GOOS=linux GOARCH=amd64 go build -o gerrittest.linux-x64 cmd/gerrittest.go
+	GOOS=darwin GOARCH=amd64 go build -o gerrittest.darwin-x64 cmd/gerrittest.go
+	GOOS=windows GOARCH=amd64 go build -o gerrittest-x64.exe cmd/gerrittest.go

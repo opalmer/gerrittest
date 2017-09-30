@@ -1,6 +1,7 @@
 /build/
 /dist/
-/gerrittest
-/gerrittest.exe
 /coverage.txt
 /.gocoverage/
+/gerrittest
+/gerrittest-x*
+/gerrittest.*-x*
