@@ -8,8 +8,6 @@ import (
 
 	"github.com/opalmer/dockertest"
 	"github.com/opalmer/gerrittest"
-	"github.com/opalmer/logrusutil"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -48,13 +46,6 @@ func addStartFlags(cmd *cobra.Command) {
 }
 
 func newStartConfig(cmd *cobra.Command) (*gerrittest.Config, error) {
-	// Setup logging
-	cfg := logrusutil.NewConfig()
-	cfg.Level = getString(cmd, "log-level")
-	if err := logrusutil.ConfigureLogger(log.StandardLogger(), cfg); err != nil {
-		return nil, err
-	}
-
 	// Setup timeout and Ctrl+C handling.
 	timeout := getDuration(cmd, "timeout")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
