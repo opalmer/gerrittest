@@ -346,6 +346,22 @@ func New(cfg *Config) (*Gerrit, error) {
 	return g, nil
 }
 
+// LoadJSON strictly loads the json file from the provided path. It makes no
+// attempts to verify that the docker container is running orr
+func LoadJSON(path string) (*Gerrit, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	g := &Gerrit{log: log.WithField("cmp", "core")}
+	err = json.Unmarshal(data, g)
+	if err == nil {
+		g.Config.Context = context.Background()
+		g.Container.ctx = context.Background()
+	}
+	return g, err
+}
+
 // NewFromJSON reads information from a json file and returns a *Gerrit
 // struct.
 func NewFromJSON(path string) (*Gerrit, error) {
@@ -354,20 +370,10 @@ func NewFromJSON(path string) (*Gerrit, error) {
 		"path":   path,
 		"action": "read",
 	}).Debug()
-	data, err := ioutil.ReadFile(path)
+	g, err := LoadJSON(path)
 	if err != nil {
 		return nil, err
 	}
-
-	ctx := context.Background()
-	g := &Gerrit{
-		log: log.WithField("cmp", "core"),
-	}
-	if err := json.Unmarshal(data, g); err != nil {
-		return nil, err
-	}
-	g.Config.Context = ctx
-	g.Container.ctx = ctx
 
 	logger.WithFields(log.Fields{
 		"path":   path,
